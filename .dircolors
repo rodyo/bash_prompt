@@ -1,0 +1,265 @@
+# Configuration file for dircolors, a utility to help you set the
+# LS_COLORS environment variable used by GNU ls with the --color option.
+# Copyright (C) 1996, 1999-2008
+# Free Software Foundation, Inc.
+# Copying and distribution of this file, with or without modification,
+# are permitted provided the copyright notice and this notice are preserved.
+# The keywords COLOR, OPTIONS, and EIGHTBIT (honored by the
+# slackware version of dircolors) are recognized but ignored.
+
+# Below, there should be one TERM entry for each termtype that is colorizable
+TERM Eterm
+TERM ansi
+TERM color-xterm
+TERM con132x25
+TERM con132x30
+TERM con132x43
+TERM con132x60
+TERM con80x25
+TERM con80x28
+TERM con80x30
+TERM con80x43
+TERM con80x50
+TERM con80x60
+TERM cons25
+TERM console
+TERM cygwin
+TERM dtterm
+TERM eterm-color
+TERM gnome
+TERM gnome-256color
+TERM jfbterm
+TERM konsole
+TERM kterm
+TERM linux
+TERM linux-c
+TERM mach-color
+TERM mlterm
+TERM putty
+TERM rxvt
+TERM rxvt-cygwin
+TERM rxvt-cygwin-native
+TERM rxvt-unicode
+TERM screen
+TERM screen-256color
+TERM screen-bce
+TERM screen-w
+TERM screen.linux
+TERM vt100
+TERM xterm
+TERM xterm-16color
+TERM xterm-256color
+TERM xterm-88color
+TERM xterm-color
+TERM xterm-debian
+
+# Below are the color init strings for the basic file types. A color init
+# string consists of one or more of the following numeric codes:
+#
+# Attribute codes:
+# ----------------
+#   00 = none 
+#   01 = brighter colors / bold
+#   04 = underscore 
+#   05 = blink 
+#   07 = reverse 
+#   08 = concealed
+#
+# Text color codes:
+# ----------------
+#   30 = black 
+#   31 = red 
+#   32 = green 
+#   33 = yellow (or brown)
+#   34 = blue 
+#   35 = magenta 
+#   36 = cyan 
+#   37 = white (or gray)
+#
+# Background color codes:
+# ----------------
+#   40 = black 
+#   41 = red 
+#   42 = green 
+#   43 = yellow (or brown)
+#   44 = blue 
+#   45 = magenta 
+#   46 = cyan 
+#   47 = white (or gray)
+
+# COLORIZE FILES / DIRS
+# --------------------------------------------------------------------------
+
+NORMAL                00        # no color code at all
+FILE                  00        # regular file: use no color at all
+RESET                 00        # reset to "normal" color
+DIR                   01;34     # directory
+LINK                  01;36     # symbolic link. (If you set this to 'target' instead of a
+                                # numerical value, the color is as for the file pointed to.)
+MISSING               37;41;05  # non-existent files with symlink(s) pointing to it
+FIFO                  40;33     # pipe
+SOCK                  01;35     # socket
+DOOR                  01;35     # door
+BLK                   40;33;01  # block device driver
+CHR                   40;33;01  # character device driver
+ORPHAN                01;40;31  # symlink to nonexistent file, or non-stat'able file
+EXEC                  00# 01;32     # files with execute permission
+SETUID                37;41     # file that is setuid (u+s)
+SETGID                30;43     # file that is setgid (g+s)
+CAPABILITY            30;41     # file with capability
+STICKY                37;44     # dir with the sticky bit set (+t) and not other-writable
+STICKY_OTHER_WRITABLE 30;42     # dir that is sticky and other-writable (+t,o+w)
+
+# OTHER_WRITABLE      34;42     # dir that is other-writable (o+w) and not sticky
+OTHER_WRITABLE        01;34     # dir that is other-writable (o+w) and not sticky
+
+
+# COLORIZE MIME TYPES
+# --------------------------------------------------------------------------
+
+# all executables
+.sh   01;32
+.cmd  01;32 
+.exe  01;32
+.com  01;32
+.btm  01;32
+.bat  01;32
+
+# archives or compressed (bright red)
+.tar  01;31
+.tgz  01;31
+.arj  01;31
+.taz  01;31
+.lzh  01;31
+.lzma 01;31
+.zip  01;31
+.ZIP  01;31
+.z    01;31
+.Z    01;31
+.dz   01;31
+.gz   01;31
+.bz2  01;31
+.bz   01;31
+.tbz2 01;31
+.tz   01;31
+.deb  01;31
+.rpm  01;31
+.jar  01;31
+.rar  01;31
+.ace  01;31
+.zoo  01;31
+.cpio 01;31
+.7z   01;31
+.rz   01;31
+
+# image formats
+.jpg  01;35
+.JPG  01;35
+.jpeg 01;35
+.JPEG 01;35
+.gif  01;35
+.GIF  01;35
+.bmp  01;35
+.BMP  01;35
+.pbm  01;35
+.pgm  01;35
+.ppm  01;35
+.tga  01;35
+.xbm  01;35
+.xpm  01;35
+.eps  01;35
+.tif  01;35
+.TIF  01;35
+.tiff 01;35
+.TIFF 01;35
+.png  01;35
+.PNG  01;35
+.svg  01;35
+.SVG  01;35
+.svgz 01;35
+.mng  01;35
+.pcx  01;35
+.m2v  01;35
+.ogm  01;35
+.mp4  01;35
+.m4v  01;35
+.mp4v 01;35
+.vob  01;35
+.qt   01;35
+.nuv  01;35
+.rmvb 01;35
+.flc  01;35
+.fli  01;35
+.gl   01;35
+.dl   01;35
+.xcf  01;35
+.xwd  01;35
+.yuv  01;35
+.axv  01;35
+.anx  01;35
+.ogv  01;35
+.ogx  01;35
+
+# movie formats
+.avi  01;33
+.mov  01;33
+.mpg  01;33
+.mpeg 01;33
+.mkv  01;33
+.flv  01;33
+.wmv  01;33
+.asf  01;33
+.rm   01;33
+
+# audio formats
+.aac  00;36
+.au   00;36
+.flac 00;36
+.mid  00;36
+.midi 00;36
+.mka  00;36
+.mp3  00;36
+.mpc  00;36
+.ogg  00;36
+.ra   00;36
+.wav  00;36
+.axa  00;36
+.oga  00;36
+.spx  00;36
+.xspf 00;36
+
+# document types
+.doc   00;34
+.DOC   00;34
+.docx  00;34
+.DOCX  00;34
+.pdf   00;34
+.PDF   00;34
+.txt   00;34
+.TXT   00;34      
+.odt   00;34
+.ODT   00;34      
+.odp   00;34
+.ODP   00;34
+.odf   00;34
+.ODF   00;34
+.ods   00;34
+.ODS   00;34
+
+# source files
+.c    43;30
+.C    01;33
+.cpp  01;33            
+.o    01;32      
+.a    01;32    
+.h    01;33      
+.hh   01;33
+.hpp  01;33
+.cc   01;33
+.m    01;33            
+.mat  00;33
+.fig  00;33
+.html 01;34      
+.htm  01;34      
+
+

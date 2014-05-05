@@ -1,0 +1,26 @@
+# perform history searches with up/down arrows keys
+"\e[A": history-search-backward
+"\e[B": history-search-forward
+
+# - do history expansion when space entered
+# - F10 toggles mc on and off
+# - Note Ctrl-o toggles panes on and off in mc
+$if Bash
+    "\e[21~": "mc\C-M"
+    Space: magic-space
+$endif
+
+# Some more emacs-style commands
+# -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+# navigate one word forward
+"\M-f": forward-word
+
+# put quotes around the argument list of the last command
+"\C-x\"": "\C-a\M-f\C-f\"\C-e\""
+
+
+# Include system-wide settings
+# -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+$include /etc/inputrc
+
