@@ -1,3 +1,10 @@
+# TODO: put the repository aliases in an associative array
+# TODO: find proper workaround for bash v. < 4
+
+# TODO: profile everything (multicolumn ls) and find ways to make it  faster!
+
+
+
 # --------------------------------------------------------------------------------------------------
 # Create global "associative" arrays
 # --------------------------------------------------------------------------------------------------
@@ -58,6 +65,7 @@ command_not_found_handle()
 # TODO: field width of file size field can be a bit more flexible
 #   (e.g., we don't ALWAYS need 7 characters...but: difficult if you want to get /dev/ right)
 # TODO: show [seq] and ranges for simple sequences, with min/max file size
+
 multicolumn_ls()
 {
     # preferences
@@ -84,7 +92,7 @@ multicolumn_ls()
     esac
 
 # BUG: since we've switched to non-associative arrays, the ACLs need a different approach altogether...
-haveAttrlist=;
+haveAttrlist=
 
     if [ $haveAttrlist ]; then
         local attrlist
@@ -98,8 +106,7 @@ haveAttrlist=;
         unset attnames attribs attlist
     fi
 
-    # check if any of the arguments was a "file"
-    # (and not just an option)
+    # check if any of the arguments was a "file" (and not just an option)
     local haveFiles=false
     for ((i=0; i<$#; ++i)); do
         if [[ -e "$1" ]]; then
@@ -112,7 +119,7 @@ haveAttrlist=;
     # get "total: XXk" line
     local firstline=
     if [[ $haveFiles == false ]]; then
-        firstline=${dirlist[0]}
+        firstline="${dirlist[0]}"
         unset dirlist[0]
     fi
 
@@ -618,8 +625,9 @@ enter_SVN()
 
     # alias everything
     # TODO
-    alias su="svn up"
-    alias sc="svn commit"
+    alias su="svn up"           ; REPO_CMD_update="su"
+    alias sc="svn commit -m "   ; REPO_CMD_commit="sc"
+    alias ss="svn status"       ; REPO_CMD_status="ss"
 }
 
 # Enter Mercurial mode
