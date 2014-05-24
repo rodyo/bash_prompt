@@ -66,6 +66,9 @@ command_not_found_handle()
 #   (e.g., we don't ALWAYS need 7 characters...but: difficult if you want to get /dev/ right)
 # TODO: show [seq] and ranges for simple sequences, with min/max file size
 
+# FIXME: seems that passing an argument does not work properly
+# FIXME: breaks when upgrading to Ubuntu 14.04???
+
 multicolumn_ls()
 {
     # preferences
