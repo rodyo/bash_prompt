@@ -6,10 +6,11 @@
 
 
 # --------------------------------------------------------------------------------------------------
-# Create global "associative" arrays
+# Create global associative arrays
 # --------------------------------------------------------------------------------------------------
 
-# (don't actually use them, since this breaks compatibility with Bash < 4)
+declare -A REPO_COLOR
+declare -A ALL_COLORS
 
 # USE_COLORS
 USE_COLORS=
@@ -24,9 +25,8 @@ if [ "yes" == "$SHELL_COLORS" ]; then
     keys=(${keys[@]/\*\./})
     values=(${tmp[@]##*=})
 
-    for ((i=0; i<${#keys[@]}; i++)); do
-        printf -v "ALL_COLORS_${keys[$i]}" %s "${values[$i]}"
-    done
+    for ((i=0; i<${#keys[@]}; ++i)); do
+        ALL_COLORS["${keys[$i]}"]="${values[$i]}"; done
 
     unset tmp keys values
 fi
@@ -36,9 +36,9 @@ REPO_MODE=false;       REPO_TYPE=""
 REPO_PATH=
 
 # colors used for different repositories in prompt/prettyprint
-REPO_COLOR_svn="\033[01;35m";    REPO_COLOR_CVS="\033[43;30";
-REPO_COLOR_git="\033[01;31m";    REPO_COLOR_hg="\033[01;36m";
-REPO_COLOR_bzr="\033[01;33m";
+REPO_COLOR[svn]="\033[01;35m";    REPO_COLOR[CVS]="\033[43;30";
+REPO_COLOR[git]="\033[01;31m";    REPO_COLOR[hg]="\033[01;36m";
+REPO_COLOR[bzr]="\033[01;33m";
 
 
 
@@ -71,6 +71,14 @@ command_not_found_handle()
 
 multicolumn_ls()
 {
+
+
+# PROFILING
+#PS4='+ $(date "+%s.%N")\011 '
+#exec 3>&2 2>/tmp/bashstart.$$.log
+#set -x
+
+
     # preferences
     local maxColumnWidth=35
     local minLines=15
@@ -94,10 +102,7 @@ multicolumn_ls()
         # TODO: also cifs and fuse.sshfs etc. --might--support it, but how to check for this...
     esac
 
-# BUG: since we've switched to non-associative arrays, the ACLs need a different approach altogether...
-haveAttrlist=
-
-    if [ $haveAttrlist ]; then
+    ( ((${BASH_VERSION:0:1}>=4)) && command -v lsattr && if [ $haveAttrlist ]; then
         local attrlist
         local attlist=($(lsattr 2>&1))
         local attribs=($(echo "${attlist[*]%% *}"))
@@ -107,12 +112,12 @@ haveAttrlist=
                 printf -v "attrlist_${attnames[$i]}" %s "${attribs[$i]}"; fi
         done
         unset attnames attribs attlist
-    fi
+    fi) || haveAttrlist=
 
     # check if any of the arguments was a "file" (and not just an option)
     local haveFiles=false
     for ((i=0; i<$#; ++i)); do
-        if [[ -e "$1" ]]; then
+        if [ -e "$1" ]; then
             haveFiles=true
             break;
         fi
@@ -121,14 +126,14 @@ haveAttrlist=
 
     # get "total: XXk" line
     local firstline=
-    if [[ $haveFiles == false ]]; then
+    if [ $haveFiles == false ]; then
         firstline="${dirlist[0]}"
         unset dirlist[0]
     fi
 
     # Compute number of rows to use (equivalent to ceil)
     local numRows=$(( (${#dirlist[@]}+$numColumns-1)/$numColumns ))
-    if [[ $numRows -lt $minLines ]]; then
+    if [ $numRows -lt $minLines ]; then
         numRows=$minLines; fi
 
     # Split dirlist up in permissions, filesizes, names, and extentions
@@ -139,7 +144,7 @@ haveAttrlist=
     local extensions
     for ((i=0; i<${#names[@]}; i++)); do
         extensions[$i]=${names[$i]##*\.}
-        if [[ ${extensions[$i]} = ${names[$i]} ]]; then
+        if [ ${extensions[$i]} == ${names[$i]} ]; then
             extensions[$i]="."; fi
     done
 
@@ -151,7 +156,7 @@ haveAttrlist=
     local n numDirs=0 numFiles=0 numLinks=0 numDevs=0 numPipes=0 numSockets=0
 
     for ((i=0; i<$numRows; i++)); do
-        if [[ $i -ge ${#names[@]} ]]; then break; fi
+        if [ $i -ge ${#names[@]} ]; then break; fi
         for ((j=0; j<$numColumns; j++)); do
 
             device=0
@@ -159,9 +164,9 @@ haveAttrlist=
             lastsymbol=" "
 
             ind=$((i+$numRows*j));
-            if [[ $ind -ge ${#names[@]} ]]; then
+            if [ $ind -ge ${#names[@]} ]; then
                 break; fi
-            if [[ $((i+$numRows*((j+1)))) -ge ${#names[@]} ]]; then
+            if [ $((i+$numRows*((j+1)))) -ge ${#names[@]} ]; then
                 lastColumn=1; fi
 
             # we ARE using colors:
@@ -171,14 +176,14 @@ haveAttrlist=
                 case ${perms[$ind]:0:1} in
 
                     # dir, link, port, socket
-                    d)  paint=$ALL_COLORS_di; ((numDirs++));;
-                    p)  paint=$ALL_COLORS_pi; ((numPipes++));;
-                    s)  paint=$ALL_COLORS_so; ((numSockets++));;
+                    d)  paint="${ALL_COLORS[di]}"; ((numDirs++));;
+                    p)  paint="${ALL_COLORS[pi]}"; ((numPipes++));;
+                    s)  paint="${ALL_COLORS[so]}"; ((numSockets++));;
                     l)  # check validity of link
                         if [ -L "${names[$ind]%% ->*}" ] && [ ! -e "${names[$ind]%% ->*}" ]; then
-                            paint=09\;$ALL_COLORS_or
+                            paint=09\;"${ALL_COLORS[or]}"
                         else
-                            paint=$ALL_COLORS_ln
+                            paint="${ALL_COLORS[ln]}"
                         fi
                         ((numLinks++))
                         ;;
@@ -186,30 +191,30 @@ haveAttrlist=
                     # block/character devices
                     b)  device=1
                         ((numDevs++))
-                        paint=$ALL_COLORS_bd
+                        paint="${ALL_COLORS[bd]}"
                         ;;
                     c)  device=1;
                         ((numDevs++))
-                        paint=$ALL_COLORS_cd
+                        paint="${ALL_COLORS[cd]}"
                         ;;
 
                     *) # regular files
                         ((numFiles++))
                         if [[ ${extensions[$ind]} != "." ]]; then
-                            paint=ALL_COLORS_${extensions[$ind]}
+                            paint="ALL_COLORS[${extensions[$ind]}]"
                             paint=${!paint};
                             if [[ ${#paint} = 0 ]]; then
-                                paint=$ALL_COLORS_no; fi
+                                paint="${ALL_COLORS[no]}"; fi
                         else
-                            paint=$ALL_COLORS_no;
+                            paint="${ALL_COLORS[no]}";
                         fi
                         ;;
                 esac
 
                 # check for specials (acl, group permissions, ...)
                 case ${perms[$ind]:((${#perms[$ind]}-1)):1} in
-                    +)   paint=04\;"$paint";;   # underline files/dirs with acls
-                    t|T) paint=$ALL_COLORS_ow;; # other-writable
+                    +)   paint=04\;"$paint";;      # underline files/dirs with acls
+                    t|T) paint="${ALL_COLORS[ow]}";; # other-writable
                     *);;
                 esac
 
@@ -289,6 +294,12 @@ haveAttrlist=
     fi
 
     IFS=$IFS_
+
+
+# END PROFILING
+#set +x
+#exec 2>&3 3>&-
+
 }
 
 
@@ -333,11 +344,11 @@ promptcmd()
             branch=${branch#\* }
             if [ $? == 0 ]; then
                 if [ $USE_COLORS ]; then
-                     PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR_git}'\] [git: $branch] : \W\[\033[00m\]\$ '
+                     PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[git]}'\] [git: $branch] : \W\[\033[00m\]\$ '
                 else PS1=$ES'\u@\h: [git: $branch] : \W\$ '; fi
             else
                 if [ $USE_COLORS ]; then
-                     PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR_git}'\] [*unknown branch*] : \W\[\033[00m\]\$ '
+                     PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[git]}'\] [*unknown branch*] : \W\[\033[00m\]\$ '
                 else PS1=$ES'\u@\h: [*unknown branch*] : \W\$ '; fi
             fi
             ;;
@@ -345,28 +356,28 @@ promptcmd()
         # SVN repo
         "svn")
             if [ $USE_COLORS ]; then
-                 PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR_svn}'\] [svn] : \W\[\033[00m\]\$ '
+                 PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[svn]}'\] [svn] : \W\[\033[00m\]\$ '
             else PS1=$ES'\u@\h: [svn] : \W\$ '; fi
             ;;
 
         # mercurial repo
         "hg")
             if [ $USE_COLORS ]; then
-                 PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR_hg}'\] [hg] : \W\[\033[00m\]\$ '
+                 PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[hg]}'\] [hg] : \W\[\033[00m\]\$ '
             else PS1=$ES'\u@\h: [hg] : \W\$ '; fi
             ;;
 
         # CVS repo
         "CVS")
             if [ $USE_COLORS ]; then
-                 PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR_CVS}'\] [CVS] : \W\[\033[00m\]\$ '
+                 PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[CVS]}'\] [CVS] : \W\[\033[00m\]\$ '
             else PS1=$ES'\u@\h: [CVS] : \W\$ '; fi
             ;;
 
         # bazaar repo
         "bzr")
             if [ $USE_COLORS ]; then
-                 PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR_bzr}'\] [bzr] : \W\[\033[00m\]\$ '
+                 PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[bzr]}'\] [bzr] : \W\[\033[00m\]\$ '
             else PS1=$ES'\u@\h: [bzr] : \W\$ '; fi
             ;;
 
@@ -468,16 +479,16 @@ prettyprint_dir()
 
             # print repos
             case "$REPO_TYPE" in
-                "git")  printf "\E[${ALL_COLORS_di}m$firstpart${REPO_COLOR_git}$lastpart/\E[0m" ;;
-                "svn")  printf "\E[${ALL_COLORS_di}m$firstpart${REPO_COLOR_svn}$lastpart/\E[0m" ;;
-                "CVS")  printf "\E[${ALL_COLORS_di}m$firstpart${REPO_COLOR_CVS}$lastpart/\E[0m" ;;
-                "bzr")  printf "\E[${ALL_COLORS_di}m$firstpart${REPO_COLOR_bzr}$lastpart/\E[0m" ;;
-                 "hg")  printf "\E[${ALL_COLORS_di}m$firstpart${REPO_COLOR_hg}$lastpart/\E[0m"  ;;
+                "git")  printf "\E[${ALL_COLORS[di]}m$firstpart${REPO_COLOR[git]}$lastpart/\E[0m" ;;
+                "svn")  printf "\E[${ALL_COLORS[di]}m$firstpart${REPO_COLOR[svn]}$lastpart/\E[0m" ;;
+                "CVS")  printf "\E[${ALL_COLORS[di]}m$firstpart${REPO_COLOR[CVS]}$lastpart/\E[0m" ;;
+                "bzr")  printf "\E[${ALL_COLORS[di]}m$firstpart${REPO_COLOR[bzr]}$lastpart/\E[0m" ;;
+                 "hg")  printf "\E[${ALL_COLORS[di]}m$firstpart${REPO_COLOR[hg]}$lastpart/\E[0m"  ;;
             esac
 
         # print only in dircolor
         else
-            printf "\E[${ALL_COLORS_di}m$pth/\E[0m"
+            printf "\E[${ALL_COLORS[di]}m$pth/\E[0m"
 
         fi
 
@@ -699,17 +710,17 @@ lds()
     local sz h dirs IFS_=$IFS
     clear
     IFS=$'\n'
-    
+
     # When no argument is given, process all dirs. Otherwise: process only given dirs
     if [ $# -eq 0 ]; then
        dirs=$(command ls -dh1 --time-style=+ */ 2> /dev/null)
     else
        dirs=$(command ls -dh1 --time-style=+ "${@/%//}" 2> /dev/null)
     fi
-    
+
     if [ $USE_COLORS ]; then
         # find proper color used for directories
-        local color=$ALL_COLORS_di
+        local color="${ALL_COLORS[di]}"
         # loop through dirlist and parse
         for f in $dirs; do
             sz=$(du -bsh --si $f 2> /dev/null);
@@ -733,17 +744,17 @@ lads()
     clear
     IFS=$'\n'
 
-    # When no argument is given, process all dirs and dot-dirs. 
-    # Otherwise: process only given dirs    
-    if [ $# -eq 0 ]; then    
+    # When no argument is given, process all dirs and dot-dirs.
+    # Otherwise: process only given dirs
+    if [ $# -eq 0 ]; then
         dirs=$(command ls -dh1 --time-style=+ */ .*/ 2> /dev/null)
     else
         dirs=$(command ls -dh1 --time-style=+ "${@/%//}" 2> /dev/null)
     fi
-        
+
     if [ $USE_COLORS ]; then
         # find proper color used for directories
-        local color=$ALL_COLORS_di
+        local color="${ALL_COLORS[di]}"
         # loop through dirlist and parse
         for f in $dirs; do
             sz=$(du -bsh --si $f 2> /dev/null);
@@ -1373,7 +1384,7 @@ _findbig_DONTUSE()
 
     # find proper color used for directories
     if [ $USE_COLORS ]; then
-        local dcolor=$ALL_COLORS_di; fi
+        local dcolor="${ALL_COLORS[di]}"; fi
 
     # loop through all big files
     IFS=$'\n'
