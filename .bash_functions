@@ -132,11 +132,10 @@ haveAttrlist=
         numRows=$minLines; fi
 
     # Split dirlist up in permissions, filesizes, names, and extentions
-    dirlist=("${dirlist[@]/%/\n}")
-    local perms=($(echo ${dirlist[@]} | awk '{print $1}'))
-    local sizes=($(echo ${dirlist[@]} | awk '{print $3}'))
+    local perms=($(printf '%s\n' "${dirlist[@]}" | awk '{print $1}'))
+    local sizes=($(printf '%s\n' "${dirlist[@]}" | awk '{print $3}'))
     # NOTE: awkward yes, but the only way to get all spaces etc. right under ALL circumstances
-    local names=($(echo ${dirlist[@]} | awk '{for(i=4;i<=NF;i++) $(i-3)=$i; if (NF>0)NF=NF-3; print $0}'))
+    local names=($(printf '%s\n' "${dirlist[@]}" | awk '{for(i=4;i<=NF;i++) $(i-3)=$i; if (NF>0)NF=NF-3; print $0}'))
     local extensions
     for ((i=0; i<${#names[@]}; i++)); do
         extensions[$i]=${names[$i]##*\.}
@@ -144,7 +143,7 @@ haveAttrlist=
             extensions[$i]="."; fi
     done
 
-    # and print the list
+    # Now print the list
     if [ $USE_COLORS ]; then
         printf "\E[0m"; fi
 
@@ -256,7 +255,9 @@ haveAttrlist=
                 fi
             fi
         done
+
         printf "\n"
+
     done
 
     # finish up
