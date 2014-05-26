@@ -732,7 +732,15 @@ lads()
     local sz h dirs IFS_=$IFS
     clear
     IFS=$'\n'
-    dirs=$(command ls -dh1 --time-style=+ */ .*/ 2> /dev/null)
+
+    # When no argument is given, process all dirs and dot-dirs. 
+    # Otherwise: process only given dirs    
+    if [ $# -eq 0 ]; then    
+        dirs=$(command ls -dh1 --time-style=+ */ .*/ 2> /dev/null)
+    else
+        dirs=$(command ls -dh1 --time-style=+ "${@/%//}" 2> /dev/null)
+    fi
+        
     if [ $USE_COLORS ]; then
         # find proper color used for directories
         local color=$ALL_COLORS_di
