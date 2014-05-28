@@ -12,7 +12,7 @@
 # Check for external tools
 # --------------------------------------------------------------------------------------------------
 
-command -v lsattr && processAcls=1 || processAcls=0
+command -v lsattr &> /dev/null && processAcls=1 || processAcls=0
 echo | awk '{switch(0){}}' &> /dev/null && haveGawk=1 || haveGawk=0
 
 
@@ -163,6 +163,10 @@ multicolumn_ls()
                 type    = substr(perms, 1,1);
                 if (type == "b" || type == "c") {
                     devices++;
+                    
+                    sizes[FNR-2] = trim($3 $4);
+                    $1=$2=$3=$4="";
+                    names[FNR-2] = trim($0);                    
 
                 }
                 else {
@@ -213,8 +217,8 @@ multicolumn_ls()
                                 else
                                     printf("  ");
 
-                                if (j==columns-1 || i+(j+1)*rows > listLength)
-                                    printf(truncate_and_alignleft(names[ind],'$COLUMNS'-(j+1)*columnWidth-8));
+                                if (i+(j+1)*rows > listLength)
+                                    printf(truncate_and_alignleft(names[ind],'$COLUMNS'-j*columnWidth-8));
                                 else
                                     printf(truncate_and_alignleft(names[ind],columnWidth-8));
                             }
@@ -261,7 +265,7 @@ multicolumn_ls()
             # TODO: also cifs and fuse.sshfs etc. --might--support it, but how to check for this...
         esac
 
-        ( ((${BASH_VERSION:0:1}>=4)) && [ $processAcls -eq 1] && if [ $haveAttrlist ]; then
+        ( ((${BASH_VERSION:0:1}>=4)) && [ $processAcls -eq 1 ] && if [ $haveAttrlist -eq 1 ]; then
             local attrlist
             local attlist=($(lsattr 2>&1))
             local attribs=($(echo "${attlist[*]%% *}"))
