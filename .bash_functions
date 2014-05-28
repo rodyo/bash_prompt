@@ -471,7 +471,7 @@ multicolumn_ls()
 promptcmd()
 {
     # write previous command to disk
-    #history -a
+    history -a
 
     # initialize
     local ES exitstatus=$?    # exitstatus of previous command
@@ -482,79 +482,79 @@ promptcmd()
     pthlen=$(echo "$pth" | sed -r "s/\x1B\[([0-9]{1,3}((;[0-9]{1,3})*)?)?[m|K]//g")
     printf "\E7\E[001;$(($COLUMNS-${#pthlen}-2))H\E[1m\E[32m[$pth\E[1m\E[32m]\E8\E[0m"
 
-    ## previous command exit status
-    #if [ $exitstatus -eq 0 ]; then
-    #    if [ $USE_COLORS ]; then
-    #        ES='\[\033[02;32m\]^_^ \[\033[00m\]'
-    #    else
-    #        ES='^_^ '; fi
-    #else
-    #    if [ $USE_COLORS ]; then
-    #        ES='\[\033[02;31m\]o_O \[\033[00m\]'
-    #    else
-    #        ES='o_O '; fi
-    #fi
-    #
-    #case "$REPO_TYPE" in
-    #
-    #    # GIT repo
-    #    "git")
-    #        branch=$(git branch | command grep "*")
-    #        branch=${branch#\* }
-    #        if [ $? == 0 ]; then
-    #            if [ $USE_COLORS ]; then
-    #                 PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[git]}'\] [git: $branch] : \W\[\033[00m\]\$ '
-    #            else PS1=$ES'\u@\h: [git: $branch] : \W\$ '; fi
-    #        else
-    #            if [ $USE_COLORS ]; then
-    #                 PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[git]}'\] [*unknown branch*] : \W\[\033[00m\]\$ '
-    #            else PS1=$ES'\u@\h: [*unknown branch*] : \W\$ '; fi
-    #        fi
-    #        ;;
-    #
-    #    # SVN repo
-    #    "svn")
-    #        if [ $USE_COLORS ]; then
-    #             PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[svn]}'\] [svn] : \W\[\033[00m\]\$ '
-    #        else PS1=$ES'\u@\h: [svn] : \W\$ '; fi
-    #        ;;
-    #
-    #    # mercurial repo
-    #    "hg")
-    #        if [ $USE_COLORS ]; then
-    #             PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[hg]}'\] [hg] : \W\[\033[00m\]\$ '
-    #        else PS1=$ES'\u@\h: [hg] : \W\$ '; fi
-    #        ;;
-    #
-    #    # CVS repo
-    #    "CVS")
-    #        if [ $USE_COLORS ]; then
-    #             PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[CVS]}'\] [CVS] : \W\[\033[00m\]\$ '
-    #        else PS1=$ES'\u@\h: [CVS] : \W\$ '; fi
-    #        ;;
-    #
-    #    # bazaar repo
-    #    "bzr")
-    #        if [ $USE_COLORS ]; then
-    #             PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[bzr]}'\] [bzr] : \W\[\033[00m\]\$ '
-    #        else PS1=$ES'\u@\h: [bzr] : \W\$ '; fi
-    #        ;;
-    #
-    #    # normal prompt
-    #    *)
-    #        if [ $USE_COLORS ]; then
-    #            # user is root
-    #            if [ `id -u` = 0 ]; then
-    #                PS1=$ES'\[\033[01;31m\]\u@\h\[\033[0m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
-    #            # non-root user
-    #            else
-    #                PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\W\[\033[00m\]\$ '
-    #            fi
-    #        else
-    #            PS1=$ES'\u@\h:\w\$ '
-    #        fi
-    #        ;;
-    #esac
+    # previous command exit status
+    if [ $exitstatus -eq 0 ]; then
+        if [ $USE_COLORS ]; then
+            ES='\[\033[02;32m\]^_^ \[\033[00m\]'
+        else
+            ES='^_^ '; fi
+    else
+        if [ $USE_COLORS ]; then
+            ES='\[\033[02;31m\]o_O \[\033[00m\]'
+        else
+            ES='o_O '; fi
+    fi
+    
+    case "$REPO_TYPE" in
+    
+        # GIT repo
+        "git")
+            branch=$(git branch | command grep "*")
+            branch=${branch#\* }
+            if [ $? == 0 ]; then
+                if [ $USE_COLORS ]; then
+                     PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[git]}'\] [git: $branch] : \W\[\033[00m\]\$ '
+                else PS1=$ES'\u@\h: [git: $branch] : \W\$ '; fi
+            else
+                if [ $USE_COLORS ]; then
+                     PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[git]}'\] [*unknown branch*] : \W\[\033[00m\]\$ '
+                else PS1=$ES'\u@\h: [*unknown branch*] : \W\$ '; fi
+            fi
+            ;;
+    
+        # SVN repo
+        "svn")
+            if [ $USE_COLORS ]; then
+                 PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[svn]}'\] [svn] : \W\[\033[00m\]\$ '
+            else PS1=$ES'\u@\h: [svn] : \W\$ '; fi
+            ;;
+    
+        # mercurial repo
+        "hg")
+            if [ $USE_COLORS ]; then
+                 PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[hg]}'\] [hg] : \W\[\033[00m\]\$ '
+            else PS1=$ES'\u@\h: [hg] : \W\$ '; fi
+            ;;
+    
+        # CVS repo
+        "CVS")
+            if [ $USE_COLORS ]; then
+                 PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[CVS]}'\] [CVS] : \W\[\033[00m\]\$ '
+            else PS1=$ES'\u@\h: [CVS] : \W\$ '; fi
+            ;;
+    
+        # bazaar repo
+        "bzr")
+            if [ $USE_COLORS ]; then
+                 PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[bzr]}'\] [bzr] : \W\[\033[00m\]\$ '
+            else PS1=$ES'\u@\h: [bzr] : \W\$ '; fi
+            ;;
+    
+        # normal prompt
+        *)
+            if [ $USE_COLORS ]; then
+                # user is root
+                if [ `id -u` = 0 ]; then
+                    PS1=$ES'\[\033[01;31m\]\u@\h\[\033[0m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
+                # non-root user
+                else
+                    PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\W\[\033[00m\]\$ '
+                fi
+            else
+                PS1=$ES'\u@\h:\w\$ '
+            fi
+            ;;
+    esac
 
 }
 # make this function the function called at each prompt display
@@ -633,6 +633,7 @@ prettyprint_dir()
             return;
         fi
 
+        # TODO: dependency on AWK; include bash-only version
         local repopath="$(dirname "${repoinfo[@]:1}")"
         pth="${pth/$repopath/$repopath$'\033'[00m$repoCol}"
         echo "${pth/$HOME/~}" | awk '
@@ -687,66 +688,7 @@ prettyprint_dir()
     fi
 }
 
-    ## Check if we're in a repository
-    ##
-    ## Return values:
-    ##   0: repository found
-    ##   1: not a repository
-    ##   2: cd to given dir gave error
-    ##
-    ## Input values:
-    ##   0 arguments: check current dir
-    ##   1 or more arguments: check given FULL path ("$@")
-    ##
-    #check_repo()
-    #{
-    #    local cpath f IFS_=$IFS
-    #    local repos=(".git" ".svn" "CVS" ".hg" ".bzr")
-    #    IFS="/"
-    #
-    #    # function can take argument(s); argument is a FULL path
-    #    # to a potential repo
-    #    if [ $# -ne 0 ]; then
-    #        cpath=($@) # NOTE: don't quote!
-    #    # Function can take no arguments; check current dir
-    #    else
-    #        cpath=($(pwd)) # NOTE: don't quote!
-    #    fi
-    #
-    #    # loop through all parent directories to check for repository signatures
-    #    command cd /
-    #    for f in "${cpath[@]}"; do
-    #
-    #        # CD to current dir
-    #        # NOTE: tilde expansion is disabled
-    #        command cd "${f/\~/$HOME}" 2> /dev/null
-    #
-    #        # Given dir may not exist anymore
-    #        if [ $? -ne 0 ]; then
-    #            IFS=$IFS_
-    #            return 2;
-    #        fi
-    #
-    #        # Perform repo check
-    #        for repo in "${repos[@]}"; do
-    #            if [ -d "$repo" ]; then
-    #                IFS=$IFS_
-    #                echo "${repo#.}"
-    #                echo "$(pwd)"
-    #                return 0
-    #            fi
-    #        done
-    #
-    #    done
-    #
-    #    # no repository found:
-    #    IFS=$IFS_;
-    #    return 1
-    #}
-
-# NOTE:
-# -- accepts multiple dir input
-# -- significant speedup
+# Check if given dir(s) is (are) (a) repository(ies)
 check_repo()
 {
     # Usage:
@@ -1675,11 +1617,11 @@ chroot_dir()
 
 # gedit ALWAYS in background and immune to terminal closing!
 # must be aliased in .bash_aliases
-_gedit_DONTUSE() { (/usr/bin/gedit "$@" &) | nohup &> /dev/null; }
+_gedit_DONTUSE() { (gedit "$@" &) | nohup &> /dev/null; }
 
 # geany ALWAYS in background and immune to terminal closing!
 # must be aliased in .bash_aliases
-_geany_DONTUSE() { (/usr/local/bin/geany "$@" &) | nohup &> /dev/null; }
+_geany_DONTUSE() { (geany "$@" &) | nohup &> /dev/null; }
 
 # grep all processes in wide-format PS, excluding "grep" itself
 psa()
