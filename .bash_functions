@@ -1,13 +1,24 @@
 # TODO: put the repository aliases in an associative array
 # TODO: find proper workaround for bash v. < 4
 
-# TODO: profile everything (multicolumn ls) and find ways to make it  faster!
 
 
 
 # --------------------------------------------------------------------------------------------------
+# Initialize
+# --------------------------------------------------------------------------------------------------
+
+
+# Check for external tools
+# --------------------------------------------------------------------------------------------------
+
+[ -n "$(which lsattr 2> /dev/null)" ] && processAcls=1 || processAcls=0
+echo | awk '{switch(0){}}' &> /dev/null && haveGawk=1 || haveGawk=0
+
+
+
 # Create global associative arrays
-# --------------------------------------------------------------------------------------------------
+# --------------------------------
 
 declare -A REPO_COLOR
 declare -A ALL_COLORS
@@ -71,374 +82,373 @@ command_not_found_handle()
 
 multicolumn_ls()
 {
-#     # preferences
-#     local maxColumnWidth=35
-#     local minLines=15
-#
-#     # derived quantities & declarations
-#     local numColumns=$(($COLUMNS/$maxColumnWidth))
-#     local maxNameWidth=$(($maxColumnWidth-10))
-#     local IFS_=$IFS;
-#
-#     # get initial file, as stripped down as possible, but including the file sizes.
-#     # NOTE: arguments to multicolumn_ls() get appended behind the base ls command
-#     IFS=$'\n'
-#     local dirlist=($(command ls -opgh --group-directories-first --time-style=+ --si "$@"))
-#
-#     # also get the file attribute list (for filesystems that are known to work)
-#     # FIXME: the order of the output of lsattr is different than that of ls.
-#     # the elements in the attributes array will therefore not correspond to the elements in the ls array...
-#     local haveAttrlist=0
-#     case $(find . -maxdepth 0 -printf %F) in
-#         ext2|ext3|ext4) haveAttrlist=1 ;;
-#         # TODO: also cifs and fuse.sshfs etc. --might--support it, but how to check for this...
-#     esac
-#
-#     ( ((${BASH_VERSION:0:1}>=4)) && command -v lsattr && if [ $haveAttrlist ]; then
-#         local attrlist
-#         local attlist=($(lsattr 2>&1))
-#         local attribs=($(echo "${attlist[*]%% *}"))
-#         local attnames=($(echo "${attlist[*]##*\.\/}"))
-#         for ((i=0; i<${#attnames[@]}; i++)); do
-#             if [ ${attribs[$i]%%lsattr:*} ]; then
-#                 printf -v "attrlist_${attnames[$i]}" %s "${attribs[$i]}"; fi
-#         done
-#         unset attnames attribs attlist
-#     fi) || haveAttrlist=
-#
-#     # check if any of the arguments was a "file" (and not just an option)
-#     local haveFiles=false
-#     for ((i=0; i<$#; ++i)); do
-#         if [ -e "$1" ]; then
-#             haveFiles=true
-#             break;
-#         fi
-#         shift
-#     done
-#
-#     # get "total: XXk" line
-#     local firstline=
-#     if [ $haveFiles == false ]; then
-#         firstline="${dirlist[0]}"
-#         unset dirlist[0]
-#     fi
-#
-#     # Compute number of rows to use (equivalent to ceil)
-#     local numRows=$(( (${#dirlist[@]}+$numColumns-1)/$numColumns ))
-#     if [ $numRows -lt $minLines ]; then
-#         numRows=$minLines; fi
-#
-#     # Split dirlist up in permissions, filesizes, names, and extentions
-#     local perms=($(printf '%s\n' "${dirlist[@]}" | awk '{print $1}'))
-#     local sizes=($(printf '%s\n' "${dirlist[@]}" | awk '{print $3}'))
-#     # NOTE: awkward yes, but the only way to get all spaces etc. right under ALL circumstances
-#     local names=($(printf '%s\n' "${dirlist[@]}" | awk '{for(i=4;i<=NF;i++) $(i-3)=$i; if (NF>0)NF=NF-3; print $0}'))
-#     local extensions
-#     for ((i=0; i<${#names[@]}; i++)); do
-#         extensions[$i]=${names[$i]##*\.}
-#         if [ ${extensions[$i]} == ${names[$i]} ]; then
-#             extensions[$i]="."; fi
-#     done
-#
-#     # Now print the list
-#     if [ $USE_COLORS ]; then
-#         printf "\E[0m"; fi
-#
-#     local lastColumnWidth ind paint device=0 lastColumn=0 lastsymbol=" "
-#     local n numDirs=0 numFiles=0 numLinks=0 numDevs=0 numPipes=0 numSockets=0
-#
-#     for ((i=0; i<$numRows; i++)); do
-#         if [ $i -ge ${#names[@]} ]; then break; fi
-#         for ((j=0; j<$numColumns; j++)); do
-#
-#             device=0
-#             lastColumn=0
-#             lastsymbol=" "
-#
-#             ind=$((i+$numRows*j));
-#             if [ $ind -ge ${#names[@]} ]; then
-#                 break; fi
-#             if [ $((i+$numRows*((j+1)))) -ge ${#names[@]} ]; then
-#                 lastColumn=1; fi
-#
-#             # we ARE using colors:
-#             if [ $USE_COLORS ]; then
-#
-#                 # get type (dir, link, file)
-#                 case ${perms[$ind]:0:1} in
-#
-#                     # dir, link, port, socket
-#                     d)  paint="${ALL_COLORS[di]}"; ((numDirs++));;
-#                     p)  paint="${ALL_COLORS[pi]}"; ((numPipes++));;
-#                     s)  paint="${ALL_COLORS[so]}"; ((numSockets++));;
-#                     l)  # check validity of link
-#                         if [ -L "${names[$ind]%% ->*}" ] && [ ! -e "${names[$ind]%% ->*}" ]; then
-#                             paint=09\;"${ALL_COLORS[or]}"
-#                         else
-#                             paint="${ALL_COLORS[ln]}"
-#                         fi
-#                         ((numLinks++))
-#                         ;;
-#
-#                     # block/character devices
-#                     b)  device=1
-#                         ((numDevs++))
-#                         paint="${ALL_COLORS[bd]}"
-#                         ;;
-#                     c)  device=1;
-#                         ((numDevs++))
-#                         paint="${ALL_COLORS[cd]}"
-#                         ;;
-#
-#                     *) # regular files
-#                         ((numFiles++))
-#                         if [[ ${extensions[$ind]} != "." ]]; then
-#                             paint="ALL_COLORS[${extensions[$ind]}]"
-#                             paint=${!paint};
-#                             if [[ ${#paint} = 0 ]]; then
-#                                 paint="${ALL_COLORS[no]}"; fi
-#                         else
-#                             paint="${ALL_COLORS[no]}";
-#                         fi
-#                         ;;
-#                 esac
-#
-#                 # check for specials (acl, group permissions, ...)
-#                 case ${perms[$ind]:((${#perms[$ind]}-1)):1} in
-#                     +)   paint=04\;"$paint";;      # underline files/dirs with acls
-#                     t|T) paint="${ALL_COLORS[ow]}";; # other-writable
-#                     *);;
-#                 esac
-#
-#                 # attribute lists
-#                 if [ $haveAttrlist ]; then
-#
-#                     # immutables
-#                     n=attrlist_${names[$ind]}; n=${!n}
-#                     if [ ${n//[^i]} ]; then
-#                         paint=44\;"$paint"
-#                         lastsymbol="i";
-#                     fi
-#                 fi
-#
-#                 # truncate name if it is longer than maximum displayable length
-#                 if [ ${#names[$ind]} -gt $maxNameWidth ] && [ $lastColumn -eq 0 ]; then
-#                     names[$ind]=${names[$ind]:0:$(($maxNameWidth-3))}"...";
-#                 elif [ $lastColumn -eq 1 ]; then
-#                     lastColumnWidth=$(($COLUMNS-$j*$maxColumnWidth-10-3))
-#                     if [ ${#names[$ind]} -gt $lastColumnWidth ]; then
-#                         names[$ind]=${names[$ind]:0:$lastColumnWidth}"..."; fi
-#                 fi
-#
-#                 # and finally, print it:
-#                 if [[ $device = 1 ]]; then
-#                     # block/character devices
-#                     printf "%7s\E[01;31m%s\E[0m \E[${paint}m%-*s \E[0m" "${sizes[$ind]}${names[$ind]%% *}" "$lastsymbol" $maxNameWidth "${names[$ind]#* }"
-#                 else
-#                     # all others
-#                     printf "%7s\E[01;31m%s\E[0m \E[${paint}m%-*s \E[0m" "${sizes[$ind]}" "$lastsymbol" $maxNameWidth "${names[$ind]}"
-#                 fi
-#
-#             # we're NOT using colors:
-#             else
-#                 # block/character devices need different treatment
-#                 case ${perms[$ind]:0:1} in
-#                     b|c) device=1;;
-#                 esac
-#                 if [[ $device = 1 ]]; then
-#                     printf "%7s  %-*s " "${sizes[$ind]}${names[$ind]%% *}" $maxNameWidth "${names[$ind]#* }"
-#                 else
-#                     printf "%7s  %-*s " "${sizes[$ind]}" $maxNameWidth "${names[$ind]}"
-#                 fi
-#             fi
-#         done
-#
-#         printf "\n"
-#
-#     done
-#
-#     # finish up
-#     if [ $numDirs -eq 0 ] && [ $numFiles -eq 0 ] && [ $numLinks -eq 0 ] &&
-#        [ $numDevs -eq 0 ] && [ $numPipes -eq 0 ] && [ $numSockets -eq 0 ]; then
-#         echo "Empty dir."
-#
-#     else
-#         if [ $haveFiles == false ]; then
-#             printf "%s in " $firstline
-#         else
-#             printf "Total "
-#         fi
-#
-#         if [[ $numDirs != 0 ]]; then
-#             printf "%d dirs, " $numDirs; fi
-#         if [[ $numFiles != 0 ]]; then
-#             printf "%d files, " $numFiles; fi
-#         if [[ $numLinks != 0 ]]; then
-#             printf "%d links, " $numLinks; fi
-#         if [[ $numDevs != 0 ]]; then
-#             printf "%d devices, " $numDevs; fi
-#         if [[ $numPipes != 0 ]]; then
-#             printf "%d pipes, " $numPipes; fi
-#         if [[ $numSockets != 0 ]]; then
-#             printf "%d sockets, " $numSockets; fi
-#
-#         printf "\b\b.\n"
-#     fi
-#
-#     IFS=$IFS_
-#
-#
-# # END PROFILING
-# #set +x
-# #exec 2>&3 3>&-
+    if [ $haveGawk -eq 1 ]; then
 
+        command ls -opg --si --group-directories-first --time-style=+ --color "$@" | awk '
 
-    command ls -opg --si --group-directories-first --time-style=+ --color | awk '
+            function ceil(v) {  # ceil fractional numbers
+                return v==int(v) ? v : int(v)+1;
+            }
 
-        function ceil(v) {  # ceil fractional numbers
-            return v==int(v) ? v : int(v)+1;
-        }
+            function min(v,w) { # minimum of two numbers
+                return w<v ? w : v;
+            }
 
-        function min(v,w) { # minimum of two numbers
-            return w<v ? w : v;
-        }
+            function trim(str) { # trim leading & trailing whitespace
+                sub(/^\s*/,"",str);
+                sub(/\s*$/,"",str);
+                return str;
+            }
 
-        function trim(str) { # trim leading & trailing whitespace
-            sub(/^\s*/,"",str);
-            sub(/\s*$/,"",str);
-            return str;
-        }
+            function strlen(str) { # compute the length of a string, ignoring color-codes
+                gsub(/\033+\[+[0-9;]+m/, "", str);
+                return length(str);
+            }
 
-        function strlen(str) { # compute the length of a string, ignoring color-codes
-            gsub(/\033+\[+[0-9;]+m/, "", str);
-            return length(str);
-        }
-
-        function truncate_and_alignleft(str, maxLen)  # truncate possibly color-coded string
-        {
-            space = 0;
-            len   = strlen(str);
-
-            if (len > maxLen)
+            function truncate_and_alignleft(str, maxLen)  # truncate possibly color-coded string
             {
-                char_count = 0;
-                counting = 1;
-                split(str, str_chars, "");
-                for (k=0; k<length(str_chars); ++k)
+                space = 0;
+                len   = strlen(str);
+
+                if (len > maxLen)
                 {
-                    if (str_chars[k] == "\033") {
-                        counting = false; continue; }
-
-                    if (!counting)
-                        counting = (str_chars[k] =="m");
-                    else
-                        char_count++;
-
-                    if (char_count > maxLen-3) {
-                        str = substr(str,1,k) "..." "\033[00m";
-                        len = k;
-                        break;
-                    }
-                }
-            }
-
-            while (space++ < maxLen-len)
-                str = str " ";
-
-            return str;
-
-        }
-
-
-        BEGIN {
-
-            # Parameters
-            columnWidth    = 35;
-            rowsThreshold  = 15;
-
-            # Counters
-            dirs    = 0;    files = 0;    links = 0;
-            sockets = 0;    pipes = 0;    doors = 0;
-            devices = 0;
-        }
-
-        {
-            # TODO: could be empty dir
-            if (FNR == 1) {
-                total = $0;
-                next;
-            }
-
-            perms   = $1;
-            type    = substr(perms, 1,1);
-            if (type == "b" || type == "c") {
-                devices++;
-
-            }
-            else {
-                if      (type == "d") dirs++;
-                else if (type == "s") sockets++;
-                else if (type == "p") pipes++;
-                else if (type == "D") doors++;
-                else if (type == "l") links++;
-                else                  files++;
-
-                sizes[FNR-2] = trim($3);
-                $1=$2=$3="";
-                names[FNR-2] = trim($0);
-            }
-
-            acls[FNR-2] = (substr(perms, length(perms),1) == "+");
-
-        }
-
-
-        END {
-
-            listLength = FNR-1;
-
-            if (FNR-1 <= rowsThreshold) {
-                for (i=0; i<listLength; ++i)
-                    printf("%6s  %s\n", sizes[i], names[i]);
-            }
-            else {
-                maxColumns = int('$COLUMNS'/columnWidth);
-                columns    = min(maxColumns, ceil(listLength/rowsThreshold));
-                rows       = ceil(listLength/columns);
-
-                #print "columns = " columns ", rows = " rows;
-
-                for (i=0; i<rows; ++i) {
-                    for (j=0; j<columns; ++j)
+                    char_count = 0;
+                    counting = 1;
+                    split(str, str_chars, "");
+                    for (k=0; k<length(str_chars); ++k)
                     {
-                        ind = i+j*rows;
-                        if (ind > listLength)
-                            break;
+                        if (str_chars[k] == "\033") {
+                            counting = false; continue; }
 
-                        printf("%6s", sizes[ind]);
-                        if (acls[ind])
-                            printf("+ ");
+                        if (!counting)
+                            counting = (str_chars[k] =="m");
                         else
-                            printf("  ");
+                            char_count++;
 
-                        printf(truncate_and_alignleft(names[ind],columnWidth-8));
+                        if (char_count > maxLen-3) {
+                            str = substr(str,1,k) "..." "\033[00m";
+                            len = k;
+                            break;
+                        }
                     }
-                    printf("\n");
                 }
+
+                while (space++ < maxLen-len)
+                    str = str " ";
+
+                return str;
+
             }
 
-            printf("\n %s ", total " in")
-            if (dirs    != 0)  if (dirs    ==1) printf "1 directory, "; else printf dirs    " directories, ";
-            if (files   != 0)  if (files   ==1) printf "1 file, "     ; else printf files   " files, "      ;
-            if (links   != 0)  if (links   ==1) printf "1 link, "     ; else printf links   " symlinks, "   ;
-            if (sockets != 0)  if (sockets ==1) printf "1 socket, "   ; else printf sockets " sockets, "    ;
-            if (pipes   != 0)  if (pipes   ==1) printf "1 pipe, "     ; else printf pipes   " pipes, "      ;
-            if (doors   != 0)  if (doors   ==1) printf "1 door, "     ; else printf doors   " doors, "      ;
-            if (devices != 0)  if (devices ==1) printf "1 device, "   ; else printf devices " devices, "    ;
-            printf("\b\b.\n\n");
+            BEGIN {
 
-        }
-    '
+                # Parameters
+                columnWidth    = 35;
+                rowsThreshold  = 15;
+
+                # Counters
+                dirs    = 0;    files = 0;    links = 0;
+                sockets = 0;    pipes = 0;    doors = 0;
+                devices = 0;
+            }
+
+            {
+                # TODO: could be empty dir
+                if (FNR == 1) {
+                    total = $0;
+                    next;
+                }
+
+                perms   = $1;
+                type    = substr(perms, 1,1);
+                if (type == "b" || type == "c") {
+                    devices++;
+
+                }
+                else {
+                    if      (type == "d") dirs++;
+                    else if (type == "s") sockets++;
+                    else if (type == "p") pipes++;
+                    else if (type == "D") doors++;
+                    else if (type == "l") links++;
+                    else                  files++;
+
+                    sizes[FNR-2] = trim($3);
+                    $1=$2=$3="";
+                    names[FNR-2] = trim($0);
+                }
+
+                acls[FNR-2] = (substr(perms, length(perms),1) == "+");
+
+            }
+
+            END {
+
+                listLength = FNR-1;
+
+                if (FNR-1 <= rowsThreshold) {
+                    for (i=0; i<listLength; ++i)
+                        printf("%6s  %s\n", sizes[i], names[i]);
+                }
+                else {
+                    maxColumns = int('$COLUMNS'/columnWidth);
+                    columns    = min(maxColumns, ceil(listLength/rowsThreshold));
+                    rows       = ceil(listLength/columns);
+
+                    #print "columns = " columns ", rows = " rows;
+
+                    for (i=0; i<rows; ++i) {
+                        for (j=0; j<columns; ++j)
+                        {
+                            ind = i+j*rows;
+                            if (ind > listLength)
+                                break;
+
+                            printf("%6s", sizes[ind]);
+                            if (acls[ind])
+                                printf("+ ");
+                            else
+                                printf("  ");
+
+                            printf(truncate_and_alignleft(names[ind],columnWidth-8));
+                        }
+                        printf("\n");
+                    }
+                }
+
+                printf("\n %s ", total " in")
+                if (dirs    != 0)  if (dirs    ==1) printf "1 directory, "; else printf dirs    " directories, ";
+                if (files   != 0)  if (files   ==1) printf "1 file, "     ; else printf files   " files, "      ;
+                if (links   != 0)  if (links   ==1) printf "1 link, "     ; else printf links   " symlinks, "   ;
+                if (sockets != 0)  if (sockets ==1) printf "1 socket, "   ; else printf sockets " sockets, "    ;
+                if (pipes   != 0)  if (pipes   ==1) printf "1 pipe, "     ; else printf pipes   " pipes, "      ;
+                if (doors   != 0)  if (doors   ==1) printf "1 door, "     ; else printf doors   " doors, "      ;
+                if (devices != 0)  if (devices ==1) printf "1 device, "   ; else printf devices " devices, "    ;
+                printf("\b\b.\n\n");
+
+            }
+        '
+
+    # Pure bash solution (Slow as CRAP!)
+    else
+
+        # preferences
+        local maxColumnWidth=35
+        local minLines=15
+
+        # derived quantities & declarations
+        local numColumns=$(($COLUMNS/$maxColumnWidth))
+        local maxNameWidth=$(($maxColumnWidth-10))
+        local IFS_=$IFS;
+
+        # get initial file, as stripped down as possible, but including the file sizes.
+        # NOTE: arguments to multicolumn_ls() get appended behind the base ls command
+        IFS=$'\n'
+        local dirlist=($(command ls -opgh --group-directories-first --time-style=+ --si "$@"))
+
+        # also get the file attribute list (for filesystems that are known to work)
+        # FIXME: the order of the output of lsattr is different than that of ls.
+        # the elements in the attributes array will therefore not correspond to the elements in the ls array...
+        local haveAttrlist=0
+        case $(find . -maxdepth 0 -printf %F) in
+            ext2|ext3|ext4) haveAttrlist=1 ;;
+            # TODO: also cifs and fuse.sshfs etc. --might--support it, but how to check for this...
+        esac
+
+        ( ((${BASH_VERSION:0:1}>=4)) && command -v lsattr && if [ $haveAttrlist ]; then
+            local attrlist
+            local attlist=($(lsattr 2>&1))
+            local attribs=($(echo "${attlist[*]%% *}"))
+            local attnames=($(echo "${attlist[*]##*\.\/}"))
+            for ((i=0; i<${#attnames[@]}; i++)); do
+                if [ ${attribs[$i]%%lsattr:*} ]; then
+                    printf -v "attrlist_${attnames[$i]}" %s "${attribs[$i]}"; fi
+            done
+            unset attnames attribs attlist
+        fi) || haveAttrlist=
+
+        # check if any of the arguments was a "file" (and not just an option)
+        local haveFiles=false
+        for ((i=0; i<$#; ++i)); do
+            if [ -e "$1" ]; then
+                haveFiles=true
+                break;
+            fi
+            shift
+        done
+
+        # get "total: XXk" line
+        local firstline=
+        if [ $haveFiles == false ]; then
+            firstline="${dirlist[0]}"
+            unset dirlist[0]
+        fi
+
+        # Compute number of rows to use (equivalent to ceil)
+        local numRows=$(( (${#dirlist[@]}+$numColumns-1)/$numColumns ))
+        if [ $numRows -lt $minLines ]; then
+            numRows=$minLines; fi
+
+        # Split dirlist up in permissions, filesizes, names, and extentions
+        local perms=($(printf '%s\n' "${dirlist[@]}" | awk '{print $1}'))
+        local sizes=($(printf '%s\n' "${dirlist[@]}" | awk '{print $3}'))
+        # NOTE: awkward yes, but the only way to get all spaces etc. right under ALL circumstances
+        local names=($(printf '%s\n' "${dirlist[@]}" | awk '{for(i=4;i<=NF;i++) $(i-3)=$i; if (NF>0)NF=NF-3; print $0}'))
+        local extensions
+        for ((i=0; i<${#names[@]}; i++)); do
+            extensions[$i]=${names[$i]##*\.}
+            if [ ${extensions[$i]} == ${names[$i]} ]; then
+                extensions[$i]="."; fi
+        done
+
+        # Now print the list
+        if [ $USE_COLORS ]; then
+            printf "\E[0m"; fi
+
+        local lastColumnWidth ind paint device=0 lastColumn=0 lastsymbol=" "
+        local n numDirs=0 numFiles=0 numLinks=0 numDevs=0 numPipes=0 numSockets=0
+
+        for ((i=0; i<$numRows; i++)); do
+            if [ $i -ge ${#names[@]} ]; then break; fi
+            for ((j=0; j<$numColumns; j++)); do
+
+                device=0
+                lastColumn=0
+                lastsymbol=" "
+
+                ind=$((i+$numRows*j));
+                if [ $ind -ge ${#names[@]} ]; then
+                    break; fi
+                if [ $((i+$numRows*((j+1)))) -ge ${#names[@]} ]; then
+                    lastColumn=1; fi
+
+                # we ARE using colors:
+                if [ $USE_COLORS ]; then
+
+                    # get type (dir, link, file)
+                    case ${perms[$ind]:0:1} in
+
+                        # dir, link, port, socket
+                        d)  paint="${ALL_COLORS[di]}"; ((numDirs++));;
+                        p)  paint="${ALL_COLORS[pi]}"; ((numPipes++));;
+                        s)  paint="${ALL_COLORS[so]}"; ((numSockets++));;
+                        l)  # check validity of link
+                            if [ -L "${names[$ind]%% ->*}" ] && [ ! -e "${names[$ind]%% ->*}" ]; then
+                                paint=09\;"${ALL_COLORS[or]}"
+                            else
+                                paint="${ALL_COLORS[ln]}"
+                            fi
+                            ((numLinks++))
+                            ;;
+
+                        # block/character devices
+                        b)  device=1
+                            ((numDevs++))
+                            paint="${ALL_COLORS[bd]}"
+                            ;;
+                        c)  device=1;
+                            ((numDevs++))
+                            paint="${ALL_COLORS[cd]}"
+                            ;;
+
+                        *) # regular files
+                            ((numFiles++))
+                            if [[ ${extensions[$ind]} != "." ]]; then
+                                paint="ALL_COLORS[${extensions[$ind]}]"
+                                paint=${!paint};
+                                if [[ ${#paint} = 0 ]]; then
+                                    paint="${ALL_COLORS[no]}"; fi
+                            else
+                                paint="${ALL_COLORS[no]}";
+                            fi
+                            ;;
+                    esac
+
+                    # check for specials (acl, group permissions, ...)
+                    case ${perms[$ind]:((${#perms[$ind]}-1)):1} in
+                        +)   paint=04\;"$paint";;      # underline files/dirs with acls
+                        t|T) paint="${ALL_COLORS[ow]}";; # other-writable
+                        *);;
+                    esac
+
+                    # attribute lists
+                    if [ $haveAttrlist ]; then
+
+                        # immutables
+                        n=attrlist_${names[$ind]}; n=${!n}
+                        if [ ${n//[^i]} ]; then
+                            paint=44\;"$paint"
+                            lastsymbol="i";
+                        fi
+                    fi
+
+                    # truncate name if it is longer than maximum displayable length
+                    if [ ${#names[$ind]} -gt $maxNameWidth ] && [ $lastColumn -eq 0 ]; then
+                        names[$ind]=${names[$ind]:0:$(($maxNameWidth-3))}"...";
+                    elif [ $lastColumn -eq 1 ]; then
+                        lastColumnWidth=$(($COLUMNS-$j*$maxColumnWidth-10-3))
+                        if [ ${#names[$ind]} -gt $lastColumnWidth ]; then
+                            names[$ind]=${names[$ind]:0:$lastColumnWidth}"..."; fi
+                    fi
+
+                    # and finally, print it:
+                    if [[ $device = 1 ]]; then
+                        # block/character devices
+                        printf "%7s\E[01;31m%s\E[0m \E[${paint}m%-*s \E[0m" "${sizes[$ind]}${names[$ind]%% *}" "$lastsymbol" $maxNameWidth "${names[$ind]#* }"
+                    else
+                        # all others
+                        printf "%7s\E[01;31m%s\E[0m \E[${paint}m%-*s \E[0m" "${sizes[$ind]}" "$lastsymbol" $maxNameWidth "${names[$ind]}"
+                    fi
+
+                # we're NOT using colors:
+                else
+                    # block/character devices need different treatment
+                    case ${perms[$ind]:0:1} in
+                        b|c) device=1;;
+                    esac
+                    if [[ $device = 1 ]]; then
+                        printf "%7s  %-*s " "${sizes[$ind]}${names[$ind]%% *}" $maxNameWidth "${names[$ind]#* }"
+                    else
+                        printf "%7s  %-*s " "${sizes[$ind]}" $maxNameWidth "${names[$ind]}"
+                    fi
+                fi
+            done
+
+            printf "\n"
+
+        done
+
+        # finish up
+        if [ $numDirs -eq 0 ] && [ $numFiles -eq 0 ] && [ $numLinks -eq 0 ] &&
+           [ $numDevs -eq 0 ] && [ $numPipes -eq 0 ] && [ $numSockets -eq 0 ]; then
+            echo "Empty dir."
+
+        else
+            if [ $haveFiles == false ]; then
+                printf "%s in " $firstline
+            else
+                printf "Total "
+            fi
+
+            if [[ $numDirs != 0 ]]; then
+                printf "%d dirs, " $numDirs; fi
+            if [[ $numFiles != 0 ]]; then
+                printf "%d files, " $numFiles; fi
+            if [[ $numLinks != 0 ]]; then
+                printf "%d links, " $numLinks; fi
+            if [[ $numDevs != 0 ]]; then
+                printf "%d devices, " $numDevs; fi
+            if [[ $numPipes != 0 ]]; then
+                printf "%d pipes, " $numPipes; fi
+            if [[ $numSockets != 0 ]]; then
+                printf "%d sockets, " $numSockets; fi
+
+            printf "\b\b.\n"
+        fi
+
+        IFS=$IFS_
+
+    fi
 
 }
 
