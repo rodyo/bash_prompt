@@ -498,62 +498,125 @@ prettyprint_dir()
     fi
 }
 
-# Check if we're in a repository
-#
-# Return values:
-#   0: repository found
-#   1: not a repository
-#   2: cd to given dir gave error
-#
-# Input values:
-#   0 arguments: check current dir
-#   1 or more arguments: check given FULL path ("$@")
-#
+    ## Check if we're in a repository
+    ##
+    ## Return values:
+    ##   0: repository found
+    ##   1: not a repository
+    ##   2: cd to given dir gave error
+    ##
+    ## Input values:
+    ##   0 arguments: check current dir
+    ##   1 or more arguments: check given FULL path ("$@")
+    ##
+    #check_repo()
+    #{
+    #    local cpath f IFS_=$IFS
+    #    local repos=(".git" ".svn" "CVS" ".hg" ".bzr")
+    #    IFS="/"
+    #
+    #    # function can take argument(s); argument is a FULL path
+    #    # to a potential repo
+    #    if [ $# -ne 0 ]; then
+    #        cpath=($@) # NOTE: don't quote!
+    #    # Function can take no arguments; check current dir
+    #    else
+    #        cpath=($(pwd)) # NOTE: don't quote!
+    #    fi
+    #
+    #    # loop through all parent directories to check for repository signatures
+    #    command cd /
+    #    for f in "${cpath[@]}"; do
+    #
+    #        # CD to current dir
+    #        # NOTE: tilde expansion is disabled
+    #        command cd "${f/\~/$HOME}" 2> /dev/null
+    #
+    #        # Given dir may not exist anymore
+    #        if [ $? -ne 0 ]; then
+    #            IFS=$IFS_
+    #            return 2;
+    #        fi
+    #
+    #        # Perform repo check
+    #        for repo in "${repos[@]}"; do
+    #            if [ -d "$repo" ]; then
+    #                IFS=$IFS_
+    #                echo "${repo#.}"
+    #                echo "$(pwd)"
+    #                return 0
+    #            fi
+    #        done
+    #
+    #    done
+    #
+    #    # no repository found:
+    #    IFS=$IFS_;
+    #    return 1
+    #}
+
+# NOTE:
+# -- accepts multiple dir input
+# -- significant speedup
 check_repo()
 {
-    local cpath f IFS_=$IFS
-    local repos=(".git" ".svn" "CVS" ".hg" ".bzr")
-    IFS="/"
+    # Usage:
+    #     check_repo [dir1] [dir2] ...
+    # If arguments are ommitted, only PWD is processed.
 
-    # function can take argument(s); argument is a FULL path
-    # to a potential repo
-    if [ $# -ne 0 ]; then
-        cpath=($@) # NOTE: don't quote!
-    # Function can take no arguments; check current dir
+
+    # Output:
+    #     [repo type 1] [repo root 1]
+    #     [repo type 2] [repo root 2]
+    #     ...
+    # Strings are set equal to "---" if the given dir is not a repository
+
+    local -a dirs
+    local curdir="$PWD"
+
+    if [ $# -eq 0 ]; then
+        dirs="$curdir"
     else
-        cpath=($(pwd)) # NOTE: don't quote!
+        dirs=("$@")
     fi
 
-    # loop through all parent directories to check for repository signatures
-    command cd /
-    for f in "${cpath[@]}"; do
+    local -a slashes=("${dirs[@]//[^\/]/}")
+    local -a repotype reporoot
+    local dir
 
-        # CD to current dir
-        # NOTE: tilde expansion is disabled
-        command cd "${f/\~/$HOME}" 2> /dev/null
+    # Using repeated cd() is slow; It's faster to append ".." in a loop, and
+    # only do 1 call to cd() to cleanup the dir format
+    for (( d=0; d<${#dirs[@]}; ++d )); do
 
-        # Given dir may not exist anymore
-        if [ $? -ne 0 ]; then
-            IFS=$IFS_
-            return 2;
+        dir="${dirs[$d]}"
+
+        if [ ! -d "$dir" ]; then
+            repotype[$d]="---"
+            reporoot[$d]="[dir removed]"
+            continue;
+        else
+            repotype[$d]="---"
+            reporoot[$d]="[no repository found]"
         fi
 
-        # Perform repo check
-        for repo in "${repos[@]}"; do
-            if [ -d "$repo" ]; then
-                IFS=$IFS_
-                echo "${repo#.}"
-                echo "$(pwd)"
-                return 0
-            fi
+        # NOTE: repeated commands outperform function call by an order of magnitude
+        # NOTE: commands without capture "$(...)" outperform commands with capture
+        for (( n=${#slashes[$d]}; n>0; --n )); do
+            [ -d "$dir/.git" ] && repotype[$d]="git" && cd "$dir" && reporoot[$d]="$PWD" && cd "$curdir" && break;
+            [ -d "$dir/.svn" ] && repotype[$d]="svn" && cd "$dir" && reporoot[$d]="$PWD" && cd "$curdir" && break;
+            [ -d "$dir/.CVS" ] && repotype[$d]="CVS" && cd "$dir" && reporoot[$d]="$PWD" && cd "$curdir" && break;
+            [ -d "$dir/.bzr" ] && repotype[$d]="bzr" && cd "$dir" && reporoot[$d]="$PWD" && cd "$curdir" && break;
+            [ -d "$dir/.hg"  ] && repotype[$d]="hg " && cd "$dir" && reporoot[$d]="$PWD" && cd "$curdir" && break;
+            dir="$dir/.."
         done
 
     done
 
-    # no repository found:
-    IFS=$IFS_;
-    return 1
+    for ((i=0;i<${#repotype[@]}; ++i )); do
+        printf "%s %s\n" "${repotype[$i]} ${reporoot[$i]}"; done
 }
+
+
 
 # Update all repositories under the current dir
 update_all()
@@ -870,15 +933,6 @@ _cd_DONTUSE()
 
         # Check if we're in a repo. If so, enter a repo mode
         repo=($(check_repo))
-
-        #clear
-        #echo  "${repo[0]}"
-        #sleep 1
-        #clear
-        #echo "${repo[@]:1}"
-        #sleep 1
-        #clear
-
         if [ $? -eq 0 ]; then
             case "${repo[0]}" in
                 "git") enter_GIT "${repo[@]:1}" ;;
@@ -889,6 +943,7 @@ _cd_DONTUSE()
                 *) ;;
             esac
         fi
+
         clear
         multicolumn_ls
 
