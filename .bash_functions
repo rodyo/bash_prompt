@@ -12,7 +12,7 @@
 # Check for external tools
 # --------------------------------------------------------------------------------------------------
 
-[ -n "$(which lsattr 2> /dev/null)" ] && processAcls=1 || processAcls=0
+command -v lsattr && processAcls=1 || processAcls=0
 echo | awk '{switch(0){}}' &> /dev/null && haveGawk=1 || haveGawk=0
 
 
@@ -185,47 +185,53 @@ multicolumn_ls()
             END {
 
                 listLength = FNR-1;
-
-                if (FNR-1 <= rowsThreshold) {
-                    for (i=0; i<listLength; ++i)
-                        printf("%6s  %s\n", sizes[i], names[i]);
-                }
-                else {
-                    maxColumns = int('$COLUMNS'/columnWidth);
-                    columns    = min(maxColumns, ceil(listLength/rowsThreshold));
-                    rows       = ceil(listLength/columns);
-
-                    #print "columns = " columns ", rows = " rows;
-
-                    for (i=0; i<rows; ++i) {
-                        for (j=0; j<columns; ++j)
-                        {
-                            ind = i+j*rows;
-                            if (ind > listLength)
-                                break;
-
-                            printf("%6s", sizes[ind]);
-                            if (acls[ind])
-                                printf("+ ");
-                            else
-                                printf("  ");
-
-                            printf(truncate_and_alignleft(names[ind],columnWidth-8));
-                        }
-                        printf("\n");
+                if (listLength == 0)
+                    printf "Empty dir.\n"
+                else
+                {
+                    if (FNR-1 <= rowsThreshold) {
+                        for (i=0; i<listLength; ++i)
+                            printf("%6s  %s\n", sizes[i], names[i]);
                     }
+                    else {
+                        maxColumns = int('$COLUMNS'/columnWidth);
+                        columns    = min(maxColumns, ceil(listLength/rowsThreshold));
+                        rows       = ceil(listLength/columns);
+
+                        #print "columns = " columns ", rows = " rows;
+
+                        for (i=0; i<rows; ++i) {
+                            for (j=0; j<columns; ++j)
+                            {
+                                ind = i+j*rows;
+                                if (ind > listLength)
+                                    break;
+
+                                printf("%6s", sizes[ind]);
+                                if (acls[ind])
+                                    printf("+ ");
+                                else
+                                    printf("  ");
+
+                                if (j==columns-1 || i+(j+1)*rows > listLength)
+                                    printf(truncate_and_alignleft(names[ind],'$COLUMNS'-(j+1)*columnWidth-8));
+                                else
+                                    printf(truncate_and_alignleft(names[ind],columnWidth-8));
+                            }
+                            printf("\n");
+                        }
+                    }
+
+                    printf("%s ", total " in")
+                    if (dirs    != 0)  if (dirs    ==1) printf "1 directory, "; else printf dirs    " directories, ";
+                    if (files   != 0)  if (files   ==1) printf "1 file, "     ; else printf files   " files, "      ;
+                    if (links   != 0)  if (links   ==1) printf "1 link, "     ; else printf links   " symlinks, "   ;
+                    if (sockets != 0)  if (sockets ==1) printf "1 socket, "   ; else printf sockets " sockets, "    ;
+                    if (pipes   != 0)  if (pipes   ==1) printf "1 pipe, "     ; else printf pipes   " pipes, "      ;
+                    if (doors   != 0)  if (doors   ==1) printf "1 door, "     ; else printf doors   " doors, "      ;
+                    if (devices != 0)  if (devices ==1) printf "1 device, "   ; else printf devices " devices, "    ;
+                    printf("\b\b.\n");
                 }
-
-                printf("\n %s ", total " in")
-                if (dirs    != 0)  if (dirs    ==1) printf "1 directory, "; else printf dirs    " directories, ";
-                if (files   != 0)  if (files   ==1) printf "1 file, "     ; else printf files   " files, "      ;
-                if (links   != 0)  if (links   ==1) printf "1 link, "     ; else printf links   " symlinks, "   ;
-                if (sockets != 0)  if (sockets ==1) printf "1 socket, "   ; else printf sockets " sockets, "    ;
-                if (pipes   != 0)  if (pipes   ==1) printf "1 pipe, "     ; else printf pipes   " pipes, "      ;
-                if (doors   != 0)  if (doors   ==1) printf "1 door, "     ; else printf doors   " doors, "      ;
-                if (devices != 0)  if (devices ==1) printf "1 device, "   ; else printf devices " devices, "    ;
-                printf("\b\b.\n\n");
-
             }
         '
 
@@ -255,7 +261,7 @@ multicolumn_ls()
             # TODO: also cifs and fuse.sshfs etc. --might--support it, but how to check for this...
         esac
 
-        ( ((${BASH_VERSION:0:1}>=4)) && command -v lsattr && if [ $haveAttrlist ]; then
+        ( ((${BASH_VERSION:0:1}>=4)) && [ $processAcls -eq 1] && if [ $haveAttrlist ]; then
             local attrlist
             local attlist=($(lsattr 2>&1))
             local attribs=($(echo "${attlist[*]%% *}"))
@@ -461,91 +467,90 @@ multicolumn_ls()
 promptcmd()
 {
     # write previous command to disk
-    history -a
+    #history -a
 
     # initialize
     local ES exitstatus=$?    # exitstatus of previous command
     local pth pthlen
 
-    # put full path in the upper right corner
-    # repositories will show the normal part blue, the repository part red
-    pth=$(prettyprint_dir "$(pwd)")
+    # put pretty-printed full path in the upper right corner
+    pth="$(prettyprint_dir "$(pwd)")"
     pthlen=$(echo "$pth" | sed -r "s/\x1B\[([0-9]{1,3}((;[0-9]{1,3})*)?)?[m|K]//g")
     printf "\E7\E[001;$(($COLUMNS-${#pthlen}-2))H\E[1m\E[32m[$pth\E[1m\E[32m]\E8\E[0m"
 
-    # previous command exit status
-    if [ $exitstatus -eq 0 ]; then
-        if [ $USE_COLORS ]; then
-            ES='\[\033[02;32m\]^_^ \[\033[00m\]'
-        else
-            ES='^_^ '; fi
-    else
-        if [ $USE_COLORS ]; then
-            ES='\[\033[02;31m\]o_O \[\033[00m\]'
-        else
-            ES='o_O '; fi
-    fi
-
-    case "$REPO_TYPE" in
-
-        # GIT repo
-        "git")
-            branch=$(git branch | command grep "*")
-            branch=${branch#\* }
-            if [ $? == 0 ]; then
-                if [ $USE_COLORS ]; then
-                     PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[git]}'\] [git: $branch] : \W\[\033[00m\]\$ '
-                else PS1=$ES'\u@\h: [git: $branch] : \W\$ '; fi
-            else
-                if [ $USE_COLORS ]; then
-                     PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[git]}'\] [*unknown branch*] : \W\[\033[00m\]\$ '
-                else PS1=$ES'\u@\h: [*unknown branch*] : \W\$ '; fi
-            fi
-            ;;
-
-        # SVN repo
-        "svn")
-            if [ $USE_COLORS ]; then
-                 PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[svn]}'\] [svn] : \W\[\033[00m\]\$ '
-            else PS1=$ES'\u@\h: [svn] : \W\$ '; fi
-            ;;
-
-        # mercurial repo
-        "hg")
-            if [ $USE_COLORS ]; then
-                 PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[hg]}'\] [hg] : \W\[\033[00m\]\$ '
-            else PS1=$ES'\u@\h: [hg] : \W\$ '; fi
-            ;;
-
-        # CVS repo
-        "CVS")
-            if [ $USE_COLORS ]; then
-                 PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[CVS]}'\] [CVS] : \W\[\033[00m\]\$ '
-            else PS1=$ES'\u@\h: [CVS] : \W\$ '; fi
-            ;;
-
-        # bazaar repo
-        "bzr")
-            if [ $USE_COLORS ]; then
-                 PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[bzr]}'\] [bzr] : \W\[\033[00m\]\$ '
-            else PS1=$ES'\u@\h: [bzr] : \W\$ '; fi
-            ;;
-
-        # normal prompt
-        *)
-            if [ $USE_COLORS ]; then
-                # user is root
-                if [ `id -u` = 0 ]; then
-                    PS1=$ES'\[\033[01;31m\]\u@\h\[\033[0m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
-                # non-root user
-                else
-                    PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\W\[\033[00m\]\$ '
-                fi
-            else
-                PS1=$ES'\u@\h:\w\$ '
-            fi
-            ;;
-    esac
+    ## previous command exit status
+    #if [ $exitstatus -eq 0 ]; then
+    #    if [ $USE_COLORS ]; then
+    #        ES='\[\033[02;32m\]^_^ \[\033[00m\]'
+    #    else
+    #        ES='^_^ '; fi
+    #else
+    #    if [ $USE_COLORS ]; then
+    #        ES='\[\033[02;31m\]o_O \[\033[00m\]'
+    #    else
+    #        ES='o_O '; fi
+    #fi
+    #
+    #case "$REPO_TYPE" in
+    #
+    #    # GIT repo
+    #    "git")
+    #        branch=$(git branch | command grep "*")
+    #        branch=${branch#\* }
+    #        if [ $? == 0 ]; then
+    #            if [ $USE_COLORS ]; then
+    #                 PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[git]}'\] [git: $branch] : \W\[\033[00m\]\$ '
+    #            else PS1=$ES'\u@\h: [git: $branch] : \W\$ '; fi
+    #        else
+    #            if [ $USE_COLORS ]; then
+    #                 PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[git]}'\] [*unknown branch*] : \W\[\033[00m\]\$ '
+    #            else PS1=$ES'\u@\h: [*unknown branch*] : \W\$ '; fi
+    #        fi
+    #        ;;
+    #
+    #    # SVN repo
+    #    "svn")
+    #        if [ $USE_COLORS ]; then
+    #             PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[svn]}'\] [svn] : \W\[\033[00m\]\$ '
+    #        else PS1=$ES'\u@\h: [svn] : \W\$ '; fi
+    #        ;;
+    #
+    #    # mercurial repo
+    #    "hg")
+    #        if [ $USE_COLORS ]; then
+    #             PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[hg]}'\] [hg] : \W\[\033[00m\]\$ '
+    #        else PS1=$ES'\u@\h: [hg] : \W\$ '; fi
+    #        ;;
+    #
+    #    # CVS repo
+    #    "CVS")
+    #        if [ $USE_COLORS ]; then
+    #             PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[CVS]}'\] [CVS] : \W\[\033[00m\]\$ '
+    #        else PS1=$ES'\u@\h: [CVS] : \W\$ '; fi
+    #        ;;
+    #
+    #    # bazaar repo
+    #    "bzr")
+    #        if [ $USE_COLORS ]; then
+    #             PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[bzr]}'\] [bzr] : \W\[\033[00m\]\$ '
+    #        else PS1=$ES'\u@\h: [bzr] : \W\$ '; fi
+    #        ;;
+    #
+    #    # normal prompt
+    #    *)
+    #        if [ $USE_COLORS ]; then
+    #            # user is root
+    #            if [ `id -u` = 0 ]; then
+    #                PS1=$ES'\[\033[01;31m\]\u@\h\[\033[0m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
+    #            # non-root user
+    #            else
+    #                PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\W\[\033[00m\]\$ '
+    #            fi
+    #        else
+    #            PS1=$ES'\u@\h:\w\$ '
+    #        fi
+    #        ;;
+    #esac
 
 }
 # make this function the function called at each prompt display
@@ -592,55 +597,85 @@ print_list_if_OK()
 # pretty print directory
 prettyprint_dir()
 {
+    if [ $# -eq 0 ]; then
+        return; fi
+
+    local -a repoinfo
     local pwdmaxlen=$(($COLUMNS/3))
-    local trunc_symbol="..."
-    local pthoffset truncated=0 pth="${@/$HOME/~}"
+    local pthoffset truncated=0 pth="${1//$HOME/~}"
 
     # truncate argument if it's longer than 30 chars
     if [ ${#pth} -gt $pwdmaxlen ]; then
         truncated=1
         pthoffset=$((${#pth}-$pwdmaxlen))
-        pth="${trunc_symbol}${pth:$pthoffset:$pwdmaxlen}"
+        pth="...${pth:$pthoffset:$pwdmaxlen}"
+    fi
+
+
+    if [ $# -lt 3 ]; then
+        repoinfo=($(check_repo "$@"))
+    else
+        repoinfo=("$2" "$3")
     fi
 
     # Color print
     if [ $USE_COLORS ]; then
 
-        # We're in a repository; additional colors are required
-        if [[ $REPO_MODE = true ]]; then
+        pth="$(command ls -d "$1" --color)"
 
-            # split input in repo path and deeper levels
-            local firstpart=$(dirname "${REPO_PATH/$HOME/~}")
-            firstpart=$(trim "$firstpart")
-            local lastpart=$(trim "${1/$HOME/~}")
-            lastpart="${lastpart##$firstpart}"
-
-            # re-do the truncating when needed
-            if [ $truncated = 1 ]; then
-                if [ ${#lastpart} -gt $pwdmaxlen ]; then
-                    firstpart=
-                    pthoffset=$((${#lastpart}-$pwdmaxlen))
-                    lastpart="${trunc_symbol}${lastpart:$pthoffset:$pwdmaxlen}"
-                else
-                    pthoffset=$((${#firstpart}-$pwdmaxlen+${#lastpart}))
-                    firstpart="${trunc_symbol}${firstpart:$pthoffset:${#firstpart}}"
-                fi
-            fi
-
-            # print repos
-            case "$REPO_TYPE" in
-                "git")  printf "\E[${ALL_COLORS[di]}m$firstpart${REPO_COLOR[git]}$lastpart/\E[0m" ;;
-                "svn")  printf "\E[${ALL_COLORS[di]}m$firstpart${REPO_COLOR[svn]}$lastpart/\E[0m" ;;
-                "CVS")  printf "\E[${ALL_COLORS[di]}m$firstpart${REPO_COLOR[CVS]}$lastpart/\E[0m" ;;
-                "bzr")  printf "\E[${ALL_COLORS[di]}m$firstpart${REPO_COLOR[bzr]}$lastpart/\E[0m" ;;
-                 "hg")  printf "\E[${ALL_COLORS[di]}m$firstpart${REPO_COLOR[hg]}$lastpart/\E[0m"  ;;
-            esac
-
-        # print only in dircolor
-        else
-            printf "\E[${ALL_COLORS[di]}m$pth/\E[0m"
-
+        repoCol=${REPO_COLOR[${repoinfo[0]}]};
+        if [ -z $repoCol ]; then
+            printf "${pth/$HOME/~}";
+            return;
         fi
+
+        local repopath="$(dirname "${repoinfo[@]:1}")"
+        pth="${pth/$repopath/$repopath$'\033'[00m$repoCol}"
+        echo "${pth/$HOME/~}" | awk '
+
+            function strlen(str) { # compute the length of a string, ignoring color-codes
+                gsub(/\033+\[+[0-9;]+m/, "", str);
+                return length(str);
+            }
+
+            {
+                str    = $0;
+                len    = strlen(str);
+                maxLen = '$pwdmaxlen';
+                if (len > maxLen)
+                {
+                    lastColorCode = "";
+                    char_count    = 0;
+                    counting      = 1;
+                    split(str, str_chars, "");
+
+                    for (k=0; k<length(str_chars); ++k)
+                    {
+                        if (str_chars[k] == "\033") {
+                            lastColorCode = "\033";
+                            counting = 0; continue;
+                        }
+
+                        if (!counting) {
+                            lastColorCode = lastColorCode str_chars[k];
+                            if (str_chars[k] == "m")
+                                counting = 1;
+                            continue;
+                        }
+                        else
+                            char_count++;
+
+                        if (len-char_count+3 <= maxLen) {
+                            str = "\033[0m" lastColorCode "..." substr(str,k-1) "\033[0m";
+                            break;
+                        }
+                    }
+                }
+
+                printf str;
+
+            }
+        '
 
     # non-color print
     else
@@ -1105,68 +1140,29 @@ _cdn_DONTUSE()
 {
     # create initial stack array
     # (take care of dirs with spaces in the name)
-    local stack=("${DIRSTACK[@]}")
-    stack=("${stack[@]/\~/$HOME}")
-    stack=("${stack[@]/%/\n}")
-    stack[0]=" ${stack[0]}"
+    local -a stack=("${DIRSTACK[@]//\~/$HOME}")
 
     # Sort entries, and find unique ones:
-    local entry IFS_=$IFS; IFS=$'\n'
-    stack=( $(echo "${stack[@]}" | sort -u) )
-    IFS=$IFS_
+    local entry IFS_old="$IFS";
+    IFS=$'\n'
+    stack=( $(echo "${stack[*]}" | sort -u) )
+    IFS="$IFS_old"
 
     # if no function arguments provided, show list
     if [ $# -eq 0 ]; then
 
-        # check for color prompt
-        local colors=0
-        if [ $USE_COLORS ]; then
-            local REPO_PATH_="$REPO_PATH"
-            local REPO_TYPE_=$REPO_TYPE
-            local REPO_MODE_=$REPO_MODE
-            local PWD_=$(pwd)
-            colors=1
-        fi
+        IFS=$'\n'
+        local -a repos=($(check_repo "${stack[@]}")) # NOTE: no quotes
+        local -a types=($(echo "${repos[*]}" | cut -f 1  -d " "))
+        local -a paths=($(echo "${repos[*]}" | cut -f 2- -d " "))
+        IFS="$IFS_old"
 
-
-
-        # print list
-        local repo
-        for ((i=0; i<${#stack[@]}; i++)); do
-            if [ $colors -eq 1 ]; then
-
-                repo=($(check_repo "$(trim ${stack[$i]})"))
-
-                # continue on any errors
-                if (( $? > 1 )); then
-                    continue; fi
-
-                # set appropriate mode
-                case "${repo[0]}" in
-                    "git") REPO_MODE=true;  REPO_TYPE=git; REPO_PATH="${repo[@]:1}" ;;
-                    "svn") REPO_MODE=true;  REPO_TYPE=svn; REPO_PATH="${repo[@]:1}" ;;
-                    "bzr") REPO_MODE=true;  REPO_TYPE=bzr; REPO_PATH="${repo[@]:1}" ;;
-                    "hg")  REPO_MODE=true;  REPO_TYPE=hg ; REPO_PATH="${repo[@]:1}" ;;
-                    "CVS") REPO_MODE=true;  REPO_TYPE=CVS; REPO_PATH="${repo[@]:1}" ;;
-                    *)     REPO_MODE=false; REPO_TYPE=   ; REPO_PATH=               ;;
-                esac
-
-                printf "%3d: " $i
-                prettyprint_dir "$(trim ${stack[$i]})"
-                printf "\n"
-
-            else
-                printf "%3d: %s\n" $i "${stack[$i]%%\n}"
-            fi
+        for ((i=0; i<${#repos[@]}; i++)); do
+            printf "%3d: " $i
+            prettyprint_dir "${stack[$i]}" "${types[$i]}" "${paths[$i]}"
+            printf "\n"
         done
 
-        # reset stuff
-        if [ $colors -eq 1 ]; then
-            REPO_PATH=$REPO_PATH_
-            REPO_TYPE=$REPO_TYPE_
-            REPO_MODE=$REPO_MODE_
-            builtin cd "$PWD_"
-        fi
 
     # otherwise, go to dir number
     else
