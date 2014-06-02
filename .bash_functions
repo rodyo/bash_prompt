@@ -114,8 +114,8 @@ multicolumn_ls()
                 {
                     char_count = 0;
                     counting = 1;
-                    split(str, str_chars, "");
-                    for (k=0; k<length(str_chars); ++k)
+                    N=split(str, str_chars, "");
+                    for (k=0; k<N; ++k)
                     {
                         if (str_chars[k] == "\033") {
                             counting = false; continue; }
@@ -261,14 +261,14 @@ multicolumn_ls()
             # TODO: also cifs and fuse.sshfs etc. --might--support it, but how to check for this...
         esac
 
-        ( ((${BASH_VERSION:0:1}>=4)) && [ $processAcls -eq 1] && if [ $haveAttrlist ]; then
-            local attrlist
+        ( ((${BASH_VERSION:0:1}>=4)) && [ $processAcls -eq 1 ] && if [ $haveAttrlist ]; then
+            local -A attrlist
             local attlist=($(lsattr 2>&1))
             local attribs=($(echo "${attlist[*]%% *}"))
             local attnames=($(echo "${attlist[*]##*\.\/}"))
             for ((i=0; i<${#attnames[@]}; i++)); do
                 if [ ${attribs[$i]%%lsattr:*} ]; then
-                    printf -v "attrlist_${attnames[$i]}" %s "${attribs[$i]}"; fi
+                    attrlist[${attnames[$i]}]="${attribs[$i]}"; fi
             done
             unset attnames attribs attlist
         fi) || haveAttrlist=
@@ -381,7 +381,7 @@ multicolumn_ls()
                     if [ $haveAttrlist ]; then
 
                         # immutables
-                        n=attrlist_${names[$ind]}; n=${!n}
+                        n=attrlist[${names[$ind]}]; n=${!n}
                         if [ ${n//[^i]} ]; then
                             paint=44\;"$paint"
                             lastsymbol="i";
