@@ -13,7 +13,7 @@
 # --------------------------------------------------------------------------------------------------
 
 command -v lsattr &> /dev/null && processAcls=1 || processAcls=0
-echo | awk '{switch(0){}}' &> /dev/null && haveGawk=1 || haveGawk=0
+command -v awk &> /dev/null && haveAwk=1 || haveAwk=0
 
 
 
@@ -82,7 +82,7 @@ command_not_found_handle()
 
 multicolumn_ls()
 {
-    if [ $haveGawk -eq 1 ]; then
+    if [ $haveAwk -eq 1 ]; then
 
         command ls -opg --si --group-directories-first --time-style=+ --color "$@" | awk '
 
