@@ -114,7 +114,7 @@ multicolumn_ls()
                 {
                     char_count = 0;
                     counting = 1;
-                    N=split(str, str_chars, "");
+                    N = split(str, str_chars, "");
                     for (k=0; k<N; ++k)
                     {
                         if (str_chars[k] == "\033") {
@@ -653,9 +653,9 @@ prettyprint_dir()
                     lastColorCode = "";
                     char_count    = 0;
                     counting      = 1;
-                    split(str, str_chars, "");
+                    N = split(str, str_chars, "");
 
-                    for (k=0; k<length(str_chars); ++k)
+                    for (k=0; k<N; ++k)
                     {
                         if (str_chars[k] == "\033") {
                             lastColorCode = "\033";
