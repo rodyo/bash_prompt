@@ -276,7 +276,7 @@ multicolumn_ls()
                     attrlist[${attnames[$i]}]="${attribs[$i]}"; fi
             done
             unset attnames attribs attlist
-        fi) || haveAttrlist=
+        fi ) || haveAttrlist=
 
         # check if any of the arguments was a "file" (and not just an option)
         local haveFiles=false
