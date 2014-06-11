@@ -1641,3 +1641,16 @@ pngify()
 
 
 
+new_github_repo()
+{ 
+    git init
+    git add *
+    git commit -m "First commit"
+    git remote add origin git@github.com:rodyo/"${1}".git
+    git push -u origin master
+}
+existing_github_repo()
+{
+    git remote add origin git@github.com:rodyo/"${1}".git
+    git push -u origin master     
+}
