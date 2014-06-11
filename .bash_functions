@@ -153,7 +153,6 @@ multicolumn_ls()
             }
 
             {
-                # TODO: could be empty dir
                 if (FNR == 1) {
                     total = $0;
                     next;
@@ -202,8 +201,6 @@ multicolumn_ls()
                         columns    = min(maxColumns, ceil(listLength/rowsThreshold));
                         rows       = ceil(listLength/columns);
 
-                        #print "columns = " columns ", rows = " rows;
-
                         for (i=0; i<rows; ++i) {
                             for (j=0; j<columns; ++j)
                             {
@@ -218,9 +215,9 @@ multicolumn_ls()
                                     printf("  ");
 
                                 if (i+(j+1)*rows > listLength)
-                                    printf(truncate_and_alignleft(names[ind],'$COLUMNS'-j*columnWidth-8));
+                                    printf("%s", truncate_and_alignleft(names[ind],'$COLUMNS'-j*columnWidth-8));
                                 else
-                                    printf(truncate_and_alignleft(names[ind],columnWidth-8));
+                                    printf("%s", truncate_and_alignleft(names[ind],columnWidth-8));
                             }
                             printf("\n");
                         }
@@ -276,7 +273,7 @@ multicolumn_ls()
                     attrlist[${attnames[$i]}]="${attribs[$i]}"; fi
             done
             unset attnames attribs attlist
-        fi) || haveAttrlist=
+        fi ) || haveAttrlist=
 
         # check if any of the arguments was a "file" (and not just an option)
         local haveFiles=false
