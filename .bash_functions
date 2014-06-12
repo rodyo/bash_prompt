@@ -95,8 +95,8 @@ multicolumn_ls()
             }
 
             function trim(str) { # trim leading & trailing whitespace
-                sub(/^\s*/,"",str);
-                sub(/\s*$/,"",str);
+                sub(/^[ \t]+/,"",str);
+                sub(/[ \t]+$/,"",str);
                 return str;
             }
 
@@ -143,8 +143,8 @@ multicolumn_ls()
             BEGIN {
 
                 # Parameters
-                columnWidth    = 35;
-                rowsThreshold  = 15;
+                columnWidth    = 50;
+                rowsThreshold  = 25;
 
                 # Counters
                 dirs    = 0;    files = 0;    links = 0;
@@ -179,6 +179,7 @@ multicolumn_ls()
                     sizes[FNR-2] = trim($3);
                     $1=$2=$3="";
                     names[FNR-2] = trim($0);
+
                 }
 
                 acls[FNR-2] = (substr(perms, length(perms),1) == "+");
