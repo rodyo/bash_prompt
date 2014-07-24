@@ -1,6 +1,6 @@
 # TODO: put the repository aliases in an associative array
 # TODO: find proper workaround for bash v. < 4
-
+# TODO: USE_COLORS doesn't work on Windows 8 for some reason...
 
 
 
@@ -480,6 +480,9 @@ promptcmd()
     pth="$(prettyprint_dir "$(pwd)")"
     pthlen=$(echo "$pth" | sed -r "s/\x1B\[([0-9]{1,3}((;[0-9]{1,3})*)?)?[m|K]//g")
     printf "\E7\E[001;$(($COLUMNS-${#pthlen}-2))H\E[1m\E[32m[$pth\E[1m\E[32m]\E8\E[0m"
+
+# TODO: why doesn't this work on Windows 8?
+USE_COLORS=1
 
     # previous command exit status
     if [ $exitstatus -eq 0 ]; then
