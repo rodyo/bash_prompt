@@ -81,6 +81,7 @@ case "$TERM" in
         ;;
 esac
 
+
 # uncomment for a colored prompt, if the terminal has the capability
 force_shell_colors=yes
 
