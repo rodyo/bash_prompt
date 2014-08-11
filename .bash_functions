@@ -1,6 +1,6 @@
 # TODO: put the repository aliases in an associative array
 # TODO: find proper workaround for bash v. < 4
-
+# TODO: USE_COLORS doesn't work on Windows 8 for some reason...
 
 
 
@@ -479,7 +479,10 @@ promptcmd()
     # put pretty-printed full path in the upper right corner
     pth="$(prettyprint_dir "$(pwd)")"
     pthlen=$(echo "$pth" | sed -r "s/\x1B\[([0-9]{1,3}((;[0-9]{1,3})*)?)?[m|K]//g")
-    printf "\E7\E[001;$(($COLUMNS-${#pthlen}-2))H\E[1m\E[32m[$pth\E[1m\E[32m]\E8\E[0m"
+    printf "\E7\E[001;$(($COLUMNS-${#pthlen}-2))H\E[1m\E[32m[\E[0m$pth\E[1m\E[32m]\E8\E[0m"
+
+# TODO: why doesn't this work on Windows 8?
+USE_COLORS=1
 
     # previous command exit status
     if [ $exitstatus -eq 0 ]; then
@@ -605,14 +608,10 @@ prettyprint_dir()
 
     local -a repoinfo
     local pwdmaxlen=$(($COLUMNS/3))
-    local pthoffset truncated=0 pth="${1//$HOME/~}"
+    local pthoffset
+    local original_pth="$(command ls -d "$1" --color)"
 
-    # truncate argument if it's longer than 30 chars
-    if [ ${#pth} -gt $pwdmaxlen ]; then
-        truncated=1
-        pthoffset=$((${#pth}-$pwdmaxlen))
-        pth="...${pth:$pthoffset:$pwdmaxlen}"
-    fi
+    pth="${original_pth/$HOME/~}";
 
 
     if [ $# -lt 3 ]; then
@@ -624,18 +623,13 @@ prettyprint_dir()
     # Color print
     if [ $USE_COLORS ]; then
 
-        pth="$(command ls -d "$1" --color)"
+        # TODO: dependency on AWK; include bash-only version
 
         repoCol=${REPO_COLOR[${repoinfo[0]}]};
-        if [ -z $repoCol ]; then
-            printf "${pth/$HOME/~}";
-            return;
-        fi
-
-        # TODO: dependency on AWK; include bash-only version
         local repopath="$(dirname "${repoinfo[@]:1}")"
         pth="${pth/$repopath/$repopath$'\033'[00m$repoCol}"
-        echo "${pth/$HOME/~}" | awk '
+
+        echo "${pth}" | awk '
 
             function strlen(str) { # compute the length of a string, ignoring color-codes
                 gsub(/\033+\[+[0-9;]+m/, "", str);
@@ -683,6 +677,10 @@ prettyprint_dir()
 
     # non-color print
     else
+        if [ ${#pth} -gt $pwdmaxlen ]; then
+            pthoffset=$((${#pth}-$pwdmaxlen))
+            pth="...${pth:$pthoffset:$pwdmaxlen}"
+        fi
         printf "$pth/"
     fi
 }
@@ -1643,7 +1641,7 @@ pngify()
 
 
 new_github_repo()
-{ 
+{
     git init
     git add * .gitignore
     git commit -m "First commit"
@@ -1653,5 +1651,5 @@ new_github_repo()
 existing_github_repo()
 {
     git remote add origin git@github.com:rodyo/"${1}".git
-    git push -u origin master     
+    git push -u origin master
 }
