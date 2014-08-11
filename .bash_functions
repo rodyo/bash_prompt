@@ -1502,7 +1502,9 @@ changext()
 }
 
 # instant calculator
-C() { echo "$@" | command bc -lq; }
+C() { 
+    echo "$@" | /usr/local/bin/bc -lq
+}
 
 # find N largest files in current directory and all subdirectories
 #
