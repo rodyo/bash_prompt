@@ -1,0 +1,89 @@
+#!/usr/bin/bc
+
+# useful extra bc functions 
+
+# Author:
+#    http://www.pixelbeat.org/
+# Notes:
+#    I only use bc when python is not available.
+#    Personally I have this file in ~/bin/bc so
+#    that I can just invoke bc as normal and have these
+#    extra functions available.
+# Changes:
+#    V0.1, 11 Apr 2007, Initial release
+
+
+define min(x,y){
+    if (x<y) return x
+    return y     
+}        
+define max(x,y){
+    if (x>y) return x
+    return y
+}                
+define abs(x){
+    if (x<0) return -x
+    return x
+}
+                        
+# "cast" to integer
+define int(x) {
+    auto old_scale   /* variables global by default */
+    old_scale=scale  /* scale is global */
+    scale=0; ret=x/1
+    scale=old_scale
+    return ret
+}
+                                            
+# round, floor, ceil
+define round(x){
+    if (x<0) x-=.5 else x+=.5
+    return int(x)
+}                                                    
+define ceil(x){
+    auto intx
+    intx=int(x)
+    if (intx<x) intx+=1
+    return intx
+}
+define floor(x){return -ceil(-x)}
+  
+# -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# Additions by Rody Oldenhuis 
+# -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=                                                                    
+
+# more basics
+pi=3.14159265358979323846264338327950288419716939937510
+define sign(x){
+    if (x>0) return 1
+    if (x==0) return 0
+    return -1
+}
+define pow(x,y){return e(l(x)*y)}
+define log(x){return l(x)}
+define log2(x){return l(x)/l(2)}
+define log10(x){return l(x)/l(10)}
+
+# trigonometrix
+define hypot(x,y){    
+    m1=max(x,y)
+    m2=min(x,y)
+    r=m2/m1
+    return m1*sqrt(1+r*r)
+}
+define sin(x){return s(x)}
+define cos(x){return c(x)}
+define tan(x){return s(x)/c(x)}
+define asin(x){return a(x/sqrt(1-x^2))}
+define acos(x){return a(sqrt(1-x^2)/x)}
+define atan(x){return a(x)}
+define atan2(x,y){
+    aa=a(x/y)
+    if (x>0) return aa
+    if (x==0) return sign(y)*pi/2
+    if (x<0){
+        if (y>=0) return pi+aa
+        if (y<0) return -pi+aa
+    }
+}
+
