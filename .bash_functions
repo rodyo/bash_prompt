@@ -458,7 +458,7 @@ multicolumn_ls()
         IFS=$IFS_
 
     fi
-
+    
 }
 
 
@@ -476,8 +476,8 @@ promptcmd()
     local ES exitstatus=$?    # exitstatus of previous command
     local pth pthlen
 
-
     # put pretty-printed full path in the upper right corner
+    # TODO: this is SLOW on CygWin!
     pth="$(prettyprint_dir "$(pwd)")"
     pthlen=$(echo "$pth" | sed -r "s/\x1B\[([0-9]{1,3}((;[0-9]{1,3})*)?)?[m|K]//g")
     printf "\E7\E[001;$(($COLUMNS-${#pthlen}-2))H\E[1m\E[32m[\E[0m$pth\E[1m\E[32m]\E8\E[0m"
@@ -497,6 +497,8 @@ USE_COLORS=1
         else
             ES='o_O '; fi
     fi
+
+
 
     case "$REPO_TYPE" in
 
@@ -625,10 +627,11 @@ prettyprint_dir()
     if [ $USE_COLORS ]; then
 
         # TODO: dependency on AWK; include bash-only version
-
-        repoCol=${REPO_COLOR[${repoinfo[0]}]};
-        local repopath="$(dirname "${repoinfo[@]:1}" 2> /dev/null)"
-        pth="${pth/$repopath/$repopath$'\033'[00m$repoCol}"
+        local repoCol=${REPO_COLOR[${repoinfo[0]}]};
+        if [ -n $repoCol ]; then
+            local repopath="$(dirname "${repoinfo[@]:1}" 2> /dev/null)"
+            pth="${pth/$repopath/$repopath$'\033'[00m$repoCol}"
+        fi
 
         echo "${pth}" | awk '
 
@@ -684,6 +687,7 @@ prettyprint_dir()
         fi
         printf "$pth/"
     fi
+    
 }
 
 # Check if given dir(s) is (are) (a) repository(ies)
