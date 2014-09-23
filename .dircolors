@@ -93,7 +93,7 @@ TERM xterm-debian
 NORMAL                00        # no color code at all
 FILE                  00        # regular file: use no color at all
 RESET                 00        # reset to "normal" color
-DIR                   01;34     # directory
+DIR                   04;01;34  # directory
 LINK                  01;36     # symbolic link. (If you set this to 'target' instead of a
                                 # numerical value, the color is as for the file pointed to.)
 MISSING               37;41;05  # non-existent files with symlink(s) pointing to it
@@ -103,7 +103,7 @@ DOOR                  01;35     # door
 BLK                   40;33;01  # block device driver
 CHR                   40;33;01  # character device driver
 ORPHAN                01;40;31  # symlink to nonexistent file, or non-stat'able file
-EXEC                  00# 01;32     # files with execute permission
+EXEC                  00# 01;32 # files with execute permission
 SETUID                37;41     # file that is setuid (u+s)
 SETGID                30;43     # file that is setgid (g+s)
 CAPABILITY            30;41     # file with capability
@@ -229,22 +229,22 @@ OTHER_WRITABLE        01;34     # dir that is other-writable (o+w) and not stick
 .xspf 00;36
 
 # document types
-.doc   00;34
-.DOC   00;34
-.docx  00;34
-.DOCX  00;34
-.pdf   00;34
-.PDF   00;34
-.txt   00;34
-.TXT   00;34      
-.odt   00;34
-.ODT   00;34      
-.odp   00;34
-.ODP   00;34
-.odf   00;34
-.ODF   00;34
-.ods   00;34
-.ODS   00;34
+.doc   01;34
+.DOC   01;34
+.docx  01;34
+.DOCX  01;34
+.pdf   01;34
+.PDF   01;34
+.txt   01;34
+.TXT   01;34      
+.odt   01;34
+.ODT   01;34      
+.odp   01;34
+.ODP   01;34
+.odf   01;34
+.ODF   01;34
+.ods   01;34
+.ODS   01;34
 
 # source files
 .c    43;30

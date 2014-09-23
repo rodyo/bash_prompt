@@ -78,7 +78,7 @@ command_not_found_handle()
 # TODO: show [seq] and ranges for simple sequences, with min/max file size
 
 # FIXME: seems that passing an argument does not work properly
-# FIXME: breaks when upgrading to Ubuntu 14.04???
+# FIXME: breaks when upgrading to Ubuntu 14.04??
 
 multicolumn_ls()
 {
@@ -476,6 +476,7 @@ promptcmd()
     local ES exitstatus=$?    # exitstatus of previous command
     local pth pthlen
 
+
     # put pretty-printed full path in the upper right corner
     pth="$(prettyprint_dir "$(pwd)")"
     pthlen=$(echo "$pth" | sed -r "s/\x1B\[([0-9]{1,3}((;[0-9]{1,3})*)?)?[m|K]//g")
@@ -626,7 +627,7 @@ prettyprint_dir()
         # TODO: dependency on AWK; include bash-only version
 
         repoCol=${REPO_COLOR[${repoinfo[0]}]};
-        local repopath="$(dirname "${repoinfo[@]:1}")"
+        local repopath="$(dirname "${repoinfo[@]:1}" 2> /dev/null)"
         pth="${pth/$repopath/$repopath$'\033'[00m$repoCol}"
 
         echo "${pth}" | awk '
