@@ -70,6 +70,18 @@ command_not_found_handle()
 
 
 # --------------------------------------------------------------------------------------------------
+# Join input arguments into a single string
+# --------------------------------------------------------------------------------------------------
+function join
+{
+    local IFS="$1";
+    shift;
+    echo "$*";
+}
+
+
+
+# --------------------------------------------------------------------------------------------------
 # Multicolumn colored filelist
 # --------------------------------------------------------------------------------------------------
 
@@ -82,6 +94,7 @@ command_not_found_handle()
 
 multicolumn_ls()
 {
+
     if [ $haveAwk -eq 1 ]; then
 
         command ls -opg --si --group-directories-first --time-style=+ --color "$@" | awk '
@@ -458,7 +471,7 @@ multicolumn_ls()
         IFS=$IFS_
 
     fi
-    
+
 }
 
 
@@ -469,19 +482,14 @@ multicolumn_ls()
 # command executed just PRIOR to showing the prompt
 promptcmd()
 {
-    # write previous command to disk
-    history -a
-
     # initialize
     local ES exitstatus=$?    # exitstatus of previous command
     local pth pthlen
 
-    # put pretty-printed full path in the upper right corner
-    # TODO: this is SLOW on CygWin!
-    pth="$(prettyprint_dir "$(pwd)")"
-    pthlen=$(echo "$pth" | sed -r "s/\x1B\[([0-9]{1,3}((;[0-9]{1,3})*)?)?[m|K]//g")
-    printf "\E7\E[001;$(($COLUMNS-${#pthlen}-2))H\E[1m\E[32m[\E[0m$pth\E[1m\E[32m]\E8\E[0m"
+    # write previous command to disk
+    (history -a &) &> /dev/null
 
+    # Set new prompt (taking into account repositories)
 # TODO: why doesn't this work on Windows 8?
 USE_COLORS=1
 
@@ -499,7 +507,6 @@ USE_COLORS=1
     fi
 
 
-
     case "$REPO_TYPE" in
 
         # GIT repo
@@ -508,11 +515,11 @@ USE_COLORS=1
             branch=${branch#\* }
             if [ $? == 0 ]; then
                 if [ $USE_COLORS ]; then
-                     PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[git]}'\] [git: $branch] : \W\[\033[00m\]\$ '
+                    PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[git]}'\] [git: $branch] : \W\[\033[00m\]\$ '
                 else PS1=$ES'\u@\h: [git: $branch] : \W\$ '; fi
             else
                 if [ $USE_COLORS ]; then
-                     PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[git]}'\] [*unknown branch*] : \W\[\033[00m\]\$ '
+                    PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[git]}'\] [*unknown branch*] : \W\[\033[00m\]\$ '
                 else PS1=$ES'\u@\h: [*unknown branch*] : \W\$ '; fi
             fi
             ;;
@@ -520,28 +527,28 @@ USE_COLORS=1
         # SVN repo
         "svn")
             if [ $USE_COLORS ]; then
-                 PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[svn]}'\] [svn] : \W\[\033[00m\]\$ '
+                PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[svn]}'\] [svn] : \W\[\033[00m\]\$ '
             else PS1=$ES'\u@\h: [svn] : \W\$ '; fi
             ;;
 
         # mercurial repo
         "hg")
             if [ $USE_COLORS ]; then
-                 PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[hg]}'\] [hg] : \W\[\033[00m\]\$ '
+                PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[hg]}'\] [hg] : \W\[\033[00m\]\$ '
             else PS1=$ES'\u@\h: [hg] : \W\$ '; fi
             ;;
 
         # CVS repo
         "CVS")
             if [ $USE_COLORS ]; then
-                 PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[CVS]}'\] [CVS] : \W\[\033[00m\]\$ '
+                PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[CVS]}'\] [CVS] : \W\[\033[00m\]\$ '
             else PS1=$ES'\u@\h: [CVS] : \W\$ '; fi
             ;;
 
         # bazaar repo
         "bzr")
             if [ $USE_COLORS ]; then
-                 PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[bzr]}'\] [bzr] : \W\[\033[00m\]\$ '
+                PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[bzr]}'\] [bzr] : \W\[\033[00m\]\$ '
             else PS1=$ES'\u@\h: [bzr] : \W\$ '; fi
             ;;
 
@@ -560,6 +567,11 @@ USE_COLORS=1
             fi
             ;;
     esac
+
+    # put pretty-printed full path in the upper right corner
+    pth="$(prettyprint_dir "$(pwd)")"
+    pthlen=$(echo "$pth" | sed -r "s/\x1B\[([0-9]{1,3}((;[0-9]{1,3})*)?)?[m|K]//g")
+    printf "\E7\E[001;$(($COLUMNS-${#pthlen}-2))H\E[1m\E[32m[\E[0m$pth\E[1m\E[32m]\E8\E[0m"
 
 }
 # make this function the function called at each prompt display
@@ -619,6 +631,7 @@ prettyprint_dir()
 
     if [ $# -lt 3 ]; then
         repoinfo=($(check_repo "$@"))
+        repoinfo[1]=$(join "${IFS[0]}" "${repoinfo[@]:1}")
     else
         repoinfo=("$2" "$3")
     fi
@@ -629,7 +642,7 @@ prettyprint_dir()
         # TODO: dependency on AWK; include bash-only version
         local repoCol=${REPO_COLOR[${repoinfo[0]}]};
         if [ -n $repoCol ]; then
-            local repopath="$(dirname "${repoinfo[@]:1}" 2> /dev/null)"
+            local repopath="$(dirname "${repoinfo[1]}" 2> /dev/null)"
             pth="${pth/$repopath/$repopath$'\033'[00m$repoCol}"
         fi
 
@@ -687,7 +700,7 @@ prettyprint_dir()
         fi
         printf "$pth/"
     fi
-    
+
 }
 
 # Check if given dir(s) is (are) (a) repository(ies)
@@ -1507,7 +1520,7 @@ changext()
 }
 
 # instant calculator
-C() { 
+C() {
     echo "$@" | /usr/local/bin/bc -lq
 }
 
