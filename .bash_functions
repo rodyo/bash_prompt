@@ -704,6 +704,34 @@ prettyprint_dir()
 }
 
 # Check if given dir(s) is (are) (a) repository(ies)
+
+check_repo_NEW()
+{
+    local -a dirs
+    local curdir="$PWD"
+    local d
+
+    if [ $# -eq 0 ]; then
+        dirs="$curdir"
+    else
+        dirs=("$@")
+    fi
+
+    for (( d=0; d<${#dirs[@]}; ++d )); do
+    
+        dir="${dirs[$d]}"
+             
+        [ -d ${dir}/.git ] || (git rev-parse --git-dir "${dir}"  2> /dev/null && printf "\n%s\n" git) || 
+        [ -d ${dir}/.svn ] || (svn info "${dir}"  2> /dev/null | awk '/^Working Copy Root Path:/ {print $NF \n svn}') ||
+                              (printf "%s\n%s\n" "[no repository found]" "---")
+   
+
+    done
+    
+}
+
+
+
 check_repo()
 {
     # Usage:
