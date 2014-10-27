@@ -1687,6 +1687,16 @@ pngify()
 }
 
 
+# check validity of XML
+check_XML() 
+{ 
+    for file in "$@"; do
+        python -c "import sys,xml.dom.minidom as d; d.parse(sys.argv[1])" "$file" && 
+            echo "XML-file $file is valid and well-formed" || 
+            echo "XML-file $file is NOT valid"
+    done
+}
+
 
 new_github_repo()
 {
@@ -1701,3 +1711,5 @@ existing_github_repo()
     git remote add origin git@github.com:rodyo/"${1}".git
     git push -u origin master
 }
+
+
