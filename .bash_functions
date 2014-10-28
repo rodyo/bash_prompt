@@ -15,6 +15,7 @@
 command -v lsattr &> /dev/null && processAcls=1 || processAcls=0
 command -v awk &> /dev/null && haveAwk=1 || haveAwk=0
 
+which git &>/dev/null && which svn &>/dev/null && which hg &>/dev/null && which bzr &>/dev/null && which cvs &>/dev/null && haveAllRepoBinaries=1 || haveAllRepoBinaries=0
 
 
 # Create global associative arrays
@@ -708,26 +709,30 @@ prettyprint_dir()
 check_repo_NEW()
 {
     local -a dirs
-    local curdir="$PWD"
     local d
 
     if [ $# -eq 0 ]; then
-        dirs="$curdir"
+        dirs="$PWD"
     else
         dirs=("$@")
     fi
-
-    for (( d=0; d<${#dirs[@]}; ++d )); do
     
-        dir="${dirs[$d]}"
-             
-        [ -d ${dir}/.git ] || (git rev-parse --git-dir "${dir}"  2> /dev/null && printf "\n%s\n" git) || 
-        [ -d ${dir}/.svn ] || (svn info "${dir}"  2> /dev/null | awk '/^Working Copy Root Path:/ {print $NF \n svn}') ||
-                              (printf "%s\n%s\n" "[no repository found]" "---")
-   
+    if [ haveAllRepoBinaries -eq 1 ]; then
 
-    done
+        for (( d=0; d<${#dirs[@]}; ++d )); do
+        
+            dir="${dirs[$d]}"        
+                 
+            (git rev-parse --git-dir "${dir}" 2> /dev/null && printf "\n%s\n" git) ||
+            (svn info "${dir}" 2> /dev/null | awk '/^Working Copy Root Path:/ {print $NF}' && [ ${PIPESTATUS[0]} -eq 0 ] && echo svn)  ||
+            (printf "%s\n%s\n" "[no repository found]" "---")   
     
+        done
+        
+    else
+        # TODO: use old way
+    fi
+        
 }
 
 
