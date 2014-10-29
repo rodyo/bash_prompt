@@ -9,13 +9,15 @@
 # --------------------------------------------------------------------------------------------------
 
 
-# Check for external tools
+# Check for external tools and shell specifics
 # --------------------------------------------------------------------------------------------------
 
 command -v lsattr &> /dev/null && processAcls=1 || processAcls=0
 command -v awk &> /dev/null && haveAwk=1 || haveAwk=0
 
 which git &>/dev/null && which svn &>/dev/null && which hg &>/dev/null && which bzr &>/dev/null && which cvs &>/dev/null && haveAllRepoBinaries=1 || haveAllRepoBinaries=0
+
+[ $(uname -o) -eq "Cygwin" ] && atWork=1 || atWork=0
 
 
 # Create global associative arrays
@@ -1667,11 +1669,24 @@ chroot_dir()
 
 # gedit ALWAYS in background and immune to terminal closing!
 # must be aliased in .bash_aliases
-_gedit_DONTUSE() { (gedit "$@" &) | nohup &> /dev/null; }
+_gedit_DONTUSE() 
+{ 
+    if [ $atWork -eq 0 ]; then
+        (gedit "$@" &) | nohup &> /dev/null; 
+    else
+        (notepad "$@" &) | nohup &> /dev/null; 
+    fi
+}
 
 # geany ALWAYS in background and immune to terminal closing!
 # must be aliased in .bash_aliases
-_geany_DONTUSE() { (geany "$@" &) | nohup &> /dev/null; }
+_geany_DONTUSE() 
+{ 
+    #if [ $atWork -eq 0 ]; then
+        (geany "$@" &) | nohup &> /dev/null; 
+    #else
+    #fi
+}
 
 # grep all processes in wide-format PS, excluding "grep" itself
 psa()
