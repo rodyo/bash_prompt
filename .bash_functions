@@ -9,6 +9,7 @@
 # --------------------------------------------------------------------------------------------------
 
 
+
 # Check for external tools and shell specifics
 # --------------------------------------------------------------------------------------------------
 
@@ -16,8 +17,61 @@ command -v lsattr &> /dev/null && processAcls=1 || processAcls=0
 command -v awk &> /dev/null && haveAwk=1 || haveAwk=0
 
 which git &>/dev/null && which svn &>/dev/null && which hg &>/dev/null && which bzr &>/dev/null && haveAllRepoBinaries=1 || haveAllRepoBinaries=0
+#TODO: bash native method is virtually always faster...
+haveAllRepoBinaries=0
 
+# (Cygwin)
 [ "$(uname -o)" == "Cygwin" ] && atWork=1 || atWork=0
+
+
+
+# Profiling
+# --------------------------------------------------------------------------------------------------
+
+# If/when profiling, surround the function to profile with _START_PROFILING;/_STOP_PROFILING;
+
+DO_PROFILING=0
+
+_START_PROFILING()
+{
+    which tee &>/dev/null && which date &>/dev/null && which sed &>/dev/null which paste &>/dev/null || \
+        (>&2 echo "cannot profile: unmet depenencies" && return)
+
+    if [ $DO_PROFILING -eq 1 ]; then
+        PS4='+ $(date "+%s.%N")\011 '
+        exec 3>&2 2> >(tee /tmp/sample-time.$$.log |
+                       sed  -u 's/^.*$/now/' |
+                       date -f - "+%s.%N" > /tmp/sample-time.$$.tim)
+        set -x
+    else
+        >&2 echo "stray _START_PROFILING found"
+    fi
+}
+
+_STOP_PROFILING()
+{
+    if [ $DO_PROFILING -eq 1 ]; then
+        set +x
+        exec 2>&3 3>&-
+
+        printf " %-11s  %-11s   %s\n" "duration" "cumulative" "command" > ~/profile_report.$$.log
+        paste <(
+            while read tim; do
+                [ -z "$last" ] && last=${tim//.} && first=${tim//.}
+                crt=000000000$((${tim//.}-10#0$last))
+                ctot=000000000$((${tim//.}-10#0$first))
+                printf "%12.9f %12.9f\n" ${crt:0:${#crt}-9}.${crt:${#crt}-9} \
+                                         ${ctot:0:${#ctot}-9}.${ctot:${#ctot}-9}
+                last=${tim//.}
+              done < /tmp/sample-time.$$.tim
+            ) /tmp/sample-time.$$.log >> ~/profile_report.$$.log && \
+        echo "Profiling report available in '~/profile_report.$$.log'"
+
+    else
+        >&2 echo "stray _STOP_PROFILING found"
+    fi
+}
+
 
 
 # Create global associative arrays
@@ -483,6 +537,8 @@ multicolumn_ls()
 # command executed just PRIOR to showing the prompt
 promptcmd()
 {
+
+
     # initialize
     local ES exitstatus=$?    # exitstatus of previous command
     local pth pthlen
@@ -563,7 +619,7 @@ USE_COLORS=1
     esac
 
     # put pretty-printed full path in the upper right corner
-    pth="$(prettyprint_dir "$(pwd)")"
+    pth="$(prettyprint_dir "$PWD")"
     pthlen=$(echo "$pth" | sed -r "s/\x1B\[([0-9]{1,3}((;[0-9]{1,3})*)?)?[m|K]//g")
     printf "\E7\E[001;$(($COLUMNS-${#pthlen}-2))H\E[1m\E[32m[\E[0m$pth\E[1m\E[32m]\E8\E[0m"
 
@@ -698,7 +754,7 @@ prettyprint_dir()
 }
 
 # Check if given dir(s) is (are) (a) repository(ies)
-check_repo
+check_repo()
 {
     # TODO: instead of "all or nothing", find out which *specific* repository systems have been installed
 
@@ -721,7 +777,7 @@ check_repo
     #    ---: the given dir is not a repository
 
     local -a dirs
-    local dir check
+    local dir
 
     if [ $# -eq 0 ]; then
         dirs="$PWD"
@@ -733,19 +789,21 @@ check_repo
     # where the repository root is located
     if [ $haveAllRepoBinaries -eq 1 ]; then
 
+        local check
+
         for dir in "${dirs[@]}"; do
 
             check=$(printf "%s " git && command cd "${dir}" && git rev-parse --show-toplevel 2> /dev/null)
-            if [ $? -eq 0 ]; then echo $check; continue; fi
+            if [ $? -eq 0 ]; then echo "$check"; continue; fi
 
             check=$(printf "%s " svn && svn info "$dir" 2> /dev/null | awk '/^Working Copy Root Path:/ {print $NF}' && [ ${PIPESTATUS[0]} -ne 1 ])
-            if [ $? -eq 0 ]; then echo $check; continue; fi
+            if [ $? -eq 0 ]; then echo "$check"; continue; fi
 
             check=$(printf "%s  " hg && hg root --cwd "$dir" 2> /dev/null)
-            if [ $? -eq 0 ]; then echo $check; continue; fi
+            if [ $? -eq 0 ]; then echo "$check"; continue; fi
 
             check=$(printf "%s " bzr && bzr root "$dir" 2> /dev/null) ||
-            if [ $? -eq 0 ]; then echo $check; continue; fi
+            if [ $? -eq 0 ]; then echo "$check"; continue; fi
 
             echo "--- [no repository found]"
 
@@ -754,8 +812,8 @@ check_repo
     # Not all repository systems have been installed; use bash to loop through the
     # directory tree in search of a repository identifier
     else
-        local -a slashes=("${dirs[@]//[^\/]/}")
-        local -a repotype reporoot
+        local -a repotype reporoot slashes=("${dirs[@]//[^\/]/}")
+        local i
 
         # Using repeated cd() is slow; It's faster to append ".." in a loop, and
         # only do 1 call to cd() to cleanup the dir format
@@ -782,7 +840,7 @@ check_repo
 
         done
 
-        for ((i=0;i<${#repotype[@]}; ++i)); do
+        for (( i=0;i<${#repotype[@]}; ++i )); do
             printf "%s %s\n" "${repotype[$i]} ${reporoot[$i]}"; done
     fi
 
@@ -793,7 +851,7 @@ check_repo
 update_all()
 {
     for d in */; do
-        rp=($(check_repo "$(pwd)/$d"))
+        rp=($(check_repo "$PWD/$d"))
         case "${rp[0]}" in
             "svn")
                 cd "${rp[@]:1}"
