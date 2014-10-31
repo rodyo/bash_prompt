@@ -15,9 +15,9 @@
 command -v lsattr &> /dev/null && processAcls=1 || processAcls=0
 command -v awk &> /dev/null && haveAwk=1 || haveAwk=0
 
-which git &>/dev/null && which svn &>/dev/null && which hg &>/dev/null && which bzr &>/dev/null && which cvs &>/dev/null && haveAllRepoBinaries=1 || haveAllRepoBinaries=0
+which git &>/dev/null && which svn &>/dev/null && which hg &>/dev/null && which bzr &>/dev/null && haveAllRepoBinaries=1 || haveAllRepoBinaries=0
 
-[ $(uname -o) -eq "Cygwin" ] && atWork=1 || atWork=0
+[ "$(uname -o)" == "Cygwin" ] && atWork=1 || atWork=0
 
 
 # Create global associative arrays
@@ -50,10 +50,8 @@ REPO_MODE=false;       REPO_TYPE=""
 REPO_PATH=
 
 # colors used for different repositories in prompt/prettyprint
-REPO_COLOR[svn]="\033[01;35m";    REPO_COLOR[CVS]="\033[43;30";
+REPO_COLOR[svn]="\033[01;35m";    REPO_COLOR[bzr]="\033[01;33m";
 REPO_COLOR[git]="\033[01;31m";    REPO_COLOR[hg]="\033[01;36m";
-REPO_COLOR[bzr]="\033[01;33m";
-
 
 
 # --------------------------------------------------------------------------------------------------
@@ -541,13 +539,6 @@ USE_COLORS=1
             else PS1=$ES'\u@\h: [hg] : \W\$ '; fi
             ;;
 
-        # CVS repo
-        "CVS")
-            if [ $USE_COLORS ]; then
-                PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[CVS]}'\] [CVS] : \W\[\033[00m\]\$ '
-            else PS1=$ES'\u@\h: [CVS] : \W\$ '; fi
-            ;;
-
         # bazaar repo
         "bzr")
             if [ $USE_COLORS ]; then
@@ -707,96 +698,95 @@ prettyprint_dir()
 }
 
 # Check if given dir(s) is (are) (a) repository(ies)
-
-check_repo_NEW()
+check_repo
 {
+    # TODO: instead of "all or nothing", find out which *specific* repository systems have been installed
+
+    # Usage:
+    #     check_repo [dir1] [dir2] ...
+    #
+    # If arguments are ommitted, only PWD is processed.
+    #
+    #
+    # Output:
+    #    [repo type 1] [repo root 1]
+    #    [repo type 2] [repo root 2]
+    #    ...
+    #
+    # The string [repo type X] is a 3-character string. Possible values are:
+    #    svn: directory is a subversion repository
+    #    git: directory is a git repository
+    #    hg : directory is a mercurial repository
+    #    bzr: directory is a bazaar repository
+    #    ---: the given dir is not a repository
+
     local -a dirs
-    local d
+    local dir check
 
     if [ $# -eq 0 ]; then
         dirs="$PWD"
     else
         dirs=("$@")
     fi
-    
-    if [ haveAllRepoBinaries -eq 1 ]; then
 
-        for (( d=0; d<${#dirs[@]}; ++d )); do
-        
-            dir="${dirs[$d]}"        
-                 
-            (git rev-parse --git-dir "${dir}" 2> /dev/null && printf "\n%s\n" git) ||
-            (svn info "${dir}" 2> /dev/null | awk '/^Working Copy Root Path:/ {print $NF}' && [ ${PIPESTATUS[0]} -eq 0 ] && echo svn)  ||
-            (printf "%s\n%s\n" "[no repository found]" "---")   
-    
-        done
-        
-    else
-        # TODO: use old way
-    fi
-        
-}
+    # All repository systems have been installed; use their native methods to discover
+    # where the repository root is located
+    if [ $haveAllRepoBinaries -eq 1 ]; then
 
+        for dir in "${dirs[@]}"; do
 
+            check=$(printf "%s " git && command cd "${dir}" && git rev-parse --show-toplevel 2> /dev/null)
+            if [ $? -eq 0 ]; then echo $check; continue; fi
 
-check_repo()
-{
-    # Usage:
-    #     check_repo [dir1] [dir2] ...
-    # If arguments are ommitted, only PWD is processed.
+            check=$(printf "%s " svn && svn info "$dir" 2> /dev/null | awk '/^Working Copy Root Path:/ {print $NF}' && [ ${PIPESTATUS[0]} -ne 1 ])
+            if [ $? -eq 0 ]; then echo $check; continue; fi
 
+            check=$(printf "%s  " hg && hg root --cwd "$dir" 2> /dev/null)
+            if [ $? -eq 0 ]; then echo $check; continue; fi
 
-    # Output:
-    #     [repo type 1] [repo root 1]
-    #     [repo type 2] [repo root 2]
-    #     ...
-    # Strings are set equal to "---" if the given dir is not a repository
+            check=$(printf "%s " bzr && bzr root "$dir" 2> /dev/null) ||
+            if [ $? -eq 0 ]; then echo $check; continue; fi
 
-    local -a dirs
-    local curdir="$PWD"
+            echo "--- [no repository found]"
 
-    if [ $# -eq 0 ]; then
-        dirs="$curdir"
-    else
-        dirs=("$@")
-    fi
-
-    local -a slashes=("${dirs[@]//[^\/]/}")
-    local -a repotype reporoot
-    local dir
-
-    # Using repeated cd() is slow; It's faster to append ".." in a loop, and
-    # only do 1 call to cd() to cleanup the dir format
-    for (( d=0; d<${#dirs[@]}; ++d )); do
-
-        dir="${dirs[$d]}"
-
-        if [ ! -d "$dir" ]; then
-            repotype[$d]="---"
-            reporoot[$d]="[dir removed]"
-            continue;
-        else
-            repotype[$d]="---"
-            reporoot[$d]="[no repository found]"
-        fi
-
-        # NOTE: repeated commands outperform function call by an order of magnitude
-        # NOTE: commands without capture "$(...)" outperform commands with capture
-        for (( n=${#slashes[$d]}; n>0; --n )); do
-            [ -d "$dir/.git" ] && repotype[$d]="git" && cd "$dir" && reporoot[$d]="$PWD" && cd "$curdir" && break;
-            [ -d "$dir/.svn" ] && repotype[$d]="svn" && cd "$dir" && reporoot[$d]="$PWD" && cd "$curdir" && break;
-            [ -d "$dir/.CVS" ] && repotype[$d]="CVS" && cd "$dir" && reporoot[$d]="$PWD" && cd "$curdir" && break;
-            [ -d "$dir/.bzr" ] && repotype[$d]="bzr" && cd "$dir" && reporoot[$d]="$PWD" && cd "$curdir" && break;
-            [ -d "$dir/.hg"  ] && repotype[$d]="hg " && cd "$dir" && reporoot[$d]="$PWD" && cd "$curdir" && break;
-            dir="$dir/.."
         done
 
-    done
+    # Not all repository systems have been installed; use bash to loop through the
+    # directory tree in search of a repository identifier
+    else
+        local -a slashes=("${dirs[@]//[^\/]/}")
+        local -a repotype reporoot
 
-    for ((i=0;i<${#repotype[@]}; ++i )); do
-        printf "%s %s\n" "${repotype[$i]} ${reporoot[$i]}"; done
+        # Using repeated cd() is slow; It's faster to append ".." in a loop, and
+        # only do 1 call to cd() to cleanup the dir format
+        for dir in "${dirs[@]}"; do
+
+            if [ ! -d "$dir" ]; then
+                repotype[$d]="---"
+                reporoot[$d]="[dir removed]"
+                continue;
+            else
+                repotype[$d]="---"
+                reporoot[$d]="[no repository found]"
+            fi
+
+            # NOTE: repeated commands outperform function call by an order of magnitude
+            # NOTE: commands without capture "$(...)" outperform commands with capture
+            for (( n=${#slashes[$d]}; n>0; --n )); do
+                [ -d "$dir/.git" ] && repotype[$d]="git" && cd "$dir" && reporoot[$d]="$PWD" && cd "$curdir" && break;
+                [ -d "$dir/.svn" ] && repotype[$d]="svn" && cd "$dir" && reporoot[$d]="$PWD" && cd "$curdir" && break;
+                [ -d "$dir/.bzr" ] && repotype[$d]="bzr" && cd "$dir" && reporoot[$d]="$PWD" && cd "$curdir" && break;
+                [ -d "$dir/.hg"  ] && repotype[$d]="hg " && cd "$dir" && reporoot[$d]="$PWD" && cd "$curdir" && break;
+                dir="$dir/.."
+            done
+
+        done
+
+        for ((i=0;i<${#repotype[@]}; ++i)); do
+            printf "%s %s\n" "${repotype[$i]} ${reporoot[$i]}"; done
+    fi
+
 }
-
 
 
 # Update all repositories under the current dir
@@ -901,22 +891,10 @@ enter_HG()
     # TODO
 }
 
-# Enter CVS mode
-enter_CVS()
-{
-    # enter CVS mode
-    REPO_TYPE="CVS"
-    REPO_MODE=true
-    REPO_PATH="$@"
-
-    # alias everything
-    # TODO
-}
-
 # Enter Bazaar mode
 enter_BZR()
 {
-    # enter CVS mode
+    # enter BZR mode
     REPO_TYPE="bzr"
     REPO_MODE=true
     REPO_PATH="$@"
@@ -1118,7 +1096,6 @@ _cd_DONTUSE()
             case "${repo[0]}" in
                 "git") enter_GIT "${repo[@]:1}" ;;
                 "svn") enter_SVN "${repo[@]:1}" ;;
-                "CVS") enter_CVS "${repo[@]:1}" ;;
                 "hg")  enter_HG  "${repo[@]:1}" ;;
                 "bzr") enter_BZR "${repo[@]:1}" ;;
                 *) ;;
@@ -1292,12 +1269,6 @@ _rm_DONTUSE()
                 ;;
 
             "hg")
-                # TODO
-                not_added=
-                outside_repo=
-                ;;
-
-            "CVS")
                 # TODO
                 not_added=
                 outside_repo=
@@ -1669,21 +1640,21 @@ chroot_dir()
 
 # gedit ALWAYS in background and immune to terminal closing!
 # must be aliased in .bash_aliases
-_gedit_DONTUSE() 
-{ 
+_gedit_DONTUSE()
+{
     if [ $atWork -eq 0 ]; then
-        (gedit "$@" &) | nohup &> /dev/null; 
+        (gedit "$@" &) | nohup &> /dev/null;
     else
-        (notepad "$@" &) | nohup &> /dev/null; 
+        (notepad "$@" &) | nohup &> /dev/null;
     fi
 }
 
 # geany ALWAYS in background and immune to terminal closing!
 # must be aliased in .bash_aliases
-_geany_DONTUSE() 
-{ 
+_geany_DONTUSE()
+{
     #if [ $atWork -eq 0 ]; then
-        (geany "$@" &) | nohup &> /dev/null; 
+        (geany "$@" &) | nohup &> /dev/null;
     #else
     #fi
 }
@@ -1708,11 +1679,11 @@ pngify()
 
 
 # check validity of XML
-check_XML() 
-{ 
+check_XML()
+{
     for file in "$@"; do
-        python -c "import sys,xml.dom.minidom as d; d.parse(sys.argv[1])" "$file" && 
-            echo "XML-file $file is valid and well-formed" || 
+        python -c "import sys,xml.dom.minidom as d; d.parse(sys.argv[1])" "$file" &&
+            echo "XML-file $file is valid and well-formed" ||
             echo "XML-file $file is NOT valid"
     done
 }
