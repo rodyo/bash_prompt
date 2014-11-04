@@ -3,28 +3,7 @@
 # TODO: USE_COLORS doesn't work on Windows 8 for some reason...
 
 
-
 # --------------------------------------------------------------------------------------------------
-# Initialize
-# --------------------------------------------------------------------------------------------------
-
-
-
-# Check for external tools and shell specifics
-# --------------------------------------------------------------------------------------------------
-
-command -v lsattr &> /dev/null && processAcls=1 || processAcls=0
-command -v awk &> /dev/null && haveAwk=1 || haveAwk=0
-
-which git &>/dev/null && which svn &>/dev/null && which hg &>/dev/null && which bzr &>/dev/null && haveAllRepoBinaries=1 || haveAllRepoBinaries=0
-#TODO: bash native method is virtually always faster...
-haveAllRepoBinaries=0
-
-# (Cygwin)
-[ "$(uname -o)" == "Cygwin" ] && atWork=1 || atWork=0
-
-
-
 # Profiling
 # --------------------------------------------------------------------------------------------------
 
@@ -73,6 +52,24 @@ _STOP_PROFILING()
 }
 
 
+# --------------------------------------------------------------------------------------------------
+# Initialize
+# --------------------------------------------------------------------------------------------------
+
+
+# Check for external tools and shell specifics
+# --------------------------------------------------------------------------------------------------
+
+command -v lsattr &> /dev/null && processAcls=1 || processAcls=0
+command -v awk &> /dev/null && haveAwk=1 || haveAwk=0
+
+which git &>/dev/null && which svn &>/dev/null && which hg &>/dev/null && which bzr &>/dev/null && haveAllRepoBinaries=1 || haveAllRepoBinaries=0
+#TODO: bash native method is virtually always faster...
+haveAllRepoBinaries=0
+
+# (Cygwin)
+[ "$(uname -o)" == "Cygwin" ] && atWork=1 || atWork=0
+
 
 # Create global associative arrays
 # --------------------------------
@@ -104,8 +101,9 @@ REPO_MODE=false;       REPO_TYPE=""
 REPO_PATH=
 
 # colors used for different repositories in prompt/prettyprint
-REPO_COLOR[svn]="\033[01;35m";    REPO_COLOR[bzr]="\033[01;33m";
-REPO_COLOR[git]="\033[01;31m";    REPO_COLOR[hg]="\033[01;36m";
+REPO_COLOR[svn]="\033[01;35m";        REPO_COLOR[bzr]="\033[01;33m";
+REPO_COLOR[git]="\033[01;31m";        REPO_COLOR[hg]="\033[01;36m";
+REPO_COLOR[---]="${ALL_COLORS[di]}"
 
 
 # --------------------------------------------------------------------------------------------------
@@ -678,10 +676,10 @@ prettyprint_dir()
 
     pth="${original_pth/$HOME/~}";
 
-
     if [ $# -lt 3 ]; then
         repoinfo=($(check_repo "$@"))
-        repoinfo[1]=$(join "${IFS[0]}" "${repoinfo[@]:1}")
+        if [ ${#repoinfo[@]} -gt 2 ]; then
+            repoinfo[1]=$(join "${IFS[0]}" "${repoinfo[@]:1}"); fi
     else
         repoinfo=("$2" "$3")
     fi
@@ -805,36 +803,40 @@ check_repo()
             check=$(printf "%s " bzr && bzr root "$dir" 2> /dev/null) ||
             if [ $? -eq 0 ]; then echo "$check"; continue; fi
 
-            echo "--- [no repository found]"
+            echo "--- [no_repository_found]"
 
         done
 
     # Not all repository systems have been installed; use bash to loop through the
     # directory tree in search of a repository identifier
     else
+
         local -a repotype reporoot slashes=("${dirs[@]//[^\/]/}")
-        local i
+        local i j
 
         # Using repeated cd() is slow; It's faster to append ".." in a loop, and
-        # only do 1 call to cd() to cleanup the dir format
-        for dir in "${dirs[@]}"; do
+        # only do 2 calls to cd() to cleanup the dir format
+        for (( i=0; i<${#dirs[@]}; ++i )); do
+
+            dir="${dirs[$i]}"
 
             if [ ! -d "$dir" ]; then
-                repotype[$d]="---"
-                reporoot[$d]="[dir removed]"
+                repotype[$i]="---"
+                reporoot[$i]="[dir_removed]"
                 continue;
             else
-                repotype[$d]="---"
-                reporoot[$d]="[no repository found]"
+                repotype[$i]="---"
+                reporoot[$i]="[no_repository_found]"
             fi
 
             # NOTE: repeated commands outperform function call by an order of magnitude
             # NOTE: commands without capture "$(...)" outperform commands with capture
-            for (( n=${#slashes[$d]}; n>0; --n )); do
-                [ -d "$dir/.git" ] && repotype[$d]="git" && cd "$dir" && reporoot[$d]="$PWD" && cd "$curdir" && break;
-                [ -d "$dir/.svn" ] && repotype[$d]="svn" && cd "$dir" && reporoot[$d]="$PWD" && cd "$curdir" && break;
-                [ -d "$dir/.bzr" ] && repotype[$d]="bzr" && cd "$dir" && reporoot[$d]="$PWD" && cd "$curdir" && break;
-                [ -d "$dir/.hg"  ] && repotype[$d]="hg " && cd "$dir" && reporoot[$d]="$PWD" && cd "$curdir" && break;
+            # NOTE: this is also faster than SED'ing the "../" away
+            for (( j=${#slashes[$i]}; j>0; --j )); do
+                [ -d "$dir/.git" ] && repotype[$i]="git" && cd "$dir" && reporoot[$i]="$PWD" && cd "$curdir" && break;
+                [ -d "$dir/.svn" ] && repotype[$i]="svn" && cd "$dir" && reporoot[$i]="$PWD" && cd "$curdir" && break;
+                [ -d "$dir/.bzr" ] && repotype[$i]="bzr" && cd "$dir" && reporoot[$i]="$PWD" && cd "$curdir" && break;
+                [ -d "$dir/.hg"  ] && repotype[$i]="hg " && cd "$dir" && reporoot[$i]="$PWD" && cd "$curdir" && break;
                 dir="$dir/.."
             done
 
