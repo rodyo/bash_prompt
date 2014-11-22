@@ -87,6 +87,7 @@ alias rmdir=_rmdir_DONTUSE
 alias shred="shred -uz -n 36"
 alias rmrf="rm -rf"
 alias ged=_gedit_DONTUSE
+alias not=_gedit_DONTUSE
 alias sged="gksudo _gedit_DONTUSE"
 
 # Bind completion of "cd" to "ido_dir()"
@@ -101,7 +102,7 @@ alias x=exit
 alias q=exit
 alias n="nano -w"
 alias m="make -j$NUM_PROCESSORS"
-alias r=gnome-open
+alias r=xdg-open
 alias t="top -d 1"
 alias p="pcmanfm . &"
 alias g=_geany_DONTUSE

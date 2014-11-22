@@ -3,18 +3,72 @@
 # TODO: USE_COLORS doesn't work on Windows 8 for some reason...
 
 
+# --------------------------------------------------------------------------------------------------
+# Profiling
+# --------------------------------------------------------------------------------------------------
+
+# If/when profiling, surround the function to profile with _START_PROFILING;/_STOP_PROFILING;
+
+DO_PROFILING=0
+
+_START_PROFILING()
+{
+    which tee &>/dev/null && which date &>/dev/null && which sed &>/dev/null which paste &>/dev/null || \
+        (>&2 echo "cannot profile: unmet depenencies" && return)
+
+    if [ $DO_PROFILING -eq 1 ]; then
+        PS4='+ $(date "+%s.%N")\011 '
+        exec 3>&2 2> >(tee /tmp/sample-time.$$.log |
+                       sed  -u 's/^.*$/now/' |
+                       date -f - "+%s.%N" > /tmp/sample-time.$$.tim)
+        set -x
+    else
+        >&2 echo "stray _START_PROFILING found"
+    fi
+}
+
+_STOP_PROFILING()
+{
+    if [ $DO_PROFILING -eq 1 ]; then
+        set +x
+        exec 2>&3 3>&-
+
+        printf " %-11s  %-11s   %s\n" "duration" "cumulative" "command" > ~/profile_report.$$.log
+        paste <(
+            while read tim; do
+                [ -z "$last" ] && last=${tim//.} && first=${tim//.}
+                crt=000000000$((${tim//.}-10#0$last))
+                ctot=000000000$((${tim//.}-10#0$first))
+                printf "%12.9f %12.9f\n" ${crt:0:${#crt}-9}.${crt:${#crt}-9} \
+                                         ${ctot:0:${#ctot}-9}.${ctot:${#ctot}-9}
+                last=${tim//.}
+              done < /tmp/sample-time.$$.tim
+            ) /tmp/sample-time.$$.log >> ~/profile_report.$$.log && \
+        echo "Profiling report available in '~/profile_report.$$.log'"
+
+    else
+        >&2 echo "stray _STOP_PROFILING found"
+    fi
+}
+
 
 # --------------------------------------------------------------------------------------------------
 # Initialize
 # --------------------------------------------------------------------------------------------------
 
 
-# Check for external tools
+# Check for external tools and shell specifics
 # --------------------------------------------------------------------------------------------------
 
 command -v lsattr &> /dev/null && processAcls=1 || processAcls=0
 command -v awk &> /dev/null && haveAwk=1 || haveAwk=0
 
+which git &>/dev/null && which svn &>/dev/null && which hg &>/dev/null && which bzr &>/dev/null && haveAllRepoBinaries=1 || haveAllRepoBinaries=0
+#TODO: bash native method is virtually always faster...
+haveAllRepoBinaries=0
+
+# (Cygwin)
+[ "$(uname -o)" == "Cygwin" ] && atWork=1 || atWork=0
 
 
 # Create global associative arrays
@@ -47,10 +101,9 @@ REPO_MODE=false;       REPO_TYPE=""
 REPO_PATH=
 
 # colors used for different repositories in prompt/prettyprint
-REPO_COLOR[svn]="\033[01;35m";    REPO_COLOR[CVS]="\033[43;30";
-REPO_COLOR[git]="\033[01;31m";    REPO_COLOR[hg]="\033[01;36m";
-REPO_COLOR[bzr]="\033[01;33m";
-
+REPO_COLOR[svn]="\033[01;35m";        REPO_COLOR[bzr]="\033[01;33m";
+REPO_COLOR[git]="\033[01;31m";        REPO_COLOR[hg]="\033[01;36m";
+REPO_COLOR[---]="${ALL_COLORS[di]}"
 
 
 # --------------------------------------------------------------------------------------------------
@@ -70,6 +123,18 @@ command_not_found_handle()
 
 
 # --------------------------------------------------------------------------------------------------
+# Join input arguments into a single string
+# --------------------------------------------------------------------------------------------------
+function join
+{
+    local IFS="$1";
+    shift;
+    echo "$*";
+}
+
+
+
+# --------------------------------------------------------------------------------------------------
 # Multicolumn colored filelist
 # --------------------------------------------------------------------------------------------------
 
@@ -78,10 +143,11 @@ command_not_found_handle()
 # TODO: show [seq] and ranges for simple sequences, with min/max file size
 
 # FIXME: seems that passing an argument does not work properly
-# FIXME: breaks when upgrading to Ubuntu 14.04???
+# FIXME: breaks when upgrading to Ubuntu 14.04??
 
 multicolumn_ls()
 {
+
     if [ $haveAwk -eq 1 ]; then
 
         command ls -opg --si --group-directories-first --time-style=+ --color "$@" | awk '
@@ -469,18 +535,16 @@ multicolumn_ls()
 # command executed just PRIOR to showing the prompt
 promptcmd()
 {
-    # write previous command to disk
-    history -a
+
 
     # initialize
     local ES exitstatus=$?    # exitstatus of previous command
     local pth pthlen
 
-    # put pretty-printed full path in the upper right corner
-    pth="$(prettyprint_dir "$(pwd)")"
-    pthlen=$(echo "$pth" | sed -r "s/\x1B\[([0-9]{1,3}((;[0-9]{1,3})*)?)?[m|K]//g")
-    printf "\E7\E[001;$(($COLUMNS-${#pthlen}-2))H\E[1m\E[32m[\E[0m$pth\E[1m\E[32m]\E8\E[0m"
+    # write previous command to disk
+    (history -a &) &> /dev/null
 
+    # Set new prompt (taking into account repositories)
 # TODO: why doesn't this work on Windows 8?
 USE_COLORS=1
 
@@ -497,6 +561,7 @@ USE_COLORS=1
             ES='o_O '; fi
     fi
 
+
     case "$REPO_TYPE" in
 
         # GIT repo
@@ -505,11 +570,11 @@ USE_COLORS=1
             branch=${branch#\* }
             if [ $? == 0 ]; then
                 if [ $USE_COLORS ]; then
-                     PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[git]}'\] [git: $branch] : \W\[\033[00m\]\$ '
+                    PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[git]}'\] [git: $branch] : \W\[\033[00m\]\$ '
                 else PS1=$ES'\u@\h: [git: $branch] : \W\$ '; fi
             else
                 if [ $USE_COLORS ]; then
-                     PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[git]}'\] [*unknown branch*] : \W\[\033[00m\]\$ '
+                    PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[git]}'\] [*unknown branch*] : \W\[\033[00m\]\$ '
                 else PS1=$ES'\u@\h: [*unknown branch*] : \W\$ '; fi
             fi
             ;;
@@ -517,28 +582,21 @@ USE_COLORS=1
         # SVN repo
         "svn")
             if [ $USE_COLORS ]; then
-                 PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[svn]}'\] [svn] : \W\[\033[00m\]\$ '
+                PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[svn]}'\] [svn] : \W\[\033[00m\]\$ '
             else PS1=$ES'\u@\h: [svn] : \W\$ '; fi
             ;;
 
         # mercurial repo
         "hg")
             if [ $USE_COLORS ]; then
-                 PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[hg]}'\] [hg] : \W\[\033[00m\]\$ '
+                PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[hg]}'\] [hg] : \W\[\033[00m\]\$ '
             else PS1=$ES'\u@\h: [hg] : \W\$ '; fi
-            ;;
-
-        # CVS repo
-        "CVS")
-            if [ $USE_COLORS ]; then
-                 PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[CVS]}'\] [CVS] : \W\[\033[00m\]\$ '
-            else PS1=$ES'\u@\h: [CVS] : \W\$ '; fi
             ;;
 
         # bazaar repo
         "bzr")
             if [ $USE_COLORS ]; then
-                 PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[bzr]}'\] [bzr] : \W\[\033[00m\]\$ '
+                PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[bzr]}'\] [bzr] : \W\[\033[00m\]\$ '
             else PS1=$ES'\u@\h: [bzr] : \W\$ '; fi
             ;;
 
@@ -557,6 +615,11 @@ USE_COLORS=1
             fi
             ;;
     esac
+
+    # put pretty-printed full path in the upper right corner
+    pth="$(prettyprint_dir "$PWD")"
+    pthlen=$(echo "$pth" | sed -r "s/\x1B\[([0-9]{1,3}((;[0-9]{1,3})*)?)?[m|K]//g")
+    printf "\E7\E[001;$(($COLUMNS-${#pthlen}-2))H\E[1m\E[32m[\E[0m$pth\E[1m\E[32m]\E8\E[0m"
 
 }
 # make this function the function called at each prompt display
@@ -613,9 +676,10 @@ prettyprint_dir()
 
     pth="${original_pth/$HOME/~}";
 
-
     if [ $# -lt 3 ]; then
         repoinfo=($(check_repo "$@"))
+        if [ ${#repoinfo[@]} -gt 2 ]; then
+            repoinfo[1]=$(join "${IFS[0]}" "${repoinfo[@]:1}"); fi
     else
         repoinfo=("$2" "$3")
     fi
@@ -624,10 +688,11 @@ prettyprint_dir()
     if [ $USE_COLORS ]; then
 
         # TODO: dependency on AWK; include bash-only version
-
-        repoCol=${REPO_COLOR[${repoinfo[0]}]};
-        local repopath="$(dirname "${repoinfo[@]:1}")"
-        pth="${pth/$repopath/$repopath$'\033'[00m$repoCol}"
+        local repoCol=${REPO_COLOR[${repoinfo[0]}]};
+        if [ -n $repoCol ]; then
+            local repopath="$(dirname "${repoinfo[1]}" 2> /dev/null)"
+            pth="${pth/$repopath/$repopath$'\033'[00m$repoCol}"
+        fi
 
         echo "${pth}" | awk '
 
@@ -683,74 +748,112 @@ prettyprint_dir()
         fi
         printf "$pth/"
     fi
+
 }
 
 # Check if given dir(s) is (are) (a) repository(ies)
 check_repo()
 {
+    # TODO: instead of "all or nothing", find out which *specific* repository systems have been installed
+
     # Usage:
     #     check_repo [dir1] [dir2] ...
+    #
     # If arguments are ommitted, only PWD is processed.
-
-
+    #
+    #
     # Output:
-    #     [repo type 1] [repo root 1]
-    #     [repo type 2] [repo root 2]
-    #     ...
-    # Strings are set equal to "---" if the given dir is not a repository
+    #    [repo type 1] [repo root 1]
+    #    [repo type 2] [repo root 2]
+    #    ...
+    #
+    # The string [repo type X] is a 3-character string. Possible values are:
+    #    svn: directory is a subversion repository
+    #    git: directory is a git repository
+    #    hg : directory is a mercurial repository
+    #    bzr: directory is a bazaar repository
+    #    ---: the given dir is not a repository
 
     local -a dirs
-    local curdir="$PWD"
+    local dir
 
     if [ $# -eq 0 ]; then
-        dirs="$curdir"
+        dirs="$PWD"
     else
         dirs=("$@")
     fi
 
-    local -a slashes=("${dirs[@]//[^\/]/}")
-    local -a repotype reporoot
-    local dir
+    # All repository systems have been installed; use their native methods to discover
+    # where the repository root is located
+    if [ $haveAllRepoBinaries -eq 1 ]; then
 
-    # Using repeated cd() is slow; It's faster to append ".." in a loop, and
-    # only do 1 call to cd() to cleanup the dir format
-    for (( d=0; d<${#dirs[@]}; ++d )); do
+        local check
 
-        dir="${dirs[$d]}"
+        for dir in "${dirs[@]}"; do
 
-        if [ ! -d "$dir" ]; then
-            repotype[$d]="---"
-            reporoot[$d]="[dir removed]"
-            continue;
-        else
-            repotype[$d]="---"
-            reporoot[$d]="[no repository found]"
-        fi
+            check=$(printf "%s " git && command cd "${dir}" && git rev-parse --show-toplevel 2> /dev/null)
+            if [ $? -eq 0 ]; then echo "$check"; continue; fi
 
-        # NOTE: repeated commands outperform function call by an order of magnitude
-        # NOTE: commands without capture "$(...)" outperform commands with capture
-        for (( n=${#slashes[$d]}; n>0; --n )); do
-            [ -d "$dir/.git" ] && repotype[$d]="git" && cd "$dir" && reporoot[$d]="$PWD" && cd "$curdir" && break;
-            [ -d "$dir/.svn" ] && repotype[$d]="svn" && cd "$dir" && reporoot[$d]="$PWD" && cd "$curdir" && break;
-            [ -d "$dir/.CVS" ] && repotype[$d]="CVS" && cd "$dir" && reporoot[$d]="$PWD" && cd "$curdir" && break;
-            [ -d "$dir/.bzr" ] && repotype[$d]="bzr" && cd "$dir" && reporoot[$d]="$PWD" && cd "$curdir" && break;
-            [ -d "$dir/.hg"  ] && repotype[$d]="hg " && cd "$dir" && reporoot[$d]="$PWD" && cd "$curdir" && break;
-            dir="$dir/.."
+            check=$(printf "%s " svn && svn info "$dir" 2> /dev/null | awk '/^Working Copy Root Path:/ {print $NF}' && [ ${PIPESTATUS[0]} -ne 1 ])
+            if [ $? -eq 0 ]; then echo "$check"; continue; fi
+
+            check=$(printf "%s  " hg && hg root --cwd "$dir" 2> /dev/null)
+            if [ $? -eq 0 ]; then echo "$check"; continue; fi
+
+            check=$(printf "%s " bzr && bzr root "$dir" 2> /dev/null) ||
+            if [ $? -eq 0 ]; then echo "$check"; continue; fi
+
+            echo "--- [no_repository_found]"
+
         done
 
-    done
+    # Not all repository systems have been installed; use bash to loop through the
+    # directory tree in search of a repository identifier
+    else
 
-    for ((i=0;i<${#repotype[@]}; ++i )); do
-        printf "%s %s\n" "${repotype[$i]} ${reporoot[$i]}"; done
+        local -a repotype reporoot slashes=("${dirs[@]//[^\/]/}")
+        local i j
+
+        # Using repeated cd() is slow; It's faster to append ".." in a loop, and
+        # only do 2 calls to cd() to cleanup the dir format
+        for (( i=0; i<${#dirs[@]}; ++i )); do
+
+            dir="${dirs[$i]}"
+
+            if [ ! -d "$dir" ]; then
+                repotype[$i]="---"
+                reporoot[$i]="[dir_removed]"
+                continue;
+            else
+                repotype[$i]="---"
+                reporoot[$i]="[no_repository_found]"
+            fi
+
+            # NOTE: repeated commands outperform function call by an order of magnitude
+            # NOTE: commands without capture "$(...)" outperform commands with capture
+            # NOTE: this is also faster than SED'ing the "../" away
+            for (( j=${#slashes[$i]}; j>0; --j )); do
+                [ -d "$dir/.git" ] && repotype[$i]="git" && cd "$dir" && reporoot[$i]="$PWD" && cd "$curdir" && break;
+                [ -d "$dir/.svn" ] && repotype[$i]="svn" && cd "$dir" && reporoot[$i]="$PWD" && cd "$curdir" && break;
+                [ -d "$dir/.bzr" ] && repotype[$i]="bzr" && cd "$dir" && reporoot[$i]="$PWD" && cd "$curdir" && break;
+                [ -d "$dir/.hg"  ] && repotype[$i]="hg " && cd "$dir" && reporoot[$i]="$PWD" && cd "$curdir" && break;
+                dir="$dir/.."
+            done
+
+        done
+
+        for (( i=0;i<${#repotype[@]}; ++i )); do
+            printf "%s %s\n" "${repotype[$i]} ${reporoot[$i]}"; done
+    fi
+
 }
-
 
 
 # Update all repositories under the current dir
 update_all()
 {
     for d in */; do
-        rp=($(check_repo "$(pwd)/$d"))
+        rp=($(check_repo "$PWD/$d"))
         case "${rp[0]}" in
             "svn")
                 cd "${rp[@]:1}"
@@ -848,22 +951,10 @@ enter_HG()
     # TODO
 }
 
-# Enter CVS mode
-enter_CVS()
-{
-    # enter CVS mode
-    REPO_TYPE="CVS"
-    REPO_MODE=true
-    REPO_PATH="$@"
-
-    # alias everything
-    # TODO
-}
-
 # Enter Bazaar mode
 enter_BZR()
 {
-    # enter CVS mode
+    # enter BZR mode
     REPO_TYPE="bzr"
     REPO_MODE=true
     REPO_PATH="$@"
@@ -1065,7 +1156,6 @@ _cd_DONTUSE()
             case "${repo[0]}" in
                 "git") enter_GIT "${repo[@]:1}" ;;
                 "svn") enter_SVN "${repo[@]:1}" ;;
-                "CVS") enter_CVS "${repo[@]:1}" ;;
                 "hg")  enter_HG  "${repo[@]:1}" ;;
                 "bzr") enter_BZR "${repo[@]:1}" ;;
                 *) ;;
@@ -1239,12 +1329,6 @@ _rm_DONTUSE()
                 ;;
 
             "hg")
-                # TODO
-                not_added=
-                outside_repo=
-                ;;
-
-            "CVS")
                 # TODO
                 not_added=
                 outside_repo=
@@ -1502,7 +1586,7 @@ changext()
 }
 
 # instant calculator
-C() { 
+C() {
     echo "$@" | /usr/local/bin/bc -lq
 }
 
@@ -1616,11 +1700,24 @@ chroot_dir()
 
 # gedit ALWAYS in background and immune to terminal closing!
 # must be aliased in .bash_aliases
-_gedit_DONTUSE() { (gedit "$@" &) | nohup &> /dev/null; }
+_gedit_DONTUSE()
+{
+    if [ $atWork -eq 0 ]; then
+        (gedit "$@" &) | nohup &> /dev/null;
+    else
+        (notepad "$@" &) | nohup &> /dev/null;
+    fi
+}
 
 # geany ALWAYS in background and immune to terminal closing!
 # must be aliased in .bash_aliases
-_geany_DONTUSE() { (geany "$@" &) | nohup &> /dev/null; }
+_geany_DONTUSE()
+{
+    #if [ $atWork -eq 0 ]; then
+        (geany "$@" &) | nohup &> /dev/null;
+    #else
+    #fi
+}
 
 # grep all processes in wide-format PS, excluding "grep" itself
 psa()
@@ -1640,6 +1737,16 @@ pngify()
     done
 }
 
+
+# check validity of XML
+check_XML()
+{
+    for file in "$@"; do
+        python -c "import sys,xml.dom.minidom as d; d.parse(sys.argv[1])" "$file" &&
+            echo "XML-file $file is valid and well-formed" ||
+            echo "XML-file $file is NOT valid"
+    done
+}
 
 
 new_github_repo()
@@ -1684,3 +1791,4 @@ new_autokey_symbol()
     
     
 }
+
