@@ -1655,3 +1655,32 @@ existing_github_repo()
     git remote add origin git@github.com:rodyo/"${1}".git
     git push -u origin master
 }
+
+new_autokey_symbol()
+{
+    local name="$1"    
+    local description="$2"
+    local abbreviation="$3"
+    local unicode="$4"
+    local instant="$5"
+    
+    if [ -z $instant ]; then 
+        instant=1
+    fi
+    
+    if [ instant -eq 1 ]; then
+        instant=true
+    else
+        instant=false
+    fi
+
+    cp "~/.config/autokey/skel/.symbol.json*" "~/.config/autokey/data/Symbols/International/.${name}.json"
+    
+    sed -i "s/REPLACEME_DESCRIPTION/${description}/g" "~/.config/autokey/data/Symbols/International/.${name}.json"
+    sed -i "s/REPLACEME_ABBREVIATION/${abbreviation}/g" "~/.config/autokey/data/Symbols/International/.${name}.json"
+    sed -i "s/REPLACEME_INSTANT/${instant}/g" "~/.config/autokey/data/Symbols/International/.${name}.json"
+    
+    echo "u${unicode} " > "~/.config/autokey/data/Symbols/International/${name}.txt"
+    
+    
+}
