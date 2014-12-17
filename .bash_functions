@@ -103,7 +103,7 @@ REPO_PATH=
 # colors used for different repositories in prompt/prettyprint
 REPO_COLOR[svn]="\033[01;35m";        REPO_COLOR[bzr]="\033[01;33m";
 REPO_COLOR[git]="\033[01;31m";        REPO_COLOR[hg]="\033[01;36m";
-REPO_COLOR[---]="${ALL_COLORS[di]}"
+REPO_COLOR[---]="\033[${ALL_COLORS[di]}m"
 
 
 # --------------------------------------------------------------------------------------------------
@@ -689,7 +689,7 @@ prettyprint_dir()
 
         # TODO: dependency on AWK; include bash-only version
         local repoCol=${REPO_COLOR[${repoinfo[0]}]};
-        if [ -n $repoCol ]; then
+        if [ -n $repoCol ]; then        
             local repopath="$(dirname "${repoinfo[1]}" 2> /dev/null)"
             pth="${pth/$repopath/$repopath$'\033'[00m$repoCol}"
         fi
@@ -1727,6 +1727,23 @@ psa()
     ps auxw | egrep -iT --color=auto "[${1:0:1}]${1:1}"
 }
 
+function mvq
+{
+    if [ $# -lt 2 ]; then
+        echo "mv requires at least 2 arguments."; exit 1; fi
+    nohup nice -n 19 mv "$@" > /dev/null 2>&1 &
+    echo "Moving \"${@: 1:$(($#-1))}\" to \"${@: -1}\""
+}
+                    
+function cpq 
+{
+    if [ $# -lt 2]; then 
+        echo "cp requires at least 2 arguments."; exit 1; fi
+    nohup nice -n 19 "$@" > /dev/null 2>&1 &
+    echo "Copying \"${@: 1:$(($#-1))}\" to \"${@: -1}\""
+}
+                                       
+
 # export hi-res PNG from svg file
 # must be aliased in .bash_aliases
 pngify()
@@ -1765,4 +1782,32 @@ existing_github_repo()
     git push -u origin master
 }
 
+new_autokey_symbol()
+{
+    local name="$1"    
+    local description="$2"
+    local abbreviation="$3"
+    local unicode="$4"
+    local instant="$5"
+    
+    if [ -z $instant ]; then 
+        instant=1
+    fi
+    
+    if [ instant -eq 1 ]; then
+        instant=true
+    else
+        instant=false
+    fi
+
+    cp "~/.config/autokey/skel/.symbol.json*" "~/.config/autokey/data/Symbols/International/.${name}.json"
+    
+    sed -i "s/REPLACEME_DESCRIPTION/${description}/g" "~/.config/autokey/data/Symbols/International/.${name}.json"
+    sed -i "s/REPLACEME_ABBREVIATION/${abbreviation}/g" "~/.config/autokey/data/Symbols/International/.${name}.json"
+    sed -i "s/REPLACEME_INSTANT/${instant}/g" "~/.config/autokey/data/Symbols/International/.${name}.json"
+    
+    echo "u${unicode} " > "~/.config/autokey/data/Symbols/International/${name}.txt"
+    
+    
+}
 
