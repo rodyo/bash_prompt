@@ -1171,6 +1171,7 @@ _cd_DONTUSE()
 # jump dirs via dir-numbers
 _cdn_DONTUSE()
 {
+
     # create initial stack array
     # (take care of dirs with spaces in the name)
     local -a stack=("${DIRSTACK[@]//\~/$HOME}")
@@ -1203,6 +1204,7 @@ _cdn_DONTUSE()
         _cd_DONTUSE "${entry#"${entry%%[![:space:]]*}"}"
 
     fi
+    
 }
 
 

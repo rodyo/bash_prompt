@@ -146,7 +146,7 @@ alias df="df -ThH"
 #alias psa="ps auxw | command egrep -iT --color=auto"
 alias top10="ps -eo pcpu,pid,user,args | sort -k 1 -r | head -10"
 alias locate="locate -i"
-alias grep="egrep -iIT --color=auto"
+alias grep="egrep -iIT --color=auto --exclude-dir .svn --exclude-dir .git"
 alias egrep=grep
 alias catbare='/bin/egrep -v "^#\|^[[:space:]]*$"'
 alias rebash=". ~/.bashrc"
