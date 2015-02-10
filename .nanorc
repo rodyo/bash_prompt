@@ -17,7 +17,7 @@
 
 
 ## Use auto-indentation.
-set autoindent
+#set autoindent
 
 ## Backup files to filename~.
 # set backup

@@ -672,7 +672,7 @@ prettyprint_dir()
     local -a repoinfo
     local pwdmaxlen=$(($COLUMNS/3))
     local pthoffset
-    local original_pth="$(command ls -d "$1" --color)"
+    local original_pth="$(command ls -d "${1/\~/$HOME}" --color)"
 
     pth="${original_pth/$HOME/~}";
 
@@ -688,57 +688,67 @@ prettyprint_dir()
     if [ $USE_COLORS ]; then
 
         # TODO: dependency on AWK; include bash-only version
-        local repoCol=${REPO_COLOR[${repoinfo[0]}]};
-        if [ -n $repoCol ]; then        
-            local repopath="$(dirname "${repoinfo[1]}" 2> /dev/null)"
-            pth="${pth/$repopath/$repopath$'\033'[00m$repoCol}"
-        fi
-
-        echo "${pth}" | awk '
-
-            function strlen(str) { # compute the length of a string, ignoring color-codes
-                gsub(/\033+\[+[0-9;]+m/, "", str);
-                return length(str);
-            }
-
-            {
-                str    = $0;
-                len    = strlen(str);
-                maxLen = '$pwdmaxlen';
-                if (len > maxLen)
+        if [ $haveAwk ]; then
+        
+            local repoCol=${REPO_COLOR[${repoinfo[0]}]};
+            if [ -n $repoCol ]; then        
+                local repopath="$(dirname "${repoinfo[1]}" 2> /dev/null)"
+                pth="${pth/$repopath/$repopath$'\033'[00m$repoCol}"
+            fi
+    
+            echo "${pth}" | awk '
+    
+                function strlen(str) { # compute the length of a string, ignoring color-codes
+                    gsub(/\033+\[+[0-9;]+m/, "", str);
+                    return length(str);
+                }
+    
                 {
-                    lastColorCode = "";
-                    char_count    = 0;
-                    counting      = 1;
-                    N = split(str, str_chars, "");
-
-                    for (k=0; k<N; ++k)
+                    str    = $0;
+                    len    = strlen(str);
+                    maxLen = '$pwdmaxlen';
+                    if (len > maxLen)
                     {
-                        if (str_chars[k] == "\033") {
-                            lastColorCode = "\033";
-                            counting = 0; continue;
-                        }
-
-                        if (!counting) {
-                            lastColorCode = lastColorCode str_chars[k];
-                            if (str_chars[k] == "m")
-                                counting = 1;
-                            continue;
-                        }
-                        else
-                            char_count++;
-
-                        if (len-char_count+3 <= maxLen) {
-                            str = "\033[0m" lastColorCode "..." substr(str,k-1) "\033[0m";
-                            break;
+                        lastColorCode = "";
+                        char_count    = 0;
+                        counting      = 1;
+                        N = split(str, str_chars, "");
+    
+                        for (k=0; k<N; ++k)
+                        {
+                            if (str_chars[k] == "\033") {
+                                lastColorCode = "\033";
+                                counting = 0; continue;
+                            }
+    
+                            if (!counting) {
+                                lastColorCode = lastColorCode str_chars[k];
+                                if (str_chars[k] == "m")
+                                    counting = 1;
+                                continue;
+                            }
+                            else
+                                char_count++;
+    
+                            if (len-char_count+3 <= maxLen) {
+                                str = "\033[0m" lastColorCode "..." substr(str,k-1) "\033[0m";
+                                break;
+                            }
                         }
                     }
+    
+                    printf str;
+    
                 }
-
-                printf str;
-
-            }
-        '
+            '
+        else
+            echo "$pth"
+            
+            # Strip color codes from string: 
+            # sed -r "s/\x1B\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]//g"
+                       
+            
+        fi
 
     # non-color print
     else
@@ -1173,20 +1183,15 @@ _cdn_DONTUSE()
 {
 
     # create initial stack array
-    # (take care of dirs with spaces in the name)
-    local -a stack=("${DIRSTACK[@]//\~/$HOME}")
-
-    # Sort entries, and find unique ones:
-    local entry IFS_old="$IFS";
-    IFS=$'\n'
-    stack=( $(echo "${stack[*]}" | sort -u) )
+    local IFS_old="$IFS"; IFS=$'\n'
+    local -a stack=( $(dirs -p | sort -u) )
     IFS="$IFS_old"
+
 
     # if no function arguments provided, show list
     if [ $# -eq 0 ]; then
-
-        IFS=$'\n'
-        local -a repos=($(check_repo "${stack[@]}")) # NOTE: no quotes
+        IFS=$'\n' 
+        local -a repos=($(check_repo "${stack[@]}")) 
         local -a types=($(echo "${repos[*]}" | cut -f 1  -d " "))
         local -a paths=($(echo "${repos[*]}" | cut -f 2- -d " "))
         IFS="$IFS_old"
