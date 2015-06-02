@@ -169,9 +169,8 @@ if [ -f ~/.bash_aliases ]; then
 export INPUTRC=~/.inputrc
 
 
-# Pathing
-export CPLUS_INCLUDE_PATH="$CPLUS_INCLUDE_PATH;/opt/cspice;/opt/boost"
-export C_INCLUDE_PATH="$C_INCLUDE_PATH;/opt/cspice;/opt/boost"
-export BOOST_ROOT=/opt/boost
-export PATH=$PATH:/home/rody/Dev/android/android-sdk-linux_x86/tools:/home/rody/Dev/android/android-sdk-linux_x86/platform-tools
-
+# SSH agent (useful on CygWin)
+if [ -z "$SSH_AUTH_SOCK" -a -x "$SSHAGENT" ]; then
+    eval `ssh-agent -s`
+    trap "kill $SSH_AGENT_PID" 0
+fi
