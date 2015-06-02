@@ -169,4 +169,8 @@ if [ -f ~/.bash_aliases ]; then
 export INPUTRC=~/.inputrc
 
 
-
+# SSH agent (useful on CygWin)
+if [ -z "$SSH_AUTH_SOCK" -a -x "$SSHAGENT" ]; then
+    eval `ssh-agent -s`
+    trap "kill $SSH_AGENT_PID" 0
+fi
