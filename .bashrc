@@ -157,6 +157,10 @@ fi
 # TODO
 
 
+# Default editor
+export EDITOR=nano
+
+
 # Todo.txt
 if [[ -d ~/.todo && -f ~/.todo/todo_completion ]]; then
     source ~/.todo/todo_completion; fi
