@@ -17,6 +17,11 @@ $endif
 "\e[1;5C": forward-word  # ctrl right
 "\e[1;5D": backward-word # ctrl left
 
+# Delete word
+"\e[3;5~": kill-word      # ctrl delete
+"\037": unix-word-rubout  # ctrl backspace
+
+
 # put quotes around the argument list of the last command
 "\C-x\"": "\C-a\M-f\C-f\"\C-e\""
 
