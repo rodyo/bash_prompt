@@ -98,6 +98,8 @@ alias sged="gksudo _gedit_DONTUSE"
 
 # one-letter shorts
 alias c=clear
+alias clc='printf "\033c"'
+alias C='printf "\033c"'
 alias x=exit
 alias q=exit
 alias n="nano -w"
