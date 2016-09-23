@@ -111,7 +111,7 @@ STICKY                37;44     # dir with the sticky bit set (+t) and not other
 STICKY_OTHER_WRITABLE 30;42     # dir that is sticky and other-writable (+t,o+w)
 
 # OTHER_WRITABLE      34;42     # dir that is other-writable (o+w) and not sticky
-OTHER_WRITABLE        01;34     # dir that is other-writable (o+w) and not sticky
+OTHER_WRITABLE        01;37     # dir that is other-writable (o+w) and not sticky
 
 
 # COLORIZE MIME TYPES
@@ -174,6 +174,7 @@ OTHER_WRITABLE        01;34     # dir that is other-writable (o+w) and not stick
 .TIFF 01;35
 .png  01;35
 .PNG  01;35
+.stl  01;35
 .svg  01;35
 .SVG  01;35
 .svgz 01;35
@@ -233,10 +234,18 @@ OTHER_WRITABLE        01;34     # dir that is other-writable (o+w) and not stick
 .DOC   01;34
 .docx  01;34
 .DOCX  01;34
+.xls   01;34
+.xlsx  01;34
+.xlsm  01;34
+.XLS   01;34
+.XLSX  01;34
+.XLSM  01;34
+.rtf   01;34
 .pdf   01;34
 .PDF   01;34
 .txt   01;34
-.TXT   01;34      
+.TXT   01;34
+.csv   01;34     
 .odt   01;34
 .ODT   01;34      
 .odp   01;34
@@ -247,19 +256,25 @@ OTHER_WRITABLE        01;34     # dir that is other-writable (o+w) and not stick
 .ODS   01;34
 
 # source files
-.c    43;30
-.C    01;33
-.cpp  01;33            
-.o    01;32      
-.a    01;32    
-.h    01;33      
-.hh   01;33
-.hpp  01;33
-.cc   01;33
-.m    01;33            
-.mat  00;33
-.fig  00;33
-.html 01;34      
-.htm  01;34      
-
-
+.c    01;43;30
+.C    01;43;30
+.h    00;43;30
+.H    00;43;30
+.cpp  01;43;30
+.CPP  01;43;30
+.cc   01;43;30
+.CC   01;43;30
+.hh   00;43;30
+.HH   00;43;30
+.hpp  00;43;30
+.HPP  00;43;30
+.o    00;42;30
+.a    00;42;30
+.py   01;43;30
+.m    00;43;30
+.mdl  00;42;30
+.mat  00;42;30
+.fig  00;42;30
+.html 00;43;30
+.htm  00;43;30
+.xml  00;43;30

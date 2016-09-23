@@ -166,9 +166,7 @@ alias matlabrun="/bin/matlab -r"
 # python
 alias ipython="ipython -pylab"
 
-# various
-alias webrestart="sudo apache2ctl graceful"
-
 # WORK
 alias sshimulus="ssh simulus@simulus_box"
 alias cdss="cd ~/SIMULUS_5/SIMSAT4-Kernel/"
+alias cded="cd ~/Desktop/Work/EDRS/Software"
