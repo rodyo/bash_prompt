@@ -908,6 +908,7 @@ enter_GIT()
     REPO_PATH="$@"
 
     # alias everything
+    alias gf="git fetch"                   ;  REPO_CMD_fetch="gf"
     alias gp="git push"                    ;  REPO_CMD_push="gp"
     alias gP="git pull"                    ;  REPO_CMD_pull="gP"
     alias gc="git commit -am"              ;  REPO_CMD_commit="gc"
