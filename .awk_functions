@@ -1,0 +1,53 @@
+function ceil(v) {  # ceil fractional numbers
+    return v==int(v) ? v : int(v)+1;
+}
+
+function min(v,w) { # minimum of two numbers
+    return w<v ? w : v;
+}
+
+function trim(str) { # trim leading & trailing whitespace
+    sub(/^[ \t]+/,"",str);
+    sub(/[ \t]+$/,"",str);
+    return str;
+}
+
+function strlen(str) { # compute the length of a string, ignoring color-codes
+    gsub(/\033+\[+[0-9;]+m/, "", str);
+    return length(str);
+}
+
+function truncate_and_alignleft(str, maxLen)  # truncate possibly color-coded string
+{
+    space = 0;
+    len   = strlen(str);
+
+    if (len > maxLen)
+    {
+        char_count = 0;
+        counting = 1;
+        N = split(str, str_chars, "");
+        for (k=0; k<N; ++k)
+        {
+            if (str_chars[k] == "\033") {
+                counting = false; continue; }
+
+            if (!counting)
+                counting = (str_chars[k] =="m");
+            else
+                char_count++;
+
+            if (char_count > maxLen-3) {
+                str = substr(str,1,k) "..." "\033[00m";
+                len = k;
+                break;
+            }
+        }
+    }
+
+    while (space++ < maxLen-len)
+        str = str " ";
+
+    return str;
+
+}

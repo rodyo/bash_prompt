@@ -1,6 +1,56 @@
 # TODO: put the repository aliases in an associative array
 # TODO: find proper workaround for bash v. < 4
-# TODO: USE_COLORS doesn't work on Windows 8 for some reason...
+
+
+# --------------------------------------------------------------------------------------------------
+# Colors are a mess in bash...
+# --------------------------------------------------------------------------------------------------
+
+
+
+START_COLORSCHEME="\e["
+END_COLORSCHEME="m"
+
+RESET_COLORS="${START_COLORSCHEME}0${END_COLORSCHEME}"
+
+TXT_BOLD="01"
+TXT_DIM="02"
+TXT_UNDERLINE="04"
+
+FG_BLACK="30"
+FG_RED="31"
+FG_GREEN="32"
+FG_YELLOW="33"
+FG_BLUE="34"
+FG_MAGENTA="35"
+FG_CYAN="36"
+FG_LIGHTGRAY="37"
+FG_DARKGRAY="90"
+FG_LIGHTRED="91"
+FG_LIGHTGREEN="92"
+FG_LIGHTYELLOW="93"
+FG_LIGHTBLUE="94"
+FG_LIGHTMAGENTA="95"
+FG_LIGHTCYAN="96"
+FG_WHITE="97"
+
+BG_BLACK="40"
+BG_RED="41"
+BG_GREEN="42"
+BG_YELLOW="43"
+BG_BLUE="44"
+BG_MAGENTA="45"
+BG_CYAN="46"
+BG_LIGHTGRAY="47"
+BG_DARKGRAY="100"
+BG_LIGHTRED="101"
+BG_LIGHTGREEN="102"
+BG_LIGHTYELLOW="103"
+BG_LIGHTBLUE="104"
+BG_LIGHTMAGENTA="105"
+BG_LIGHTCYAN="106"
+BG_WHITE="107"
+
 
 
 # --------------------------------------------------------------------------------------------------
@@ -101,9 +151,9 @@ REPO_MODE=false;       REPO_TYPE=""
 REPO_PATH=
 
 # colors used for different repositories in prompt/prettyprint
-REPO_COLOR[svn]="\033[01;35m";        REPO_COLOR[bzr]="\033[01;33m";
-REPO_COLOR[git]="\033[01;31m";        REPO_COLOR[hg]="\033[01;36m";
-REPO_COLOR[---]="\033[${ALL_COLORS[di]}m"
+REPO_COLOR[svn]=${START_COLORSCHEME}${TXT_BOLD}';'${FG_MAGENTA}${END_COLORSCHEME};    REPO_COLOR[bzr]=${START_COLORSCHEME}${TXT_BOLD}';'${FG_YELLOW}${END_COLORSCHEME}
+REPO_COLOR[git]=${START_COLORSCHEME}${TXT_BOLD}';'${FG_RED}${END_COLORSCHEME};        REPO_COLOR[hg]=${START_COLORSCHEME}${TXT_BOLD}';'${FG_CYAN}${END_COLORSCHEME}
+REPO_COLOR[---]=${START_COLORSCHEME}${ALL_COLORS[di]}${END_COLORSCHEME}
 
 
 # --------------------------------------------------------------------------------------------------
@@ -150,61 +200,7 @@ multicolumn_ls()
 
     if [ $haveAwk -eq 1 ]; then
 
-        command ls -opg --si --group-directories-first --time-style=+ --color "$@" | awk '
-
-            function ceil(v) {  # ceil fractional numbers
-                return v==int(v) ? v : int(v)+1;
-            }
-
-            function min(v,w) { # minimum of two numbers
-                return w<v ? w : v;
-            }
-
-            function trim(str) { # trim leading & trailing whitespace
-                sub(/^[ \t]+/,"",str);
-                sub(/[ \t]+$/,"",str);
-                return str;
-            }
-
-            function strlen(str) { # compute the length of a string, ignoring color-codes
-                gsub(/\033+\[+[0-9;]+m/, "", str);
-                return length(str);
-            }
-
-            function truncate_and_alignleft(str, maxLen)  # truncate possibly color-coded string
-            {
-                space = 0;
-                len   = strlen(str);
-
-                if (len > maxLen)
-                {
-                    char_count = 0;
-                    counting = 1;
-                    N = split(str, str_chars, "");
-                    for (k=0; k<N; ++k)
-                    {
-                        if (str_chars[k] == "\033") {
-                            counting = false; continue; }
-
-                        if (!counting)
-                            counting = (str_chars[k] =="m");
-                        else
-                            char_count++;
-
-                        if (char_count > maxLen-3) {
-                            str = substr(str,1,k) "..." "\033[00m";
-                            len = k;
-                            break;
-                        }
-                    }
-                }
-
-                while (space++ < maxLen-len)
-                    str = str " ";
-
-                return str;
-
-            }
+        command ls -opg --si --group-directories-first --time-style=+ --color "$@" | awk -i "$HOME/.awk_functions" '
 
             BEGIN {
 
@@ -378,7 +374,7 @@ multicolumn_ls()
 
         # Now print the list
         if [ $USE_COLORS ]; then
-            printf "\E[0m"; fi
+            printf $RESET_COLORS; fi
 
         local lastColumnWidth ind paint device=0 lastColumn=0 lastsymbol=" "
         local n numDirs=0 numFiles=0 numLinks=0 numDevs=0 numPipes=0 numSockets=0
@@ -469,10 +465,10 @@ multicolumn_ls()
                     # and finally, print it:
                     if [[ $device = 1 ]]; then
                         # block/character devices
-                        printf "%7s\E[01;31m%s\E[0m \E[${paint}m%-*s \E[0m" "${sizes[$ind]}${names[$ind]%% *}" "$lastsymbol" $maxNameWidth "${names[$ind]#* }"
+                        printf "%7s${START_COLORSCHEME}${TXT_BOLD};${FG_RED}${END_COLORSCHEME}%s${RESET_COLORS} ${START_COLORSCHEME}${paint}${END_COLORSCHEME}%-*s ${RESET_COLORS}" "${sizes[$ind]}${names[$ind]%% *}" "$lastsymbol" $maxNameWidth "${names[$ind]#* }"
                     else
                         # all others
-                        printf "%7s\E[01;31m%s\E[0m \E[${paint}m%-*s \E[0m" "${sizes[$ind]}" "$lastsymbol" $maxNameWidth "${names[$ind]}"
+                        printf "%7s${START_COLORSCHEME}${TXT_BOLD};${FG_RED}${END_COLORSCHEME}%s${RESET_COLORS} ${START_COLORSCHEME}${paint}${END_COLORSCHEME}%-*s ${RESET_COLORS}" "${sizes[$ind]}" "$lastsymbol" $maxNameWidth "${names[$ind]}"
                     fi
 
                 # we're NOT using colors:
@@ -535,33 +531,43 @@ multicolumn_ls()
 # command executed just PRIOR to showing the prompt
 promptcmd()
 {
-
-
     # initialize
     local ES exitstatus=$?    # exitstatus of previous command
     local pth pthlen
 
+    # Username color scheme
+    local usrName=""
+    if [ $USE_COLORS ]; then
+        usrName="${START_COLORSCHEME}${TXT_BOLD};${FG_GREEN}${END_COLORSCHEME}"; fi
+
+    # hostname color scheme
+    local hstName=""
+    if [ $USE_COLORS ]; then
+        hstName="${START_COLORSCHEME}${FG_MAGENTA}${END_COLORSCHEME}"; fi
+
+
     # write previous command to disk
     (history -a &) &> /dev/null
 
-    # Set new prompt (taking into account repositories)
-# TODO: why doesn't this work on Windows 8?
-USE_COLORS=1
 
     # previous command exit status
     if [ $exitstatus -eq 0 ]; then
         if [ $USE_COLORS ]; then
-            ES='\[\033[02;32m\]^_^ \[\033[00m\]'
+            ES=${START_COLORSCHEME}'${TXT_DIM};${FG_GREEN}'${END_COLORSCHEME}'^_^ '${RESET_COLORS}
         else
             ES='^_^ '; fi
     else
         if [ $USE_COLORS ]; then
-            ES='\[\033[02;31m\]o_O \[\033[00m\]'
+            ES=${START_COLORSCHEME}'${TXT_DIM};${FG_RED}'${END_COLORSCHEME}'o_O '${RESET_COLORS}
         else
             ES='o_O '; fi
     fi
 
+    # System time
+    ES=$ES'[\t] '
 
+
+    # Set new prompt (taking into account repositories)
     case "$REPO_TYPE" in
 
         # GIT repo
@@ -570,58 +576,72 @@ USE_COLORS=1
             branch=${branch#\* }
             if [ $? == 0 ]; then
                 if [ $USE_COLORS ]; then
-                    PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[git]}'\] [git: $branch] : \W\[\033[00m\]\$ '
-                else PS1=$ES'\u@\h: [git: $branch] : \W\$ '; fi
+                    PS1=$ES${usrName}'\u'${RESET_COLORS}'@'${hstName}'\h'${RESET_COLORS}' :'${REPO_COLOR[git]}' [git: $branch] : \W/'${RESET_COLORS}' \$ '
+                else
+                    PS1=$ES'\u@\h : [git: $branch] : \W/ \$ ';
+                fi
             else
                 if [ $USE_COLORS ]; then
-                    PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[git]}'\] [*unknown branch*] : \W\[\033[00m\]\$ '
-                else PS1=$ES'\u@\h: [*unknown branch*] : \W\$ '; fi
+                    PS1=$ES${usrName}'\u'${RESET_COLORS}'@'${hstName}'\h'${RESET_COLORS}' :'${REPO_COLOR[git]}' [*unknown branch*] : \W/'${RESET_COLORS}' \$ '
+                else
+                    PS1=$ES'\u@\h : [*unknown branch*] : \W/ \$ ';
+                fi
             fi
             ;;
 
         # SVN repo
         "svn")
             if [ $USE_COLORS ]; then
-                PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[svn]}'\] [svn] : \W\[\033[00m\]\$ '
-            else PS1=$ES'\u@\h: [svn] : \W\$ '; fi
+                PS1=$ES${usrName}'\u'${RESET_COLORS}'@'${hstName}'\h'${RESET_COLORS}' :'${REPO_COLOR[svn]}' [svn] : \W/'${RESET_COLORS}' \$ '
+            else
+                PS1=$ES'\u@\h : [svn] : \W/ \$ ';
+            fi
             ;;
 
         # mercurial repo
         "hg")
             if [ $USE_COLORS ]; then
-                PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[hg]}'\] [hg] : \W\[\033[00m\]\$ '
-            else PS1=$ES'\u@\h: [hg] : \W\$ '; fi
+                PS1=$ES${usrName}'\u'${RESET_COLORS}'@'${hstName}'\h'${RESET_COLORS}' :'${REPO_COLOR[hg]}' [hg] : \W/'${RESET_COLORS}' \$ '
+            else
+                PS1=$ES'\u@\h : [hg] : \W/ \$ ';
+            fi
             ;;
 
         # bazaar repo
         "bzr")
             if [ $USE_COLORS ]; then
-                PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\['${REPO_COLOR[bzr]}'\] [bzr] : \W\[\033[00m\]\$ '
-            else PS1=$ES'\u@\h: [bzr] : \W\$ '; fi
+                PS1=$ES${usrName}'\u'${RESET_COLORS}'@'${hstName}'\h'${RESET_COLORS}' :'${REPO_COLOR[bzr]}' [bzr] : \W/'${RESET_COLORS}' \$ '
+            else
+                PS1=$ES'\u@\h : [bzr] : \W/ \$ ';
+            fi
             ;;
 
         # normal prompt
         *)
             if [ $USE_COLORS ]; then
+
+                dirName=${START_COLORSCHEME}${TXT_BOLD}';'${FG_BLUE}${END_COLORSCHEME}
+
                 # user is root
                 if [ `id -u` = 0 ]; then
-                    PS1=$ES'\[\033[01;31m\]\u@\h\[\033[0m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
+                    usrName="${START_COLORSCHEME}${TXT_BOLD};${FG_RED}${END_COLORSCHEME}"
+                    PS1=$ES${usrName}'\u'${RESET_COLORS}'@'${hstName}'\h'${RESET_COLORS}' : '${dirName}'\w/'${RESET_COLORS}' \$ '
                 # non-root user
                 else
-                    PS1=$ES'\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\W\[\033[00m\]\$ '
+                    PS1=$ES${usrName}'\u'${RESET_COLORS}'@'${hstName}'\h'${RESET_COLORS}' : '${dirName}'\W/'${RESET_COLORS}' \$ '
                 fi
             else
-                PS1=$ES'\u@\h:\w\$ '
+                PS1=$ES'\u@\h : \w/ \$ '
             fi
             ;;
+
     esac
 
     # put pretty-printed full path in the upper right corner
     pth="$(prettyprint_dir "$PWD")"
-    pthlen=$(echo "$pth" | sed -r "s/\x1B\[([0-9]{1,3}((;[0-9]{1,3})*)?)?[m|K]//g")
-    printf "\E7\E[001;$(($COLUMNS-${#pthlen}-2))H\E[1m\E[32m[\E[0m$pth\E[1m\E[32m]\E8\E[0m"
-
+    printf "\E7\E[001;$(($COLUMNS-${#PWD}-2))H${START_COLORSCHEME}1${END_COLORSCHEME}"${START_COLORSCHEME}"${FG_GREEN}"${END_COLORSCHEME}"[${RESET_COLORS}$pth"${START_COLORSCHEME}"${TXT_BOLD};${FG_GREEN}"${END_COLORSCHEME}"]\E8"${RESET_COLORS}
 }
+
 # make this function the function called at each prompt display
 PROMPT_COMMAND=promptcmd
 
@@ -664,8 +684,10 @@ print_list_if_OK()
 }
 
 # pretty print directory
+
 prettyprint_dir()
 {
+    # No arguments, no function
     if [ $# -eq 0 ]; then
         return; fi
 
@@ -673,8 +695,7 @@ prettyprint_dir()
     local pwdmaxlen=$(($COLUMNS/3))
     local pthoffset
     local original_pth="$(command ls -d "${1/\~/$HOME}" --color)"
-
-    pth="${original_pth/$HOME/~}";
+    local pth="${original_pth/$HOME/~}";
 
     if [ $# -lt 3 ]; then
         repoinfo=($(check_repo "$@"))
@@ -689,20 +710,16 @@ prettyprint_dir()
 
         # TODO: dependency on AWK; include bash-only version
         if [ $haveAwk ]; then
-        
+
             local repoCol=${REPO_COLOR[${repoinfo[0]}]};
-            if [ -n $repoCol ]; then        
+
+            if [ -n $repoCol ]; then
                 local repopath="$(dirname "${repoinfo[1]}" 2> /dev/null)"
-                pth="${pth/$repopath/$repopath$'\033'[00m$repoCol}"
+                pth="${pth/$repopath/$repopath$'\033'[0m$repoCol}"
             fi
-    
-            echo "${pth}" | awk '
-    
-                function strlen(str) { # compute the length of a string, ignoring color-codes
-                    gsub(/\033+\[+[0-9;]+m/, "", str);
-                    return length(str);
-                }
-    
+
+            echo "${pth}" | awk -i "$HOME/.awk_functions" '
+
                 {
                     str    = $0;
                     len    = strlen(str);
@@ -713,14 +730,14 @@ prettyprint_dir()
                         char_count    = 0;
                         counting      = 1;
                         N = split(str, str_chars, "");
-    
+
                         for (k=0; k<N; ++k)
                         {
                             if (str_chars[k] == "\033") {
                                 lastColorCode = "\033";
                                 counting = 0; continue;
                             }
-    
+
                             if (!counting) {
                                 lastColorCode = lastColorCode str_chars[k];
                                 if (str_chars[k] == "m")
@@ -729,25 +746,26 @@ prettyprint_dir()
                             }
                             else
                                 char_count++;
-    
+
                             if (len-char_count+3 <= maxLen) {
                                 str = "\033[0m" lastColorCode "..." substr(str,k-1) "\033[0m";
                                 break;
                             }
                         }
                     }
-    
+
                     printf str;
-    
+
                 }
             '
+
         else
             echo "$pth"
-            
-            # Strip color codes from string: 
+
+            # Strip color codes from string:
             # sed -r "s/\x1B\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]//g"
-                       
-            
+            # TODO
+
         fi
 
     # non-color print
@@ -758,8 +776,8 @@ prettyprint_dir()
         fi
         printf "$pth/"
     fi
-
 }
+
 
 # Check if given dir(s) is (are) (a) repository(ies)
 check_repo()
@@ -1018,7 +1036,7 @@ lds()
         for f in $dirs; do
             sz=$(du -bsh --si $f 2> /dev/null);
             sz=${sz%%$'\t'*}
-            printf "$sz\t\E[${color#*;}m\E[${color%;*}m$f\n\E[0m"
+            printf "$sz\t\E[${color#*;}m\E[${color%;*}m$f\n${RESET_COLORS}"
         done
     else
         for f in $dirs; do
@@ -1052,7 +1070,7 @@ lads()
         for f in $dirs; do
             sz=$(du -bsh --si $f 2> /dev/null);
             sz=${sz%%$'\t'*}
-            printf "$sz\t\E[${color#*;}m\E[${color%;*}m$f\n\E[0m"
+            printf "$sz\t\E[${color#*;}m\E[${color%;*}m$f\n${RESET_COLORS}"
         done
     else
         for f in $dirs; do
@@ -1182,19 +1200,20 @@ _cd_DONTUSE()
 # jump dirs via dir-numbers
 _cdn_DONTUSE()
 {
-
     # create initial stack array
     local IFS_old="$IFS"; IFS=$'\n'
     local -a stack=( $(dirs -p | sort -u) )
     IFS="$IFS_old"
 
-
     # if no function arguments provided, show list
     if [ $# -eq 0 ]; then
-        IFS=$'\n' 
-        local -a repos=($(check_repo "${stack[@]}")) 
+
+        IFS=$'\n'
+
+        local -a repos=($(check_repo "${stack[@]}"))
         local -a types=($(echo "${repos[*]}" | cut -f 1  -d " "))
         local -a paths=($(echo "${repos[*]}" | cut -f 2- -d " "))
+
         IFS="$IFS_old"
 
         for ((i=0; i<${#repos[@]}; i++)); do
@@ -1203,14 +1222,11 @@ _cdn_DONTUSE()
             printf "\n"
         done
 
-
     # otherwise, go to dir number
     else
         entry="${stack[$1]%%\n}"
         _cd_DONTUSE "${entry#"${entry%%[![:space:]]*}"}"
-
     fi
-    
 }
 
 
@@ -1359,7 +1375,7 @@ _rm_DONTUSE()
         if [[ "$err" =~ "${not_added}" ]]; then
 
             msg="\n WARNING: Some files were never added to the repository \n Do you wish to remove them anyway? [N/y]"
-            if [ $USE_COLORS ]; then printf "\E[41m$msg\E[0m "
+            if [ $USE_COLORS ]; then printf "\E[41m$msg${RESET_COLORS} "
             else printf "$msg "; fi
 
             case $(read L && echo $L) in
@@ -1378,7 +1394,7 @@ _rm_DONTUSE()
                 command rm -vI "$@"
                 if [ $? == 0 ]; then
                     print_list_if_OK 0
-                    if [ $USE_COLORS ]; then printf "\E[41m$msg\E[0m"
+                    if [ $USE_COLORS ]; then printf "\E[41m$msg${RESET_COLORS}"
                     else printf "$msg"; fi
                 fi
             else
@@ -1446,7 +1462,7 @@ _mv_DONTUSE()
                 if [ $? == 0 ]; then
                     print_list_if_OK $?
                     if [ $USE_COLORS ]; then
-                         printf "\n\E[41m WARNING: Target and/or source was outside repository! \n\n\E[0m";
+                         printf "\n\E[41m WARNING: Target and/or source was outside repository! \n\n${RESET_COLORS}";
                     else printf "\n WARNING: Target and/or source was outside repository! \n\n"; fi
                 fi
             else
@@ -1645,7 +1661,7 @@ _findbig_DONTUSE()
                 fcolor=${LS_COLORS##*no=};
                 fcolor=${fcolor%%:*}
             fi
-            printf "%s\E[${dcolor#*;}m%s\E[${fcolor#*;}m%s\n\E[0m" $perms $dir $file
+            printf "%s\E[${dcolor#*;}m%s\E[${fcolor#*;}m%s\n${RESET_COLORS}" $perms $dir $file
         else
             printf "%s%s%s\n" $perms $dir $file
         fi
@@ -1740,15 +1756,15 @@ function mvq
     nohup nice -n 19 mv "$@" > /dev/null 2>&1 &
     echo "Moving \"${@: 1:$(($#-1))}\" to \"${@: -1}\""
 }
-                    
-function cpq 
+
+function cpq
 {
-    if [ $# -lt 2]; then 
+    if [ $# -lt 2]; then
         echo "cp requires at least 2 arguments."; exit 1; fi
     nohup nice -n 19 "$@" > /dev/null 2>&1 &
     echo "Copying \"${@: 1:$(($#-1))}\" to \"${@: -1}\""
 }
-                                       
+
 
 # export hi-res PNG from svg file
 # must be aliased in .bash_aliases
@@ -1790,16 +1806,16 @@ existing_github_repo()
 
 new_autokey_symbol()
 {
-    local name="$1"    
+    local name="$1"
     local description="$2"
     local abbreviation="$3"
     local unicode="$4"
     local instant="$5"
-    
-    if [ -z $instant ]; then 
+
+    if [ -z $instant ]; then
         instant=1
     fi
-    
+
     if [ instant -eq 1 ]; then
         instant=true
     else
@@ -1807,13 +1823,13 @@ new_autokey_symbol()
     fi
 
     cp "~/.config/autokey/skel/.symbol.json*" "~/.config/autokey/data/Symbols/International/.${name}.json"
-    
+
     sed -i "s/REPLACEME_DESCRIPTION/${description}/g" "~/.config/autokey/data/Symbols/International/.${name}.json"
     sed -i "s/REPLACEME_ABBREVIATION/${abbreviation}/g" "~/.config/autokey/data/Symbols/International/.${name}.json"
     sed -i "s/REPLACEME_INSTANT/${instant}/g" "~/.config/autokey/data/Symbols/International/.${name}.json"
-    
+
     echo "u${unicode} " > "~/.config/autokey/data/Symbols/International/${name}.txt"
-    
-    
+
+
 }
 
