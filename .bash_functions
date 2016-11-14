@@ -200,7 +200,7 @@ multicolumn_ls()
 
     if [ $haveAwk -eq 1 ]; then
 
-        command ls -opg --si --group-directories-first --time-style=+ --color "$@" | awk -i "$HOME/.awk_functions" '
+        command ls -opg --si --group-directories-first --time-style=+ --color "$@" | awk -f "$HOME/.awk_functions" -f <( echo -E '
 
             BEGIN {
 
@@ -230,7 +230,8 @@ multicolumn_ls()
                     names[FNR-2] = trim($0);
 
                 }
-                else {
+                else 
+                {
                     if      (type == "d") dirs++;
                     else if (type == "s") sockets++;
                     else if (type == "p") pipes++;
@@ -251,8 +252,9 @@ multicolumn_ls()
             END {
 
                 listLength = FNR-1;
-                if (listLength == 0)
-                    printf "Empty dir.\n"
+                if (listLength == 0) {
+                    printf("Empty dir.")
+                }
                 else
                 {
                     if (FNR-1 <= rowsThreshold) {
@@ -297,7 +299,7 @@ multicolumn_ls()
                     printf("\b\b.\n");
                 }
             }
-        '
+        ' ) -- 
 
     # Pure bash solution (Slow as CRAP!)
     else
@@ -718,7 +720,7 @@ prettyprint_dir()
                 pth="${pth/$repopath/$repopath$'\033'[0m$repoCol}"
             fi
 
-            echo "${pth}" | awk -i "$HOME/.awk_functions" '
+            echo "${pth}" | awk -f "$HOME/.awk_functions" -f <( echo -E '
 
                 {
                     str    = $0;
@@ -757,7 +759,7 @@ prettyprint_dir()
                     printf str;
 
                 }
-            '
+            ' ) --
 
         else
             echo "$pth"

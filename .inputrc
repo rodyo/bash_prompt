@@ -5,7 +5,6 @@ set mark-directories on
 set mark-symlinked-directories on
 set show-all-if-ambiguous on
 
-
 # perform history searches with up/down arrows keys
 "\e[A": history-search-backward
 "\e[B": history-search-forward
@@ -28,7 +27,6 @@ $endif
 # Delete word
 "\e[3;5~": kill-word      # ctrl delete
 "\037": unix-word-rubout  # ctrl backspace
-
 
 # put quotes around the argument list of the last command
 "\C-x\"": "\C-a\M-f\C-f\"\C-e\""
