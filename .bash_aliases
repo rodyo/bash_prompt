@@ -19,7 +19,7 @@ export REPO_PATH=                 # path where repository is located
 PS1_=$PS1;                        # save it to reset it when changed below
 
 # global vars
-NUM_PROCESSORS=$(cat /proc/cpuinfo | command grep processor | wc -l)
+NUM_PROCESSORS=$(nproc --all)
 
 # exports for colored man-pages
 if [ "$color_prompt" = yes ]; then

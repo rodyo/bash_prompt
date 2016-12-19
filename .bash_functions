@@ -6,8 +6,6 @@
 # Colors are a mess in bash...
 # --------------------------------------------------------------------------------------------------
 
-
-
 START_COLORSCHEME="\e["
 END_COLORSCHEME="m"
 
@@ -175,11 +173,14 @@ command_not_found_handle()
 # --------------------------------------------------------------------------------------------------
 # Join input arguments into a single string
 # --------------------------------------------------------------------------------------------------
-function join
+function strjoin
 {
-    local IFS="$1";
-    shift;
-    echo "$*";
+    local d="$1"
+    shift
+
+    echo -n "$1"
+    shift
+    printf "%s" "${@/#/$d}"
 }
 
 
@@ -702,7 +703,7 @@ prettyprint_dir()
     if [ $# -lt 3 ]; then
         repoinfo=($(check_repo "$@"))
         if [ ${#repoinfo[@]} -gt 2 ]; then
-            repoinfo[1]=$(join "${IFS[0]}" "${repoinfo[@]:1}"); fi
+            repoinfo[1]=$(strjoin "${IFS[0]}" "${repoinfo[@]:1}"); fi
     else
         repoinfo=("$2" "$3")
     fi
@@ -1507,29 +1508,63 @@ _ln_DONTUSE()
 # warnings should be issued, files auto-added to repo, etc.
 _cp_DONTUSE()
 {
+
+    local cpcmd
+    local nargin=$#
+
+    #cpcmd="command cp -ivR $@"           
+    cpcmd="rsync -aAHch --info=progress2 $@"
+
+    # optional args
+    while true
+    do
+        case "$1" in
+
+            -M|--multiple-destination|--multidest)
+                cpcmd="echo \"\${@:2:\$nargin}\" | xargs -n1 -P $(nproc --all) -- rsync -aAHch --info=progress2 -- \"\$1\""
+                ((nargin--))
+                shift
+                ;;
+
+
+            --)
+                ((nargin--))
+                shift
+                break
+                ;;
+            *)
+                break
+                ;;
+        esac
+    done
+
+
+    # allow 1-argument copy
+    if [ $nargin == 1 ]; then
+        _cp_DONTUSE "$1" "copy_of_$1"
+        return 
+    fi
+
+
     # REPO mode
     if [[ $REPO_MODE == "git" ]]; then
+
         # only add copy to repo when
         # - we have exactly 2 arguments
         # - if arg. 1 and 2 are both inside the repo
-        if [ $# -gt 2 ]; then
-            command cp -ivR "$@"
-        else
-            command cp -ivR "$@"
+
+        eval $cpcmd
+
+        if [ $nargin == 2 ]; then
             git add "$2" 2> /dev/null
         fi
 
+
     # normal mode
     else
-        # allow 1-argument copy
-        if [ $# == 1 ]; then
-            command cp -ivR "$1" "copy_of_$1"
-
-        # normal, n-element copy
-        else
-            command cp -ivR "$@"
-        fi
+        eval $cpcmd
     fi
+
     print_list_if_OK $?
 }
 
@@ -1585,6 +1620,11 @@ ex()
         echo "'$1' is not a valid, readable file."
     fi
 }
+
+
+
+
+
 
 # change extentions of files in current dir
 changext()
@@ -1735,21 +1775,13 @@ _gedit_DONTUSE()
     fi
 }
 
-# geany ALWAYS in background and immune to terminal closing!
-# must be aliased in .bash_aliases
-_geany_DONTUSE()
-{
-    #if [ $atWork -eq 0 ]; then
-        (geany "$@" &) | nohup &> /dev/null;
-    #else
-    #fi
-}
 
 # grep all processes in wide-format PS, excluding "grep" itself
 psa()
 {
     ps auxw | egrep -iT --color=auto "[${1:0:1}]${1:1}"
 }
+
 
 function mvq
 {
@@ -1763,14 +1795,14 @@ function cpq
 {
     if [ $# -lt 2]; then
         echo "cp requires at least 2 arguments."; exit 1; fi
-    nohup nice -n 19 "$@" > /dev/null 2>&1 &
+    nohup nice -n 19 cp "$@" > /dev/null 2>&1 &
     echo "Copying \"${@: 1:$(($#-1))}\" to \"${@: -1}\""
 }
 
 
 # export hi-res PNG from svg file
 # must be aliased in .bash_aliases
-pngify()
+svg2png()
 {
     local svgname pngname;
     for f in "$@"; do
@@ -1792,6 +1824,10 @@ check_XML()
 }
 
 
+# ==================================================
+# Github 
+# ==================================================
+
 new_github_repo()
 {
     git init
@@ -1805,6 +1841,11 @@ existing_github_repo()
     git remote add origin git@github.com:rodyo/"${1}".git
     git push -u origin master
 }
+
+
+# ==================================================
+# Auto(hot)key
+# ==================================================
 
 new_autokey_symbol()
 {
