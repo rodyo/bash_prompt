@@ -6,10 +6,15 @@
 # Colors are a mess in bash...
 # --------------------------------------------------------------------------------------------------
 
+START_COLORSCHEME_PS1="\[\e["
+END_COLORSCHEME_PS1="m\]"
+
 START_COLORSCHEME="\e["
 END_COLORSCHEME="m"
 
-RESET_COLORS="${START_COLORSCHEME}0${END_COLORSCHEME}"
+RESET_COLORS=$(tput sgr0)
+RESET_COLORS_PS1='\['"${RESET_COLORS}"'\]'
+
 
 TXT_BOLD="01"
 TXT_DIM="02"
@@ -578,6 +583,9 @@ multicolumn_ls()
 # command executed just PRIOR to showing the prompt
 promptcmd()
 {
+    # NOTE: it is imperative that ALL non-printing characters in PS1 must be enclosed by \[ \].
+    # See http://askubuntu.com/questions/24358/
+
     # initialize
     local ES exitstatus=$?    # exitstatus of previous command
     local pth pthlen
@@ -585,12 +593,12 @@ promptcmd()
     # Username color scheme
     local usrName=""
     if [ $USE_COLORS -eq 1 ]; then
-        usrName="${START_COLORSCHEME}${TXT_BOLD};${FG_GREEN}${END_COLORSCHEME}"; fi
+        usrName="${START_COLORSCHEME_PS1}${TXT_BOLD};${FG_GREEN}${END_COLORSCHEME_PS1}"; fi
 
     # hostname color scheme
     local hstName=""
     if [ $USE_COLORS -eq 1 ]; then
-        hstName="${START_COLORSCHEME}${FG_MAGENTA}${END_COLORSCHEME}"; fi
+        hstName="${START_COLORSCHEME_PS1}${FG_MAGENTA}${END_COLORSCHEME_PS1}"; fi
 
 
     # write previous command to disk
@@ -600,85 +608,63 @@ promptcmd()
     # previous command exit status
     if [ $exitstatus -eq 0 ]; then
         if [ $USE_COLORS -eq 1 ]; then
-            ES='\['${START_COLORSCHEME}${TXT_DIM}';'${FG_GREEN}${END_COLORSCHEME}'\]^_^ \['${RESET_COLORS}'\]'
+            ES="${START_COLORSCHEME_PS1}${TXT_DIM};${FG_GREEN}${END_COLORSCHEME_PS1}^_^ ${RESET_COLORS_PS1}"
         else
             ES='^_^ '; fi
     else
         if [ $USE_COLORS -eq 1 ]; then
-            ES='\['${START_COLORSCHEME}${TXT_DIM}';'${FG_RED}${END_COLORSCHEME}'\]o_O \['${RESET_COLORS}'\]'
+            ES="${START_COLORSCHEME_PS1}${TXT_DIM};${FG_RED}${END_COLORSCHEME}o_O ${RESET_COLORS_PS1}"
         else
             ES='o_O '; fi
     fi
 
     # System time
-    ES=$ES'[\t] '
+    ES="$ES"'[\t] '
 
 
     # Set new prompt (taking into account repositories)
-    case "$REPO_TYPE" in
+    case "${REPO_TYPE}" in
 
-        # GIT repo
+        # GIT also lists branch
         "git")
             branch=$(git branch | command grep "*")
-            branch=${branch#\* }
-            if [ $? == 0 ]; then
-                if [ $USE_COLORS -eq 1 ]; then
-                    PS1=$ES${usrName}'\u\['${RESET_COLORS}'\]@'${hstName}'\h\['${RESET_COLORS}'\] :\['${REPO_COLOR[git]}'\] [git: $branch] : \W/\['${RESET_COLORS}'\] \$ '
-                else
-                    PS1=$ES'\u@\h : [git: $branch] : \W/ \$ ';
-                fi
+            branch="${branch#\* }"
+            if [ $? != 0 ]; then
+                branch="*unknown branch*"; fi
+
+            if [ $USE_COLORS -eq 1 ]; then
+                PS1="$ES${usrName}"'\u'"${RESET_COLORS_PS1}@${hstName}"'\h'"${RESET_COLORS_PS1} : "'\['"${REPO_COLOR[git]} [git: ${branch}] : "'\W'"/${RESET_COLORS_PS1} "'\$'" "
             else
-                if [ $USE_COLORS -eq 1 ]; then
-                    PS1=$ES${usrName}'\u\['${RESET_COLORS}'\]@'${hstName}'\h\['${RESET_COLORS}'\] :\['${REPO_COLOR[git]}'\] [*unknown branch*] : \W/\['${RESET_COLORS}'\] \$ '
-                else
-                    PS1=$ES'\u@\h : [*unknown branch*] : \W/ \$ ';
-                fi
+                PS1="$ES"'\u@\h : [git: '"${branch}] : "'\W/ \$ ';
             fi
             ;;
 
-        # SVN repo
-        "svn")
+        # SVN, Mercurial, Bazhaar
+        "svn"|"hg"|"bzr")
             if [ $USE_COLORS -eq 1 ]; then
-                PS1=$ES${usrName}'\u\['${RESET_COLORS}'\]@'${hstName}'\h\['${RESET_COLORS}'\] :\['${REPO_COLOR[svn]}'\] [svn] : \W/\['${RESET_COLORS}'\] \$ '
+                PS1="$ES${usrName}"'\u'"${RESET_COLORS_PS1}@${hstName}"'\h'"${RESET_COLORS_PS1} : "'\['"${REPO_COLOR[${REPO_TYPE}]} [${REPO_TYPE}] : "'\W'"/${RESET_COLORS_PS1} "'\$'" "
             else
-                PS1=$ES'\u@\h : [svn] : \W/ \$ ';
+                PS1="$ES"'\u@\h : ['"${REPO_TYPE}] : "'\W/ \$ ';
             fi
             ;;
 
-        # mercurial repo
-        "hg")
-            if [ $USE_COLORS -eq 1 ]; then
-                PS1=$ES${usrName}'\u\['${RESET_COLORS}'\]@'${hstName}'\h\['${RESET_COLORS}'\] :\['${REPO_COLOR[hg]}'\] [hg] : \W/\['${RESET_COLORS}'\] \$ '
-            else
-                PS1=$ES'\u@\h : [hg] : \W/ \$ ';
-            fi
-            ;;
-
-        # bazaar repo
-        "bzr")
-            if [ $USE_COLORS -eq 1 ]; then
-                PS1=$ES${usrName}'\u\['${RESET_COLORS}'\]@'${hstName}'\h\['${RESET_COLORS}'\] :\['${REPO_COLOR[bzr]}'\] [bzr] : \W/\['${RESET_COLORS}'\] \$ '
-            else
-                PS1=$ES'\u@\h : [bzr] : \W/ \$ ';
-            fi
-            ;;
 
         # normal prompt
         *)
             if [ $USE_COLORS -eq 1 ]; then
 
-                dirName='\['${START_COLORSCHEME}${TXT_BOLD}';'${FG_BLUE}${END_COLORSCHEME}'\]'
+                dirName="${START_COLORSCHEME_PS1}${TXT_BOLD};${FG_BLUE}${END_COLORSCHEME_PS1}"
 
                 # user is root
                 if [ `id -u` = 0 ]; then
-                    usrName="${START_COLORSCHEME}${TXT_BOLD};${FG_RED}${END_COLORSCHEME}"
-                    PS1=$ES${usrName}'\u\['${RESET_COLORS}'\]@'${hstName}'\h\['${RESET_COLORS}']\ : '${dirName}'\w/\['${RESET_COLORS}'\] \$ '
+                    usrName="${START_COLORSCHEME_PS1}${TXT_BOLD};${FG_RED}${END_COLORSCHEME_PS1}"
+                    PS1="$ES${usrName}"'\u'"${RESET_COLORS_PS1}@${hstName}"'\h'"${RESET_COLORS_PS1} : ${dirName}"'\w'"/${RESET_COLORS_PS1} "'\$'" "
                 # non-root user
                 else
-                    PS1=$ES${usrName}'\u\['${RESET_COLORS}'\]@'${hstName}'\h\['${RESET_COLORS}'\] : '${dirName}'\W/\['${RESET_COLORS}'\] \$ '
+                    PS1="$ES${usrName}"'\u'"${RESET_COLORS_PS1}@${hstName}"'\h'"${RESET_COLORS_PS1} : ${dirName}"'\W'"/${RESET_COLORS_PS1} "'\$'" "
                 fi
             else
-                PS1=$ES'\u@\h : \w/ \$ '
+                PS1="$ES"'\u@\h : \w/ \$ '
             fi
             ;;
 
@@ -686,7 +672,8 @@ promptcmd()
 
     # put pretty-printed full path in the upper right corner
     pth="$(prettyprint_dir "$PWD")"
-    printf "\E7\E[001;$(($COLUMNS-${#PWD}-2))H${START_COLORSCHEME}1${END_COLORSCHEME}"${START_COLORSCHEME}"${FG_GREEN}"${END_COLORSCHEME}"[${RESET_COLORS}$pth"${START_COLORSCHEME}"${TXT_BOLD};${FG_GREEN}"${END_COLORSCHEME}"]\E8"${RESET_COLORS}
+    printf "\E7\E[001;$(($COLUMNS-${#PWD}-2))H${START_COLORSCHEME}1${END_COLORSCHEME}${START_COLORSCHEME}${FG_GREEN}${END_COLORSCHEME}[${RESET_COLORS}$pth${START_COLORSCHEME}${TXT_BOLD};${FG_GREEN}${END_COLORSCHEME}]\E8${RESET_COLORS}"
+
 }
 
 # make this function the function called at each prompt display
