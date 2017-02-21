@@ -12,6 +12,10 @@ END_COLORSCHEME_PS1="m\]"
 START_COLORSCHEME="\e["
 END_COLORSCHEME="m"
 
+# (Alias for better clarity)
+START_ESCAPE_GROUP="\e["
+END_ESCAPE_GROUP="m"
+
 RESET_COLORS=$(tput sgr0)
 RESET_COLORS_PS1='\['"${RESET_COLORS}"'\]'
 
@@ -250,7 +254,11 @@ multicolumn_ls()
 
     if [ $haveAwk -eq 1 ]; then
 
-        command ls -opg --si --group-directories-first --time-style=+ --color "$@" | awk -f "$HOME/.awk_functions" -f <( echo -E '
+        local colorflag=
+        if [ $USE_COLORS -eq 1 ]; then
+            colorflag="--color"; fi
+
+        command ls -opg --si --group-directories-first --time-style=+ ${colorflag} "$@" | awk -f "$HOME/.awk_functions" -f <( echo -E '
 
             BEGIN {
 
@@ -376,7 +384,6 @@ multicolumn_ls()
             ext2|ext3|ext4) haveAttrlist=1 ;;
             # TODO: also cifs and fuse.sshfs etc. --might-- support it, but how to check for this...
         esac
-
 
         ( ((${BASH_VERSION:0:1}>=4)) && [ $processAcls -eq 1 ] && if [ $haveAttrlist -eq 1 ]; then
             local -A attrlist
@@ -672,7 +679,17 @@ promptcmd()
 
     # put pretty-printed full path in the upper right corner
     pth="$(prettyprint_dir "$PWD")"
-    printf "\E7\E[001;$(($COLUMNS-${#PWD}-2))H${START_COLORSCHEME}1${END_COLORSCHEME}${START_COLORSCHEME}${FG_GREEN}${END_COLORSCHEME}[${RESET_COLORS}$pth${START_COLORSCHEME}${TXT_BOLD};${FG_GREEN}${END_COLORSCHEME}]\E8${RESET_COLORS}"
+    move_cursor="\E7\E[001;$(($COLUMNS-${#PWD}-2))H${START_ESCAPE_GROUP}1${END_ESCAPE_GROUP}"
+    reset_cursor="\E8"
+    if [ $USE_COLORS -eq 1 ]; then
+        bracket_open="${START_COLORSCHEME}${FG_GREEN}${END_COLORSCHEME}[${RESET_COLORS}"
+        bracket_close="${START_COLORSCHEME}${TXT_BOLD};${FG_GREEN}${END_COLORSCHEME}]${RESET_COLORS}"
+    else
+        bracket_open="["
+        bracket_close="]"
+    fi
+
+    printf "${move_cursor}${bracket_open}$pth${bracket_close}${reset_cursor}"
 
 }
 
@@ -1293,14 +1310,14 @@ _cdn_DONTUSE()
     fi
 
     # Parse arguments
-    local supress_colors=0
+    local supress_colors=1
     local intarg=-1
     local namearg=
     while (( "$#" )); do
         case "$1" in
 
-            "-n"|"--no-colors")
-                supress_colors=1
+            "-c"|"--color"|"--colors")
+                supress_colors=0
                 ;;
 
             *) if [[ $1 =~ ^[0-9]+$ ]]; then
@@ -1357,21 +1374,36 @@ _cdn_DONTUSE()
     else
         IFS=$'\n'
 
-        local previous_color_setting=$USE_COLORS
         local -a repos=($(check_repo "${stack[@]}"))
         local -a types=($(echo "${repos[*]}" | cut -f 1  -d " "))
         local -a paths=($(echo "${repos[*]}" | cut -f 2- -d " "))
 
         IFS="$IFS_old"
 
+        # Colorless
         if [ $supress_colors -eq 1 ]; then
-            USE_COLORS=0; fi
 
-        for ((i=0; i<${#repos[@]}; i++)); do
-            (printf "%3d: %s\n" $i "$( prettyprint_dir "${stack[$i]}" "${types[$i]}" "${paths[$i]}" )" &)
-        done
+            # Don't pass through prettyprint_dir(), it's faster to just truncate
+            # here and print immediately (Cygwin spawning a hundred processes is something
+            # Kaspersky does not like -- cdn() will be crawling)
+            local dir dirlen
+            local pwdmaxlen=$(($COLUMNS/3))
 
-        USE_COLORS=$previous_color_setting
+            for ((i=0; i<${#repos[@]}; i++)); do
+
+                dir="${stack[$i]}"
+                dirlen=${#dir}
+                if [ $dirlen -gt $pwdmaxlen ]; then
+                    dir="...${dir: ((-${pwdmaxlen}-3))}"; fi
+
+                printf "%3d: %-${pwdmaxlen}s\n" $i "${dir}"
+            done
+
+        # Colored
+        else
+            for ((i=0; i<${#repos[@]}; i++)); do
+                (printf "%3d: %s\n" $i "$( prettyprint_dir "${stack[$i]}" "${types[$i]}" "${paths[$i]}" )" &); done
+        fi
     fi
 }
 
