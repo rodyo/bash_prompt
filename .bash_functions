@@ -105,6 +105,12 @@ _STOP_PROFILING()
 # --------------------------------------------------------------------------------------------------
 
 
+# Location of files
+# --------------------------------------------------------------------------------------------------
+
+dirstack="${HOME}/.dirstack"
+
+
 # Check for external tools and shell specifics
 # --------------------------------------------------------------------------------------------------
 
@@ -173,7 +179,7 @@ command_not_found_handle()
 # --------------------------------------------------------------------------------------------------
 # Join input arguments into a single string
 # --------------------------------------------------------------------------------------------------
-function strjoin
+strjoin()
 {
     local d="$1"
     shift
@@ -231,7 +237,7 @@ multicolumn_ls()
                     names[FNR-2] = trim($0);
 
                 }
-                else 
+                else
                 {
                     if      (type == "d") dirs++;
                     else if (type == "s") sockets++;
@@ -300,7 +306,7 @@ multicolumn_ls()
                     printf("\b\b.\n");
                 }
             }
-        ' ) -- 
+        ' ) --
 
     # Pure bash solution (Slow as CRAP!)
     else
@@ -556,12 +562,12 @@ promptcmd()
     # previous command exit status
     if [ $exitstatus -eq 0 ]; then
         if [ $USE_COLORS ]; then
-            ES=${START_COLORSCHEME}'${TXT_DIM};${FG_GREEN}'${END_COLORSCHEME}'^_^ '${RESET_COLORS}
+            ES='\['${START_COLORSCHEME}${TXT_DIM}';'${FG_GREEN}${END_COLORSCHEME}'\]^_^ '${RESET_COLORS}
         else
             ES='^_^ '; fi
     else
         if [ $USE_COLORS ]; then
-            ES=${START_COLORSCHEME}'${TXT_DIM};${FG_RED}'${END_COLORSCHEME}'o_O '${RESET_COLORS}
+            ES='\['${START_COLORSCHEME}${TXT_DIM}';'${FG_RED}${END_COLORSCHEME}'\]o_O '${RESET_COLORS}
         else
             ES='o_O '; fi
     fi
@@ -579,13 +585,13 @@ promptcmd()
             branch=${branch#\* }
             if [ $? == 0 ]; then
                 if [ $USE_COLORS ]; then
-                    PS1=$ES${usrName}'\u'${RESET_COLORS}'@'${hstName}'\h'${RESET_COLORS}' :'${REPO_COLOR[git]}' [git: $branch] : \W/'${RESET_COLORS}' \$ '
+                    PS1=$ES${usrName}'\u\['${RESET_COLORS}'\]@'${hstName}'\h\['${RESET_COLORS}'\] :\['${REPO_COLOR[git]}'\] [git: $branch] : \W/\['${RESET_COLORS}'\] \$ '
                 else
                     PS1=$ES'\u@\h : [git: $branch] : \W/ \$ ';
                 fi
             else
                 if [ $USE_COLORS ]; then
-                    PS1=$ES${usrName}'\u'${RESET_COLORS}'@'${hstName}'\h'${RESET_COLORS}' :'${REPO_COLOR[git]}' [*unknown branch*] : \W/'${RESET_COLORS}' \$ '
+                    PS1=$ES${usrName}'\u\['${RESET_COLORS}'\]@'${hstName}'\h\['${RESET_COLORS}'\] :\['${REPO_COLOR[git]}'\] [*unknown branch*] : \W/\['${RESET_COLORS}'\] \$ '
                 else
                     PS1=$ES'\u@\h : [*unknown branch*] : \W/ \$ ';
                 fi
@@ -595,7 +601,7 @@ promptcmd()
         # SVN repo
         "svn")
             if [ $USE_COLORS ]; then
-                PS1=$ES${usrName}'\u'${RESET_COLORS}'@'${hstName}'\h'${RESET_COLORS}' :'${REPO_COLOR[svn]}' [svn] : \W/'${RESET_COLORS}' \$ '
+                PS1=$ES${usrName}'\u\['${RESET_COLORS}'\]@'${hstName}'\h\['${RESET_COLORS}'\] :\['${REPO_COLOR[svn]}'\] [svn] : \W/\['${RESET_COLORS}'\] \$ '
             else
                 PS1=$ES'\u@\h : [svn] : \W/ \$ ';
             fi
@@ -604,7 +610,7 @@ promptcmd()
         # mercurial repo
         "hg")
             if [ $USE_COLORS ]; then
-                PS1=$ES${usrName}'\u'${RESET_COLORS}'@'${hstName}'\h'${RESET_COLORS}' :'${REPO_COLOR[hg]}' [hg] : \W/'${RESET_COLORS}' \$ '
+                PS1=$ES${usrName}'\u\['${RESET_COLORS}'\]@'${hstName}'\h\['${RESET_COLORS}'\] :\['${REPO_COLOR[hg]}'\] [hg] : \W/\['${RESET_COLORS}'\] \$ '
             else
                 PS1=$ES'\u@\h : [hg] : \W/ \$ ';
             fi
@@ -613,7 +619,7 @@ promptcmd()
         # bazaar repo
         "bzr")
             if [ $USE_COLORS ]; then
-                PS1=$ES${usrName}'\u'${RESET_COLORS}'@'${hstName}'\h'${RESET_COLORS}' :'${REPO_COLOR[bzr]}' [bzr] : \W/'${RESET_COLORS}' \$ '
+                PS1=$ES${usrName}'\u\['${RESET_COLORS}'\]@'${hstName}'\h\['${RESET_COLORS}'\] :\['${REPO_COLOR[bzr]}'\] [bzr] : \W/\['${RESET_COLORS}'\] \$ '
             else
                 PS1=$ES'\u@\h : [bzr] : \W/ \$ ';
             fi
@@ -623,15 +629,15 @@ promptcmd()
         *)
             if [ $USE_COLORS ]; then
 
-                dirName=${START_COLORSCHEME}${TXT_BOLD}';'${FG_BLUE}${END_COLORSCHEME}
+                dirName='\['${START_COLORSCHEME}${TXT_BOLD}';'${FG_BLUE}${END_COLORSCHEME}'\]'
 
                 # user is root
                 if [ `id -u` = 0 ]; then
                     usrName="${START_COLORSCHEME}${TXT_BOLD};${FG_RED}${END_COLORSCHEME}"
-                    PS1=$ES${usrName}'\u'${RESET_COLORS}'@'${hstName}'\h'${RESET_COLORS}' : '${dirName}'\w/'${RESET_COLORS}' \$ '
+                    PS1=$ES${usrName}'\u\['${RESET_COLORS}'\]@'${hstName}'\h\['${RESET_COLORS}']\ : '${dirName}'\w/\['${RESET_COLORS}'\] \$ '
                 # non-root user
                 else
-                    PS1=$ES${usrName}'\u'${RESET_COLORS}'@'${hstName}'\h'${RESET_COLORS}' : '${dirName}'\W/'${RESET_COLORS}' \$ '
+                    PS1=$ES${usrName}'\u\['${RESET_COLORS}'\]@'${hstName}'\h\['${RESET_COLORS}'\] : '${dirName}'\W/\['${RESET_COLORS}'\] \$ '
                 fi
             else
                 PS1=$ES'\u@\h : \w/ \$ '
@@ -697,8 +703,8 @@ prettyprint_dir()
     local -a repoinfo
     local pwdmaxlen=$(($COLUMNS/3))
     local pthoffset
-    local original_pth="$(command ls -d "${1/\~/$HOME}" --color)"
-    local pth="${original_pth/$HOME/~}";
+    local original_pth="$(command ls -d "${1/\~/${HOME}}" --color)"
+    local pth="${original_pth/${HOME}/~}";
 
     if [ $# -lt 3 ]; then
         repoinfo=($(check_repo "$@"))
@@ -714,11 +720,10 @@ prettyprint_dir()
         # TODO: dependency on AWK; include bash-only version
         if [ $haveAwk ]; then
 
-            local repoCol=${REPO_COLOR[${repoinfo[0]}]};
-
-            if [ -n $repoCol ]; then
+            if [ "${repoinfo[0]}" != "---" ]; then
+                local repoCol=${REPO_COLOR[${repoinfo[0]}]};
                 local repopath="$(dirname "${repoinfo[1]}" 2> /dev/null)"
-                pth="${pth/$repopath/$repopath$'\033'[0m$repoCol}"
+                pth="${pth/${repopath}/${repopath}$'\033'[0m$repoCol}"
             fi
 
             echo "${pth}" | awk -f "$HOME/.awk_functions" -f <( echo -E '
@@ -863,6 +868,7 @@ check_repo()
             # NOTE: repeated commands outperform function call by an order of magnitude
             # NOTE: commands without capture "$(...)" outperform commands with capture
             # NOTE: this is also faster than SED'ing the "../" away
+            # NOTE: ...the main speed problem on the LuxSpace machine is Kaspersky :(
             for (( j=${#slashes[$i]}; j>0; --j )); do
                 [ -d "$dir/.git" ] && repotype[$i]="git" && cd "$dir" && reporoot[$i]="$PWD" && cd "$curdir" && break;
                 [ -d "$dir/.svn" ] && repotype[$i]="svn" && cd "$dir" && reporoot[$i]="$PWD" && cd "$curdir" && break;
@@ -1165,19 +1171,30 @@ _cd_DONTUSE()
 
     # Home
     if [ $# -eq 0 ]; then
-        builtin pushd -- "$HOME" > /dev/null
+        builtin cd -- "$HOME" > /dev/null
 
     # Previous
     elif [[ $# -eq 1 && "-" = "$1" ]]; then
-        builtin pushd > /dev/null
+        builtin cd > /dev/null
 
     # All others
     else
-        builtin pushd -- "$@" > /dev/null
+        builtin cd -- "$@" > /dev/null
     fi
 
-    # if successful, display abbreviated dirlist and check if it is a GIT repository
+    # if successful, save to dirstack, display abbreviated dirlist and
+    # check if it is a GIT repository
     if [ $? -eq 0 ]; then
+
+        # Save to dirstack file and check if unique
+        if [ -e "${dirstack}" ]; then
+            pwd >> "${dirstack}"
+            tmp=$(mktemp)
+            sort -u "${dirstack}" > "${tmp}"
+            mv "${tmp}" "${dirstack}"
+        else
+            pwd > "${dirstack}"
+        fi
 
         # Assume we're not going to use any of the repository modes
         leave_repos
@@ -1198,15 +1215,26 @@ _cd_DONTUSE()
         multicolumn_ls
 
     fi
+
+
+
 }
 
 # jump dirs via dir-numbers
 _cdn_DONTUSE()
 {
+    check_dirstack
+
     # create initial stack array
     local IFS_old="$IFS"; IFS=$'\n'
-    local -a stack=( $(dirs -p | sort -u) )
+    local -a stack=( $(cat "$dirstack") )
     IFS="$IFS_old"
+
+    # list may be empty
+    if [ ${#stack[@]} -eq 0 ]; then
+        echo "No directories have been visited yet."
+        return
+    fi
 
     # if no function arguments provided, show list
     if [ $# -eq 0 ]; then
@@ -1220,9 +1248,7 @@ _cdn_DONTUSE()
         IFS="$IFS_old"
 
         for ((i=0; i<${#repos[@]}; i++)); do
-            printf "%3d: " $i
-            prettyprint_dir "${stack[$i]}" "${types[$i]}" "${paths[$i]}"
-            printf "\n"
+            (printf "%3d: %s\n" $i "$( prettyprint_dir "${stack[$i]}" "${types[$i]}" "${paths[$i]}" )" &)
         done
 
     # otherwise, go to dir number
@@ -1241,7 +1267,7 @@ cd_completer()
 
     # create initial stack array (uniques only)
     IFS=$'\n'
-    local stack=("${DIRSTACK[@]}")
+    local stack=($(cat "${dirstack}"))
     stack=("${stack[@]/\~/$HOME}")
     stack=("${stack[@]/%/$'\n'}")
     stack=($(echo "${stack[@]}" | sort -u))
@@ -1322,12 +1348,41 @@ _mkdir_DONTUSE()
     fi
 }
 
+# Check dirstack file if all directories it contains still exist
+check_dirstack()
+{
+    local -a stack
+    local tmp=$(mktemp)
+    local IFS_=$IFS
+
+    if [ -e "${dirstack}" ]; then
+
+        # Read current dirstack
+        IFS=$'\n'
+        stack=($(cat "${dirstack}"))
+
+        # Loop through all dirs one by one. If they exist, print
+        # them into a tempfile
+        for dir in "${stack[@]}"; do
+            if [ -e "${dir}" ]; then
+                echo "${dir}" >> "${tmp}"
+            fi
+        done
+
+        IFS=$IFS_
+
+        # Then overwrite the original dirstack file with the tempfile content
+        command mv -f "${tmp}" "${dirstack}"
+    fi
+}
+
 # remove dir(s), taking into account current repo mode
 # TODO: not done yet
 _rmdir_DONTUSE()
 {
     command rmdir "$@"
     print_list_if_OK $?
+    check_dirstack
 }
 
 # remove file(s), taking into account current repo mode
@@ -1512,7 +1567,7 @@ _cp_DONTUSE()
     local cpcmd
     local nargin=$#
 
-    #cpcmd="command cp -ivR $@"           
+    #cpcmd="command cp -ivR $@"
     cpcmd="rsync -aAHch --info=progress2 $@"
 
     # optional args
@@ -1542,7 +1597,7 @@ _cp_DONTUSE()
     # allow 1-argument copy
     if [ $nargin == 1 ]; then
         _cp_DONTUSE "$1" "copy_of_$1"
-        return 
+        return
     fi
 
 
@@ -1825,7 +1880,7 @@ check_XML()
 
 
 # ==================================================
-# Github 
+# Github
 # ==================================================
 
 new_github_repo()
