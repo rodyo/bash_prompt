@@ -53,7 +53,7 @@ alias clear=_clear_DONTUSE
 # By <oldenhuis@gmail.com>
 if [ -f ~/.bash_functions ]; then
     source ~/.bash_functions;
-    check_dirstack
+    __check_dirstack
 fi
 
 # list-aliases

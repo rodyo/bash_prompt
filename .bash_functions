@@ -159,7 +159,7 @@ REPO_COLOR[git]=${START_COLORSCHEME}${TXT_BOLD}';'${FG_RED}${END_COLORSCHEME};  
 REPO_COLOR[---]=${START_COLORSCHEME}${ALL_COLORS[di]}${END_COLORSCHEME}
 
 
-# error/warning function
+# error/warning functions
 error()
 {
     local msg
@@ -225,7 +225,7 @@ command_not_found_handle()
     ([[ -f "${1}" && -x "${1}" ]] && "./${1}") ||
 
     # not found
-    error "Command not found."
+    error "Command not found: %s" "$@"
 }
 
 
@@ -298,7 +298,7 @@ multicolumn_ls()
 
                 listLength = FNR-1;
                 if (listLength == 0) {
-                    printf("Empty dir.")
+                    printf("Empty dir.\n")
                 }
                 else
                 {
@@ -387,7 +387,7 @@ multicolumn_ls()
 
         # check if any of the arguments was a "file" (and not just an option)
         local haveFiles=false
-        for ((i=0; i<$#; ++i)); do
+        while (( "$#" )); do
             if [ -e "$1" ]; then
                 haveFiles=true
                 break;
@@ -707,6 +707,20 @@ strjoin()
     shift
     printf "%s" "${@/#/$d}"
 }
+
+# Produce a quoted list, taking into account proper comma placement
+quoted_list()
+{
+    case "$#" in
+        0) ;;
+        1) echo "\"$1\"" ;;
+        2) echo "\"$1\" and \"$2\"" ;;
+        *) first="$(strjoin "\", \"" ${@:1:(($#-1))})"
+           echo "\"${first}\", and \"${@: -1}\""
+           ;;
+    esac
+}
+
 
 # trim bash string
 trim()
@@ -1216,7 +1230,7 @@ __add_dir_to_stack()
     fi
 
     # Check if all directories still exist
-    (__check_dirstack &)
+    ( __check_dirstack & )
 }
 
 # Navigate to directory. Check if directory is in a repo
@@ -1232,6 +1246,11 @@ _cd_DONTUSE()
     # Previous
     elif [[ $# -eq 1 && "-" = "$1" ]]; then
         builtin cd > /dev/null
+
+    # Help call
+    elif [[ $# -ge 1 && "-h" = "$1" || "--help" = "$1" ]]; then
+        builtin cd --help
+        return 0
 
     # All others
     else
@@ -1290,7 +1309,7 @@ _cdn_DONTUSE()
     local supress_colors=0
     local intarg=-1
     local namearg=
-    for ((i=0; i<$#; ++i)); do
+    while (( "$#" )); do
         case "$1" in
 
             "-n"|"--no-colors")
@@ -1424,7 +1443,7 @@ _rmdir_DONTUSE()
 {
     command rmdir "$@"
     print_list_if_OK $?
-    __check_dirstack &
+    ( __check_dirstack & )
 }
 
 # remove file(s), taking into account current repo mode
@@ -1433,10 +1452,8 @@ _rm_DONTUSE()
     # we are in REPO mode
     if [[ $REPO_MODE == true ]]; then
 
-        local err msg not_addedoutside_repo
-
         # perform repo-specific delete
-        err=$(eval ${REPO_CMD_remove} "$@" 2>&1 1> /dev/null)
+        local err=$(eval ${REPO_CMD_remove} "$@" 2>&1 1> /dev/null)
 
         # different repositories issue different errors
         case "$REPO_TYPE" in
@@ -1516,6 +1533,11 @@ _rm_DONTUSE()
 # warnings should be issued, files auto-added to repo, etc.
 _mv_DONTUSE()
 {
+    # Help call
+    if [[ $# -ge 1 && "-h" = "$1" || "--help" = "$1" ]]; then
+        command mv --help
+        return 0
+    fi
 
     # check if target is in REPO
     local source source_repo
@@ -1577,6 +1599,12 @@ _mv_DONTUSE()
 # forms of ln make this complicated
 _ln_DONTUSE()
 {
+    # Help call
+    if [[ $# -ge 1 && "-h" = "$1" || "--help" = "$1" ]]; then
+        command ln --help
+        return 0
+    fi
+
     command ln -s "$@"
     if [ $? == 0 ]; then
         print_list_if_OK 0
@@ -1600,6 +1628,11 @@ _ln_DONTUSE()
 # warnings should be issued, files auto-added to repo, etc.
 _cp_DONTUSE()
 {
+    # Help call
+    if [[ $# -ge 1 && "-h" = "$1" || "--help" = "$1" ]]; then
+        command cp --help
+        return 0
+    fi
 
     local cpcmd
     local nargin=$#
@@ -1608,18 +1641,17 @@ _cp_DONTUSE()
     cpcmd="rsync -aAHch --info=progress2 $@"
 
     # optional args
-    while true
-    do
+    while (( "$#" )); do
+
         case "$1" in
 
-            -M|--multiple-destination|--multidest)
+            "-M"|"--multiple-destination"|"--multidest")
                 cpcmd="echo \"\${@:2:\$nargin}\" | xargs -n1 -P $(nproc --all) -- rsync -aAHch --info=progress2 -- \"\$1\""
                 ((nargin--))
                 shift
                 ;;
 
-
-            --)
+            "--")
                 ((nargin--))
                 shift
                 break
@@ -1648,8 +1680,7 @@ _cp_DONTUSE()
         eval $cpcmd
 
         if [ $nargin == 2 ]; then
-            git add "$2" 2> /dev/null
-        fi
+            git add "$2" 2> /dev/null; fi
 
 
     # normal mode
@@ -1673,8 +1704,8 @@ _touch_DONTUSE()
 # Frequently needed functionality
 # --------------------------------------------------------------------------------------------------
 
-# copy all relevant bash config files to a different (bash > 4 enabled) system
-proliferate_to()
+# copy all relevant bash config files to a different (bash > 4.0) system
+spread_the_madness()
 {
     scp ~/.bash_aliases "$@"
     if (( $? == 0 )); then
@@ -1707,10 +1738,10 @@ ex()
             *.Z)         uncompress "$1" ;;
             *.7z)        7z x "$1"       ;;
 
-            *) warning "'$1' cannot be extracted via ex()." ;;
+            *) warning "'%s' cannot be extracted via ex()."  "$1";;
         esac
     else
-        error "'$1' is not a valid, readable file."
+        error "'%s' is not a valid, readable file." "$1"
     fi
 }
 
@@ -1884,48 +1915,51 @@ psa()
 mvq()
 {
     if [ $# -lt 2 ]; then
-        error "mv requires at least 2 arguments.";
-        return 1;
+        error "mv requires at least 2 arguments."
+        return 1
     fi
 
-    (nohup nice -n 19 mv "$@" 2>&1 1> /dev/null &)
-    echo "Moving \"${@: 1:$(($#-1))}\" to \"${@: -1}\""
+    # TODO: nohup doesn't allow for easy redirection
+    #(nohup nice -n 19 mv "$@" 2> >(error) &)
+    (nice -n 19 cp -r "$@" 1> >(warning) 2> >(error) &)
+    printf 'Moving %s to "%s"...\n'  "$(quoted_list ${@: 1:$(($#-1))})"  "${@: -1}"
 }
 
 # Queued copy
 cpq()
 {
-    if [ $# -lt 2]; then
+    if [ $# -lt 2 ]; then
         error "cp requires at least 2 arguments."
-        exit 1
+        return 1
     fi
 
-    (nohup nice -n 19 cp -r "$@" 2>&1 1> /dev/null &)
-    echo "Copying \"${@: 1:$(($#-1))}\" to \"${@: -1}\""
+    # TODO: nohup doesn't allow for easy redirection
+    #(nohup nice -n 19 cp -r "$@" 1> >(warning) 2> >(error) &)
+    (nice -n 19 cp -r "$@" 1> >(warning) 2> >(error) &)
+    printf 'Copying %s to "%s"...\n'  "$(quoted_list ${@: 1:$(($#-1))})"  "${@: -1}"
 }
 
 # Multi-source, multi-destination copy/move
-__spread_core()
+__spread()
 {
     local cmd="cp"
 
-    local -a sources
-    local -a targets
+    local -a sources=()
+    local -a targets=()
 
     local collecting_sources=1
-    local collecting_targets=0
+    local do_repository=0
+
 
     # Collect arguments
-    for ((i=0; i<$#; ++i)); do
+    while (( "$#" )); do
 
         case "$1" in
 
-            "-c"|"--copy")
-                cmd="cp"
-                ;;
-            "-m"|"--move")
-                cmd="mv"
-                ;;
+            "-c"|"--copy") cmd="cp" ;;
+            "-m"|"--move") cmd="mv" ;;
+
+            "-r"|"--repository") do_repository=1 ;;
 
             "-s"|"--sources")
                 collecting_sources=1
@@ -1955,13 +1989,22 @@ __spread_core()
     for target in "${targets[@]}"; do
 
         # Move/copy sources to current target
-        if [ $cmd = "cp" ]; then
-            command cp -r "${sources[@]}" "${target}" 2>&1 | error;
-        elif [ $cmd = "mv" ]; then
-            command mv -r "${sources[@]}" "${target}" 2>&1 | error;
+        if [ $do_repository -eq 1 ]; then
+            case $cmd in
+                "cp") (_cp_DONTUSE "${sources[@]}" "${target}" 1> >(warning) 2> >(error) &); ;;
+                "mv") (_mv_DONTUSE "${sources[@]}" "${target}" 1> >(warning) 2> >(error) &); ;;
+                *)    error "Invalid command: '%s'." "$cmd"
+                      return 1
+                      ;;
+            esac
         else
-            error "Invalid command: '%s'." "$cmd"
-            return 1
+            case $cmd in
+                "cp") cpq "${sources[@]}" "${target}" ;;
+                "mv") mvq "${sources[@]}" "${target}" ;;
+                *)    error "Invalid command: '%s'." "$cmd"
+                      return 1
+                      ;;
+            esac
         fi
 
         # Halt on first error
@@ -1974,11 +2017,12 @@ __spread_core()
 # Multi-source, multi-destination copy
 proliferate()
 {
-    __spread_core -c $@
+    __spread -c $@
 }
-distribute()
+# Multi-source, multi-destination move
+spread()
 {
-    __spread_core -m $@
+    __spread -m $@
 }
 
 
