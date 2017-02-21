@@ -684,8 +684,10 @@ typeset -r IDO_HISTORY_FILE
 
 # read the history file when first sourcing this script
 if [ ${#IDO_HISTORY[@]} -eq 0 ]; then
+    echo "1Reading IDO history..."
     ido_read_history; fi
 
+complete -v -F ido_dir -o nospace cdn
 
 
 

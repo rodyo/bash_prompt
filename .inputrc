@@ -1,9 +1,9 @@
-# Default settings 
+# Default settings
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 set completion-ignore-case on
 set mark-directories on
 set mark-symlinked-directories on
-set show-all-if-ambiguous on
+#set show-all-if-ambiguous on
 
 # perform history searches with up/down arrows keys
 "\e[A": history-search-backward

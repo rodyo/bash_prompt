@@ -62,7 +62,7 @@ DO_PROFILING=0
 _START_PROFILING()
 {
     which tee &>/dev/null && which date &>/dev/null && which sed &>/dev/null which paste &>/dev/null || \
-        (>&2 echo "cannot profile: unmet depenencies" && return)
+        (error "cannot profile: unmet depenencies" && return)
 
     if [ $DO_PROFILING -eq 1 ]; then
         PS4='+ $(date "+%s.%N")\011 '
@@ -71,7 +71,7 @@ _START_PROFILING()
                        date -f - "+%s.%N" > /tmp/sample-time.$$.tim)
         set -x
     else
-        >&2 echo "stray _START_PROFILING found"
+        error "stray _START_PROFILING found"
     fi
 }
 
@@ -95,7 +95,7 @@ _STOP_PROFILING()
         echo "Profiling report available in '~/profile_report.$$.log'"
 
     else
-        >&2 echo "stray _STOP_PROFILING found"
+        error "stray _STOP_PROFILING found"
     fi
 }
 
@@ -108,7 +108,7 @@ _STOP_PROFILING()
 # Location of files
 # --------------------------------------------------------------------------------------------------
 
-dirstack="${HOME}/.dirstack"
+DIRSTACK_FILE="${HOME}/.dirstack"
 
 
 # Check for external tools and shell specifics
@@ -131,7 +131,6 @@ haveAllRepoBinaries=0
 declare -A REPO_COLOR
 declare -A ALL_COLORS
 
-# USE_COLORS
 USE_COLORS=
 if [ "yes" == "$SHELL_COLORS" ]; then
     USE_COLORS=1
@@ -160,6 +159,60 @@ REPO_COLOR[git]=${START_COLORSCHEME}${TXT_BOLD}';'${FG_RED}${END_COLORSCHEME};  
 REPO_COLOR[---]=${START_COLORSCHEME}${ALL_COLORS[di]}${END_COLORSCHEME}
 
 
+# error/warning function
+error()
+{
+    local msg
+
+    # argument
+    if [ -n "$1" ]; then
+        msg="$(printf "$@")"
+
+    # stdin
+    else
+        while read msg; do
+            error "${msg}"; done
+        return 0
+    fi
+
+    # Print the message, based on color settings
+    if [ $USE_COLORS -eq 1 ]; then
+        echo "${START_COLORSCHEME}${TXT_BOLD};${FG_RED}${END_COLORSCHEME}ERROR: ${msg}${RESET_COLORS}" >&2
+    else
+        error "ERROR: ${msg}" >&2
+    fi
+
+    return 1
+}
+
+warning()
+{
+    local msg
+
+    # argument
+    if [ -n "$1" ]; then
+        msg="$(printf "$@")"
+
+    # stdin
+    else
+        while read msg; do
+            warning "${msg}"; done
+        return 0
+    fi
+
+    # Print the message, based on color settings
+    if [ $USE_COLORS -eq 1 ]; then
+        echo "${START_COLORSCHEME}${TXT_BOLD};${FG_ORANGE}${END_COLORSCHEME}WARNING: ${msg}${RESET_COLORS}"
+    else
+        echo "WARNING: ${msg}"
+    fi
+
+    return 0
+}
+
+
+
+
 # --------------------------------------------------------------------------------------------------
 # Execute things in current dir when command is not found
 # --------------------------------------------------------------------------------------------------
@@ -172,23 +225,8 @@ command_not_found_handle()
     ([[ -f "${1}" && -x "${1}" ]] && "./${1}") ||
 
     # not found
-    echo "Command not found."
+    error "Command not found."
 }
-
-
-# --------------------------------------------------------------------------------------------------
-# Join input arguments into a single string
-# --------------------------------------------------------------------------------------------------
-strjoin()
-{
-    local d="$1"
-    shift
-
-    echo -n "$1"
-    shift
-    printf "%s" "${@/#/$d}"
-}
-
 
 
 # --------------------------------------------------------------------------------------------------
@@ -331,7 +369,7 @@ multicolumn_ls()
         local haveAttrlist=0
         case $(find . -maxdepth 0 -printf %F) in
             ext2|ext3|ext4) haveAttrlist=1 ;;
-            # TODO: also cifs and fuse.sshfs etc. --might--support it, but how to check for this...
+            # TODO: also cifs and fuse.sshfs etc. --might-- support it, but how to check for this...
         esac
 
 
@@ -382,7 +420,7 @@ multicolumn_ls()
         done
 
         # Now print the list
-        if [ $USE_COLORS ]; then
+        if [ $USE_COLORS -eq 1 ]; then
             printf $RESET_COLORS; fi
 
         local lastColumnWidth ind paint device=0 lastColumn=0 lastsymbol=" "
@@ -403,7 +441,7 @@ multicolumn_ls()
                     lastColumn=1; fi
 
                 # we ARE using colors:
-                if [ $USE_COLORS ]; then
+                if [ $USE_COLORS  -eq 1 ]; then
 
                     # get type (dir, link, file)
                     case ${perms[$ind]:0:1} in
@@ -546,12 +584,12 @@ promptcmd()
 
     # Username color scheme
     local usrName=""
-    if [ $USE_COLORS ]; then
+    if [ $USE_COLORS -eq 1 ]; then
         usrName="${START_COLORSCHEME}${TXT_BOLD};${FG_GREEN}${END_COLORSCHEME}"; fi
 
     # hostname color scheme
     local hstName=""
-    if [ $USE_COLORS ]; then
+    if [ $USE_COLORS -eq 1 ]; then
         hstName="${START_COLORSCHEME}${FG_MAGENTA}${END_COLORSCHEME}"; fi
 
 
@@ -561,13 +599,13 @@ promptcmd()
 
     # previous command exit status
     if [ $exitstatus -eq 0 ]; then
-        if [ $USE_COLORS ]; then
-            ES='\['${START_COLORSCHEME}${TXT_DIM}';'${FG_GREEN}${END_COLORSCHEME}'\]^_^ '${RESET_COLORS}
+        if [ $USE_COLORS -eq 1 ]; then
+            ES='\['${START_COLORSCHEME}${TXT_DIM}';'${FG_GREEN}${END_COLORSCHEME}'\]^_^ \['${RESET_COLORS}'\]'
         else
             ES='^_^ '; fi
     else
-        if [ $USE_COLORS ]; then
-            ES='\['${START_COLORSCHEME}${TXT_DIM}';'${FG_RED}${END_COLORSCHEME}'\]o_O '${RESET_COLORS}
+        if [ $USE_COLORS -eq 1 ]; then
+            ES='\['${START_COLORSCHEME}${TXT_DIM}';'${FG_RED}${END_COLORSCHEME}'\]o_O \['${RESET_COLORS}'\]'
         else
             ES='o_O '; fi
     fi
@@ -584,13 +622,13 @@ promptcmd()
             branch=$(git branch | command grep "*")
             branch=${branch#\* }
             if [ $? == 0 ]; then
-                if [ $USE_COLORS ]; then
+                if [ $USE_COLORS -eq 1 ]; then
                     PS1=$ES${usrName}'\u\['${RESET_COLORS}'\]@'${hstName}'\h\['${RESET_COLORS}'\] :\['${REPO_COLOR[git]}'\] [git: $branch] : \W/\['${RESET_COLORS}'\] \$ '
                 else
                     PS1=$ES'\u@\h : [git: $branch] : \W/ \$ ';
                 fi
             else
-                if [ $USE_COLORS ]; then
+                if [ $USE_COLORS -eq 1 ]; then
                     PS1=$ES${usrName}'\u\['${RESET_COLORS}'\]@'${hstName}'\h\['${RESET_COLORS}'\] :\['${REPO_COLOR[git]}'\] [*unknown branch*] : \W/\['${RESET_COLORS}'\] \$ '
                 else
                     PS1=$ES'\u@\h : [*unknown branch*] : \W/ \$ ';
@@ -600,7 +638,7 @@ promptcmd()
 
         # SVN repo
         "svn")
-            if [ $USE_COLORS ]; then
+            if [ $USE_COLORS -eq 1 ]; then
                 PS1=$ES${usrName}'\u\['${RESET_COLORS}'\]@'${hstName}'\h\['${RESET_COLORS}'\] :\['${REPO_COLOR[svn]}'\] [svn] : \W/\['${RESET_COLORS}'\] \$ '
             else
                 PS1=$ES'\u@\h : [svn] : \W/ \$ ';
@@ -609,7 +647,7 @@ promptcmd()
 
         # mercurial repo
         "hg")
-            if [ $USE_COLORS ]; then
+            if [ $USE_COLORS -eq 1 ]; then
                 PS1=$ES${usrName}'\u\['${RESET_COLORS}'\]@'${hstName}'\h\['${RESET_COLORS}'\] :\['${REPO_COLOR[hg]}'\] [hg] : \W/\['${RESET_COLORS}'\] \$ '
             else
                 PS1=$ES'\u@\h : [hg] : \W/ \$ ';
@@ -618,7 +656,7 @@ promptcmd()
 
         # bazaar repo
         "bzr")
-            if [ $USE_COLORS ]; then
+            if [ $USE_COLORS -eq 1 ]; then
                 PS1=$ES${usrName}'\u\['${RESET_COLORS}'\]@'${hstName}'\h\['${RESET_COLORS}'\] :\['${REPO_COLOR[bzr]}'\] [bzr] : \W/\['${RESET_COLORS}'\] \$ '
             else
                 PS1=$ES'\u@\h : [bzr] : \W/ \$ ';
@@ -627,7 +665,7 @@ promptcmd()
 
         # normal prompt
         *)
-            if [ $USE_COLORS ]; then
+            if [ $USE_COLORS -eq 1 ]; then
 
                 dirName='\['${START_COLORSCHEME}${TXT_BOLD}';'${FG_BLUE}${END_COLORSCHEME}'\]'
 
@@ -658,6 +696,17 @@ PROMPT_COMMAND=promptcmd
 # --------------------------------------------------------------------------------------------------
 # Helper functions
 # --------------------------------------------------------------------------------------------------
+
+# Join input arguments into a single string
+strjoin()
+{
+    local d="$1"
+    shift
+
+    echo -n "$1"
+    shift
+    printf "%s" "${@/#/$d}"
+}
 
 # trim bash string
 trim()
@@ -692,8 +741,9 @@ print_list_if_OK()
     fi
 }
 
-# pretty print directory
-
+# pretty print directory:
+# - truncate (leading "...") if name is too long
+# - colorized according to dircolors and repository info
 prettyprint_dir()
 {
     # No arguments, no function
@@ -703,8 +753,16 @@ prettyprint_dir()
     local -a repoinfo
     local pwdmaxlen=$(($COLUMNS/3))
     local pthoffset
-    local original_pth="$(command ls -d "${1/\~/${HOME}}" --color)"
+    local original_pth
+
+    if [ $USE_COLORS -eq 1 ]; then
+        original_pth="$(command ls -d "${1/\~/${HOME}}" --color)"
+    else
+        original_pth="$(command ls -d "${1/\~/${HOME}}")"
+    fi
+
     local pth="${original_pth/${HOME}/~}";
+
 
     if [ $# -lt 3 ]; then
         repoinfo=($(check_repo "$@"))
@@ -715,7 +773,7 @@ prettyprint_dir()
     fi
 
     # Color print
-    if [ $USE_COLORS ]; then
+    if [ $USE_COLORS -eq 1 ]; then
 
         # TODO: dependency on AWK; include bash-only version
         if [ $haveAwk ]; then
@@ -887,47 +945,30 @@ check_repo()
 
 
 # Update all repositories under the current dir
+# TODO: also update git submodules, svn externals, etc.
 update_all()
 {
     for d in */; do
         rp=($(check_repo "$PWD/$d"))
+
+        cd "${rp[@]:1}"
+
         case "${rp[0]}" in
-            "svn")
-                cd "${rp[@]:1}"
-                svn update
-                cd ..
-                ;;
-
-            "git")
-                cd "${rp[@]:1}"
-                git pull
-                cd ..
-                ;;
-
-            "hg")
-                cd "${rp[@]:1}"
-                hg update
-                cd ..
-                ;;
-
-            "bzr")
-                cd "${rp[@]:1}"
-                bzr update
-                cd ..
-                ;;
-
-            "CSV")
-                # TODO
-                ;;
-
-            *)
+            "svn") svn update ;;
+            "git") git pull   ;;
+            "hg")  hg update  ;;
+            "bzr") bzr update ;;
+            *)  warning "Don't know how to update repository."
                 ;;
         esac
+
+        cd ..
+
     done
 }
 
 # Enter GIT mode
-enter_GIT()
+__enter_GIT()
 {
     # set type
     REPO_TYPE="git"
@@ -963,7 +1004,7 @@ enter_GIT()
 }
 
 # Enter SVN mode
-enter_SVN()
+__enter_SVN()
 {
     # enter SVN mode
     REPO_TYPE="svn"
@@ -971,14 +1012,13 @@ enter_SVN()
     REPO_PATH="$@"
 
     # alias everything
-    # TODO
     alias su="svn up"           ; REPO_CMD_update="su"
     alias sc="svn commit -m "   ; REPO_CMD_commit="sc"
     alias ss="svn status"       ; REPO_CMD_status="ss"
 }
 
 # Enter Mercurial mode
-enter_HG()
+__enter_HG()
 {
     # enter GIT mode
     REPO_TYPE="hg"
@@ -990,7 +1030,7 @@ enter_HG()
 }
 
 # Enter Bazaar mode
-enter_BZR()
+__enter_BZR()
 {
     # enter BZR mode
     REPO_TYPE="bzr"
@@ -1002,7 +1042,7 @@ enter_BZR()
 }
 
 # leave any and all repositories
-leave_repos()
+__leave_repos()
 {
     if [[ $REPO_MODE != true ]]; then
         return; fi
@@ -1038,7 +1078,7 @@ lds()
        dirs=$(command ls -dh1 --time-style=+ "${@/%//}" 2> /dev/null)
     fi
 
-    if [ $USE_COLORS ]; then
+    if [ $USE_COLORS  -eq 1 ]; then
         # find proper color used for directories
         local color="${ALL_COLORS[di]}"
         # loop through dirlist and parse
@@ -1072,7 +1112,7 @@ lads()
         dirs=$(command ls -dh1 --time-style=+ "${@/%//}" 2> /dev/null)
     fi
 
-    if [ $USE_COLORS ]; then
+    if [ $USE_COLORS  -eq 1 ]; then
         # find proper color used for directories
         local color="${ALL_COLORS[di]}"
         # loop through dirlist and parse
@@ -1098,16 +1138,16 @@ lo()
 
     # Contruct proper command and display string
     case "$1" in
-        0) str="no permissions"              ; cmd="" ;; # TODO
-        1) str="Executable"                  ; cmd="-executable" ;;
-        2) str="Writable"                    ; cmd="-writable" ;;
-        3) str="Writable/executable"         ; cmd="-writable -executable" ;;
-        4) str="Readable"                    ; cmd="-readable" ;;
-        5) str="Readable/executable"         ; cmd="-readable -executable" ;;
-        6) str="Readable/writable"           ; cmd="-readable -writable" ;;
+        0) str="no permissions"              ; cmd=""                                ;; # TODO
+        1) str="Executable"                  ; cmd="-executable"                     ;;
+        2) str="Writable"                    ; cmd="-writable"                       ;;
+        3) str="Writable/executable"         ; cmd="-writable -executable"           ;;
+        4) str="Readable"                    ; cmd="-readable"                       ;;
+        5) str="Readable/executable"         ; cmd="-readable -executable"           ;;
+        6) str="Readable/writable"           ; cmd="-readable -writable"             ;;
         7) str="Readable/writable/executable"; cmd="-readable -writable -executable" ;;
 
-        *) echo "Invalid octal permission."; return 1 ;;
+        *) error "Invalid octal permission."; return 1 ;;
     esac
 
     # default: find non-dot files only.
@@ -1138,7 +1178,6 @@ lo()
     fi
 
     return 0
-
 }
 
 # display only files readable by current user
@@ -1161,9 +1200,26 @@ lax() { lo 1 "all"; }
 # More advanced cd, mkdir, rmdir, mv, rm, cp, ln
 # --------------------------------------------------------------------------------------------------
 
+# Save a directory to the dirstack file, and check if its unique
+__add_dir_to_stack()
+{
+    local tmp
+    local dir="$1"
+
+    if [ -e "${DIRSTACK_FILE}" ]; then
+        echo "${dir}" >> "${DIRSTACK_FILE}"
+        tmp=$(mktemp)
+        sort -u "${DIRSTACK_FILE}" > "${tmp}"
+        mv "${tmp}" "${DIRSTACK_FILE}"
+    else
+        echo "${dir}" > "${DIRSTACK_FILE}"
+    fi
+
+    # Check if all directories still exist
+    (__check_dirstack &)
+}
+
 # Navigate to directory. Check if directory is in a repo
-# TODO: jump to dir in the stack (without autocomplete) when its not in the current dir
-# TODO: autocomplete dirs in the stack (if none exist in the current path)
 _cd_DONTUSE()
 {
     # first cd to given directory
@@ -1187,26 +1243,19 @@ _cd_DONTUSE()
     if [ $? -eq 0 ]; then
 
         # Save to dirstack file and check if unique
-        if [ -e "${dirstack}" ]; then
-            pwd >> "${dirstack}"
-            tmp=$(mktemp)
-            sort -u "${dirstack}" > "${tmp}"
-            mv "${tmp}" "${dirstack}"
-        else
-            pwd > "${dirstack}"
-        fi
+        (__add_dir_to_stack "$PWD" &)
 
         # Assume we're not going to use any of the repository modes
-        leave_repos
+        __leave_repos
 
         # Check if we're in a repo. If so, enter a repo mode
         repo=($(check_repo))
         if [ $? -eq 0 ]; then
             case "${repo[0]}" in
-                "git") enter_GIT "${repo[@]:1}" ;;
-                "svn") enter_SVN "${repo[@]:1}" ;;
-                "hg")  enter_HG  "${repo[@]:1}" ;;
-                "bzr") enter_BZR "${repo[@]:1}" ;;
+                "git") __enter_GIT "${repo[@]:1}" ;;
+                "svn") __enter_SVN "${repo[@]:1}" ;;
+                "hg")  __enter_HG  "${repo[@]:1}" ;;
+                "bzr") __enter_BZR "${repo[@]:1}" ;;
                 *) ;;
             esac
         fi
@@ -1215,19 +1264,20 @@ _cd_DONTUSE()
         multicolumn_ls
 
     fi
-
-
-
 }
 
 # jump dirs via dir-numbers
+# TODO: autocomplete dirs in the stack bash-ido style (if none exist in the current path)
 _cdn_DONTUSE()
 {
-    check_dirstack
+    local IFS_old="$IFS"
+
+    # Remove non-existent dirs from dirstack
+    __check_dirstack
 
     # create initial stack array
-    local IFS_old="$IFS"; IFS=$'\n'
-    local -a stack=( $(cat "$dirstack") )
+    IFS=$'\n'
+    local -a stack=( $(cat "${DIRSTACK_FILE}") )
     IFS="$IFS_old"
 
     # list may be empty
@@ -1236,105 +1286,97 @@ _cdn_DONTUSE()
         return
     fi
 
-    # if no function arguments provided, show list
-    if [ $# -eq 0 ]; then
+    # Parse arguments
+    local supress_colors=0
+    local intarg=-1
+    local namearg=
+    for ((i=0; i<$#; ++i)); do
+        case "$1" in
 
+            "-n"|"--no-colors")
+                supress_colors=1
+                ;;
+
+            *) if [[ $1 =~ ^[0-9]+$ ]]; then
+                    intarg=$1
+               else
+                    namearg="$1"
+               fi
+               break
+               ;;
+        esac
+        shift
+    done
+
+    # Integer argument provided: go to dir number
+    if [ $intarg -ne -1 ]; then
+        if [ $intarg -le ${#stack[@]} ]; then
+            _cd_DONTUSE "${stack[$intarg]}"
+        else
+            error "ERROR: given directory index exceeds number of directories visited."
+        fi
+
+    # String argument provided: Search all dirs in local dir AND dirstack for first partial match
+    elif [ -n "$namearg" ]; then
+
+        # Get local dirs
+        IFS=$'\n'
+        local local_dirs=($(command ls -1bd */))
+        IFS=$IFS_old
+
+        # First check for exact match in local dirs
+        for dir in "${local_dirs[@]}"; do
+            if [ "${dir}" = "${namearg}" ]; then
+                _cd_DONTUSE "${dir}"
+                return
+            fi
+        done
+
+        # Otherwise, go for partial mathes in local dirs + dirstack.
+
+        # Add local directories to stack
+        stack=( "${local_dirs[@]}" "${stack[@]}" )
+
+        # Loop through all dirs; cd to first partial match
+        for dir in "${stack[@]}"; do
+            if [[ "$dir" == *"${namearg}"* ]]; then
+                _cd_DONTUSE "${dir}"
+                return
+            fi
+        done
+
+        error "ERROR: no partial match for input string \"%s\".\n" "${namearg}"
+
+    # if no function arguments provided, show list
+    else
         IFS=$'\n'
 
+        local previous_color_setting=$USE_COLORS
         local -a repos=($(check_repo "${stack[@]}"))
         local -a types=($(echo "${repos[*]}" | cut -f 1  -d " "))
         local -a paths=($(echo "${repos[*]}" | cut -f 2- -d " "))
 
         IFS="$IFS_old"
 
+        if [ $supress_colors -eq 1 ]; then
+            USE_COLORS=0; fi
+
         for ((i=0; i<${#repos[@]}; i++)); do
             (printf "%3d: %s\n" $i "$( prettyprint_dir "${stack[$i]}" "${types[$i]}" "${paths[$i]}" )" &)
         done
 
-    # otherwise, go to dir number
-    else
-        entry="${stack[$1]%%\n}"
-        _cd_DONTUSE "${entry#"${entry%%[![:space:]]*}"}"
+        USE_COLORS=$previous_color_setting
     fi
 }
 
 
-
-# TODO Complete partial CD paths, including the current dir AND the dirstack
-cd_completer()
+# TODO: autocomplete dirs in the stack bash-ido style (if none exist in the current path)
+_cdn_completer()
 {
-    local IFS_=$IFS
-
-    # create initial stack array (uniques only)
-    IFS=$'\n'
-    local stack=($(cat "${dirstack}"))
-    stack=("${stack[@]/\~/$HOME}")
-    stack=("${stack[@]/%/$'\n'}")
-    stack=($(echo "${stack[@]}" | sort -u))
-
-for i in "${stack[@]}"; do
-    k="${#COMPREPLY[@]}"
-    COMPREPLY[k++]=${j#$i/}
-done
-
-
-
-
-
-return 0
-
-    # from /etc/bash_completion///_cd():
-
-    #local cur IFS=$'\n' i j k
-    #_get_comp_words_by_ref cur
-
-    # try to allow variable completion
-    #if [[ "$cur" == ?(\\)\$* ]]; then
-        #COMPREPLY=( $( compgen -v -P '$' -- "${cur#?(\\)$}" ) )
-        #return 0
-    #fi
-
-    #_compopt_o_filenames
-
-    ## Use standard dir completion if no CDPATH or parameter starts with /,
-    ## ./ or ../
-    #if [[ -z "${CDPATH:-}" || "$cur" == ?(.)?(.)/* ]]; then
-        #_filedir -d
-        #return 0
-    #fi
-
-    #local -r mark_dirs=$(_rl_enabled mark-directories && echo y)
-    #local -r mark_symdirs=$(_rl_enabled mark-symlinked-directories && echo y)
-
-    ## we have a CDPATH, so loop on its contents
-    #for i in ${CDPATH//:/$'\n'}; do
-        ## create an array of matched subdirs
-        #k="${#COMPREPLY[@]}"
-        #for j in $( compgen -d $i/$cur ); do
-            #if [[ ( $mark_symdirs && -h $j || $mark_dirs && ! -h $j ) && ! -d ${j#$i/} ]]; then
-                #j="${j}/"
-            #fi
-            #COMPREPLY[k++]=${j#$i/}
-        #done
-    #done
-
-    #_filedir -d
-
-    #if [[ ${#COMPREPLY[@]} -eq 1 ]]; then
-        #i=${COMPREPLY[0]}
-        #if [[ "$i" == "$cur" && $i != "*/" ]]; then
-            #COMPREPLY[0]="${i}/"
-        #fi
-    #fi
-
-    #return 0
+    # TODO
+    exit 0
 }
-#if shopt -q cdable_vars; then
-    #complete -v -F cdn_complete -o nospace cd
-#else
-    #complete -F cdn_complete -o nospace cd
-#fi
-
+#complete -F _cdn_completer -o nospace cdn
 
 
 # create dir(s), taking into account current repo mode
@@ -1349,17 +1391,17 @@ _mkdir_DONTUSE()
 }
 
 # Check dirstack file if all directories it contains still exist
-check_dirstack()
+__check_dirstack()
 {
     local -a stack
     local tmp=$(mktemp)
     local IFS_=$IFS
 
-    if [ -e "${dirstack}" ]; then
+    if [ -e "${DIRSTACK_FILE}" ]; then
 
         # Read current dirstack
         IFS=$'\n'
-        stack=($(cat "${dirstack}"))
+        stack=($(cat "${DIRSTACK_FILE}"))
 
         # Loop through all dirs one by one. If they exist, print
         # them into a tempfile
@@ -1372,7 +1414,7 @@ check_dirstack()
         IFS=$IFS_
 
         # Then overwrite the original dirstack file with the tempfile content
-        command mv -f "${tmp}" "${dirstack}"
+        command mv -f "${tmp}" "${DIRSTACK_FILE}"
     fi
 }
 
@@ -1382,7 +1424,7 @@ _rmdir_DONTUSE()
 {
     command rmdir "$@"
     print_list_if_OK $?
-    check_dirstack
+    __check_dirstack &
 }
 
 # remove file(s), taking into account current repo mode
@@ -1432,9 +1474,7 @@ _rm_DONTUSE()
         # remove non-added or external files
         if [[ "$err" =~ "${not_added}" ]]; then
 
-            msg="\n WARNING: Some files were never added to the repository \n Do you wish to remove them anyway? [N/y]"
-            if [ $USE_COLORS ]; then printf "\E[41m$msg${RESET_COLORS} "
-            else printf "$msg "; fi
+            warning "Some files were never added to the repository \n Do you wish to remove them anyway? [N/y]"
 
             case $(read L && echo $L) in
                 y|Y|yes|Yes|YES)
@@ -1447,16 +1487,13 @@ _rm_DONTUSE()
 
         else
             if [[ "$err" =~ "${outside_repo}" ]]; then
-
-                msg="\n WARNING: Some files were outside the repository. \n\n"
                 command rm -vI "$@"
                 if [ $? == 0 ]; then
                     print_list_if_OK 0
-                    if [ $USE_COLORS ]; then printf "\E[41m$msg${RESET_COLORS}"
-                    else printf "$msg"; fi
+                    warning "Some files were outside the repository."
                 fi
             else
-                echo "$err"
+                error "$err"
             fi
         fi
 
@@ -1519,7 +1556,7 @@ _mv_DONTUSE()
                 command mv -iv "$@"
                 if [ $? == 0 ]; then
                     print_list_if_OK $?
-                    if [ $USE_COLORS ]; then
+                    if [ $USE_COLORS  -eq 1 ]; then
                          printf "\n\E[41m WARNING: Target and/or source was outside repository! \n\n${RESET_COLORS}";
                     else printf "\n WARNING: Target and/or source was outside repository! \n\n"; fi
                 fi
@@ -1636,7 +1673,7 @@ _touch_DONTUSE()
 # Frequently needed functionality
 # --------------------------------------------------------------------------------------------------
 
-# copy all relevant bash config files to a different (bash-enabled) system
+# copy all relevant bash config files to a different (bash > 4 enabled) system
 proliferate_to()
 {
     scp ~/.bash_aliases "$@"
@@ -1645,10 +1682,11 @@ proliferate_to()
         scp ~/.bashrc "$@"
         scp ~/.dircolors "$@"
         scp ~/.inputrc "$@"
+        scp ~/.awk_functions "$@"
         scp ~/.git_prompt "$@"
         scp ~/.git_completion "$@"
     else
-        echo "failed to proliferate Rody's bash madness to remote system."
+        error "failed to proliferate Rody's bash madness to remote system."
     fi
 }
 
@@ -1669,10 +1707,10 @@ ex()
             *.Z)         uncompress "$1" ;;
             *.7z)        7z x "$1"       ;;
 
-            *) echo "'$1' cannot be extracted via ex()." ;;
+            *) warning "'$1' cannot be extracted via ex()." ;;
         esac
     else
-        echo "'$1' is not a valid, readable file."
+        error "'$1' is not a valid, readable file."
     fi
 }
 
@@ -1693,7 +1731,9 @@ changext()
     local before after f
 
     # period is optional
-    before=$1; after=$2
+    before=$1;
+    after=$2
+
     if [ "${before:0:1}" != "." ]; then
         before=".$before"; fi
     if [ "${after:0:1}" != "." ]; then
@@ -1703,7 +1743,8 @@ changext()
     for f in *$before; do
         command mv "$f" "${f%$before}$after"; done
 
-    clear; multicolumn_ls
+    clear
+    multicolumn_ls
 }
 
 # instant calculator
@@ -1722,7 +1763,7 @@ _findbig_DONTUSE()
 
     # parse input arguments
     if [ $# -gt 1 ]; then
-        echo "Findbig takes at most 1 argument."; return; fi
+        error "Findbig takes at most 1 argument."; return; fi
     local num
     if [ $# -eq 1 ]; then
         num=$1 # argument is number of files to print
@@ -1734,7 +1775,7 @@ _findbig_DONTUSE()
     local lsout perms dir fcolor file f IFS_=$IFS
 
     # find proper color used for directories
-    if [ $USE_COLORS ]; then
+    if [ $USE_COLORS  -eq 1 ]; then
         local dcolor="${ALL_COLORS[di]}"; fi
 
     # loop through all big files
@@ -1751,7 +1792,7 @@ _findbig_DONTUSE()
 
         # Print list, taking into account proper file colors
         # TODO: do this the same way as in multicolumn_ls()
-        if [ $USE_COLORS ]; then
+        if [ $USE_COLORS  -eq 1 ]; then
             local fcolor=${LS_COLORS##*'*'.${file##*.}=};
             fcolor=${fcolor%%:*}
             if [ -z $(echo ${fcolor:0:1} | tr -d "[:alpha:]") ]; then
@@ -1767,6 +1808,7 @@ _findbig_DONTUSE()
 }
 
 # find biggest applications
+# must be aliased in .bash_aliases
 # FIXME: can't alias this one directly due to {} symbols
 _findbig_applications_DONTUSE()
 {
@@ -1778,14 +1820,14 @@ chroot_dir()
 {
     # Check input
     if [ $# -ne 1 ]; then
-        echo "Invalid number of arguments received.              "
-        echo "                                                   "
-        echo "Usage: $0 [PATH]                                   "
-        echo "                                                   "
-        echo "Where PATH is a valid dirname to put the chroot in."
-        echo "Example:                                           "
-        echo "   $0 /media/SYSTEM_DISK/                          "
-        echo "                                                   "
+        error "Invalid number of arguments received.              "
+        echo  "                                                   "
+        echo  "Usage: $0 [PATH]                                   "
+        echo  "                                                   "
+        echo  "Where PATH is a valid dirname to put the chroot in."
+        echo  "Example:                                           "
+        echo  "   $0 /media/SYSTEM_DISK/                          "
+        echo  "                                                   "
         return 1
     fi
 
@@ -1838,25 +1880,109 @@ psa()
 }
 
 
-function mvq
+# Queued move
+mvq()
 {
     if [ $# -lt 2 ]; then
-        echo "mv requires at least 2 arguments."; exit 1; fi
-    nohup nice -n 19 mv "$@" > /dev/null 2>&1 &
+        error "mv requires at least 2 arguments.";
+        return 1;
+    fi
+
+    (nohup nice -n 19 mv "$@" 2>&1 1> /dev/null &)
     echo "Moving \"${@: 1:$(($#-1))}\" to \"${@: -1}\""
 }
 
-function cpq
+# Queued copy
+cpq()
 {
     if [ $# -lt 2]; then
-        echo "cp requires at least 2 arguments."; exit 1; fi
-    nohup nice -n 19 cp "$@" > /dev/null 2>&1 &
+        error "cp requires at least 2 arguments."
+        exit 1
+    fi
+
+    (nohup nice -n 19 cp -r "$@" 2>&1 1> /dev/null &)
     echo "Copying \"${@: 1:$(($#-1))}\" to \"${@: -1}\""
+}
+
+# Multi-source, multi-destination copy/move
+__spread_core()
+{
+    local cmd="cp"
+
+    local -a sources
+    local -a targets
+
+    local collecting_sources=1
+    local collecting_targets=0
+
+    # Collect arguments
+    for ((i=0; i<$#; ++i)); do
+
+        case "$1" in
+
+            "-c"|"--copy")
+                cmd="cp"
+                ;;
+            "-m"|"--move")
+                cmd="mv"
+                ;;
+
+            "-s"|"--sources")
+                collecting_sources=1
+                ;;
+
+            "-t"|"--targets")
+                collecting_sources=0
+                ;;
+
+            *)  if [ $collecting_sources -eq 1 ]; then
+                    sources+=("$1")
+                else
+                    targets+=("$1")
+                fi
+                ;;
+        esac
+        shift
+    done
+
+    # Check arguments
+    if [ ${#sources[@]} -eq 0 ]; then
+        error "No source files/directories given."; return 1; fi
+    if [ ${#sources[@]} -eq 0 ]; then
+        error "No target files/directories given."; return 1; fi
+
+    # Execute command
+    for target in "${targets[@]}"; do
+
+        # Move/copy sources to current target
+        if [ $cmd = "cp" ]; then
+            command cp -r "${sources[@]}" "${target}" 2>&1 | error;
+        elif [ $cmd = "mv" ]; then
+            command mv -r "${sources[@]}" "${target}" 2>&1 | error;
+        else
+            error "Invalid command: '%s'." "$cmd"
+            return 1
+        fi
+
+        # Halt on first error
+        if [ $? -ne 0 ]; then
+            return 1; fi
+    done
+}
+
+
+# Multi-source, multi-destination copy
+proliferate()
+{
+    __spread_core -c $@
+}
+distribute()
+{
+    __spread_core -m $@
 }
 
 
 # export hi-res PNG from svg file
-# must be aliased in .bash_aliases
 svg2png()
 {
     local svgname pngname;
@@ -1874,7 +2000,7 @@ check_XML()
     for file in "$@"; do
         python -c "import sys,xml.dom.minidom as d; d.parse(sys.argv[1])" "$file" &&
             echo "XML-file $file is valid and well-formed" ||
-            echo "XML-file $file is NOT valid"
+            warning "XML-file $file is NOT valid"
     done
 }
 
@@ -1891,6 +2017,7 @@ new_github_repo()
     git remote add origin git@github.com:rodyo/"${1}".git
     git push -u origin master
 }
+
 existing_github_repo()
 {
     git remote add origin git@github.com:rodyo/"${1}".git
@@ -1927,7 +2054,5 @@ new_autokey_symbol()
     sed -i "s/REPLACEME_INSTANT/${instant}/g" "~/.config/autokey/data/Symbols/International/.${name}.json"
 
     echo "u${unicode} " > "~/.config/autokey/data/Symbols/International/${name}.txt"
-
-
 }
 

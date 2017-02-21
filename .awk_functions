@@ -12,6 +12,11 @@ function trim(str) { # trim leading & trailing whitespace
     return str;
 }
 
+function colorless_string(str) { # Remove all color-codes from string
+    gsub(/\033+\[+[0-9;]+m/, "", str);
+    return str;
+}
+
 function strlen(str) { # compute the length of a string, ignoring color-codes
     gsub(/\033+\[+[0-9;]+m/, "", str);
     return length(str);

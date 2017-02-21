@@ -52,12 +52,9 @@ alias clear=_clear_DONTUSE
 # custom functions
 # By <oldenhuis@gmail.com>
 if [ -f ~/.bash_functions ]; then
-    source ~/.bash_functions; fi
-
-# teleport command
-# By Alvin Alexander (devdaily.com)
-#if [ -f ~/.tp_command ]; then
-#    source ~/.tp_command; fi
+    source ~/.bash_functions;
+    check_dirstack
+fi
 
 # list-aliases
 alias ls="clear; ls --color=auto --si"
