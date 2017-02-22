@@ -763,6 +763,14 @@ trim()
     echo -n "$var"
 }
 
+
+# Normalize directory string
+# e.g.,  /foo/bar/../baz  ->  /foo/baz
+normalize_dir()
+{
+    echo "$(readlink -m "$1")"
+}
+
 # delete single element and re-order array
 # usage:  array=($(delete_reorder array[@] 10))
 delete_reorder()
@@ -1275,8 +1283,7 @@ lax() { lo 1 "all"; }
 # Save a directory to the dirstack file, and check if its unique
 __add_dir_to_stack()
 {
-    # TODO: make sure dir is fully expanded
-    local -r addition="$1"
+    local -r addition="$(normalize_dir "$1")"
 
     _lock_dirstack
 
@@ -1388,8 +1395,10 @@ __remove_dir_from_stack()
         # String argument: remove first (partial) match
         else
             local dir
+            local -r deletion="$(normalize_dir "${removal}")"
+
             for dir in "${stack[@]}"; do
-                if [[ "${dir:((${DIRSTACK_COUNTLENGTH}+1))}" != *"${removal}"* ]]; then
+                if [[ "${dir:((${DIRSTACK_COUNTLENGTH}+1))}" != *"${deletion}"* ]]; then
                     echo "${stack[$i]}" >> "${tmp}"
                 else
                     was_present=1
@@ -1448,11 +1457,11 @@ _cd_DONTUSE()
 
     # Home
     if [ $# -eq 0 ]; then
-        builtin cd -- "$HOME" > /dev/null
+        builtin cd -- "$HOME" 2> >(error)
 
     # Previous
     elif [[ $# -eq 1 && "-" = "$1" ]]; then
-        builtin cd > /dev/null
+        builtin cd 2> >(error)
 
     # Help call
     elif [[ $# -ge 1 && "-h" = "$1" || "--help" = "$1" ]]; then
@@ -1461,7 +1470,7 @@ _cd_DONTUSE()
 
     # All others
     else
-        builtin cd -- "$@" > /dev/null
+        builtin cd -- "$@" 2> >(error)
     fi
 
     # if successful, save to dirstack, display abbreviated dirlist and
