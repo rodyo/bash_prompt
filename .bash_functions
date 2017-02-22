@@ -218,7 +218,7 @@ error()
     if [ $USE_COLORS -eq 1 ]; then
         echo "${START_COLORSCHEME}${TXT_BOLD};${FG_RED}${END_COLORSCHEME}ERROR: ${msg}${RESET_COLORS}" >&2
     else
-        error "ERROR: ${msg}" >&2
+        error "${msg}" >&2
     fi
 
     return 1
@@ -1553,7 +1553,7 @@ _cdn_DONTUSE()
             _cd_DONTUSE "${stack[$intarg]:((${DIRSTACK_COUNTLENGTH}+1))}"
             return 0
         else
-            error "ERROR: given directory index exceeds number of directories visited."
+            error "given directory index exceeds number of directories visited."
             return 1
         fi
 
@@ -1586,7 +1586,7 @@ _cdn_DONTUSE()
             # Local dirs have no counter, dirstack dirs do. In the latter case, remove
             # the counter from the variable
             dir="${dirline}"
-            if [[ "${dir:0:((${DIRSTACK_COUNTLENGTH}+1))}" =~ ^[0-9]+[[:space:]] ]]; then
+            if [[ "${dir:0:((${DIRSTACK_COUNTLENGTH}+1))}" =~ ^[[:space:]]*[0-9]+[[:space:]] ]]; then
                 dir="${dirline:((${DIRSTACK_COUNTLENGTH}+1))}"; fi
 
             # CD to patially-matched dirname
