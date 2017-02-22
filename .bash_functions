@@ -662,7 +662,7 @@ promptcmd()
         "git")
             branch=$(git branch | command grep "*")
             branch="${branch#\* }"
-            if [ $? != 0 ]; then
+            if [ $? -ne 0 ]; then
                 branch="*unknown branch*"; fi
 
             if [ $USE_COLORS -eq 1 ]; then
@@ -1658,8 +1658,8 @@ _cdn_completer()
 # create dir(s), taking into account current repo mode
 _mkdir_DONTUSE()
 {
-    command mkdir -p "$@"
-    if [ $? == 0 ]; then
+    command mkdir -p "$@" 2> >(error)
+    if [ $? -eq 0 ]; then
         if [ $REPO_MODE -eq 1 ]; then
             eval $REPO_CMD_add "$@"; fi
         print_list_if_OK 0
@@ -1670,7 +1670,7 @@ _mkdir_DONTUSE()
 # TODO: not done yet
 _rmdir_DONTUSE()
 {
-    command rmdir "$@"
+    command rmdir "$@" 2> >(error)
     print_list_if_OK $?
     ( __check_dirstack & )
 }
@@ -1711,7 +1711,7 @@ _rm_DONTUSE()
                 ;;
 
             *) # anything erroneous does the same as no repo
-                command rm -vI "$@"
+                command rm -vI "$@" 2> >(error)
                 print_list_if_OK $?
                 ;;
 
@@ -1724,7 +1724,7 @@ _rm_DONTUSE()
 
             case $(read L && echo $L) in
                 y|Y|yes|Yes|YES)
-                    command rm -vI "$@"
+                    command rm -vI "$@" 2> >(error)
                     print_list_if_OK $?
                     ;;
                 *)
@@ -1733,8 +1733,8 @@ _rm_DONTUSE()
 
         else
             if [[ "$err" =~ "${outside_repo}" ]]; then
-                command rm -vI "$@"
-                if [ $? == 0 ]; then
+                command rm -vI "$@" 2> >(error)
+                if [ $? -eq 0 ]; then
                     print_list_if_OK 0
                     warning "Some files were outside the repository."
                 fi
@@ -1745,9 +1745,8 @@ _rm_DONTUSE()
 
     # not in REPO mode
     else
-        command rm -vI "$@"
+        command rm -vI "$@" 2> >(error)
         print_list_if_OK $?
-
     fi
 }
 
@@ -1774,7 +1773,7 @@ _mv_DONTUSE()
 
 # TODO!
     ## if that is so, (repo-)move all sources to target
-    #if [[ $? == 0 ]]; then
+    #if [ $? -eq 0 ]; then
         #for ((i=0; i<$#-1; ++i)); do
             #source="$1" # NOTE: will be shifted
             #source_repo=$(check_repo $(dirname $source))
@@ -1799,17 +1798,15 @@ _mv_DONTUSE()
 
         local match="outside repository"
 
-        local err=$(git mv "$@" 2>&1 1> /dev/null)
+        local err=$(git mv "$@" 1> /dev/null 2> >(error))
 
 
-        if [ $? != 0 ]; then
+        if [ $? -ne 0 ]; then
             if [[ "$err" =~ "${match}" ]]; then
-                command mv -iv "$@"
-                if [ $? == 0 ]; then
+                command mv -iv "$@" 2> >(error)
+                if [ $? -eq 0 ]; then
                     print_list_if_OK $?
-                    if [ $USE_COLORS  -eq 1 ]; then
-                         printf "\n\E[41m WARNING: Target and/or source was outside repository! \n\n${RESET_COLORS}";
-                    else printf "\n WARNING: Target and/or source was outside repository! \n\n"; fi
+                    warning "Target and/or source was outside repository";
                 fi
             else
                 echo $err
@@ -1817,7 +1814,7 @@ _mv_DONTUSE()
         fi
 
     else
-        command mv -iv "$@"
+        command mv -iv "$@" 2> >(error)
         print_list_if_OK $?
 
     fi
@@ -1834,8 +1831,8 @@ _ln_DONTUSE()
         return 0
     fi
 
-    command ln -s "$@"
-    if [ $? == 0 ]; then
+    command ln -s "$@" 2> >(error)
+    if [ $? -eq 0 ]; then
         print_list_if_OK 0
         if [ $REPO_TYPE == "git" ]; then
         # TODO: add link ($2, but taking into account spaces)
@@ -1898,6 +1895,8 @@ _cp_DONTUSE()
         return
     fi
 
+    # Attach stderr to error()
+    cpcmd="${cpcmd} 2> >(error)"
 
     # REPO mode
     if [[ $REPO_TYPE == "git" ]]; then
@@ -1906,15 +1905,15 @@ _cp_DONTUSE()
         # - we have exactly 2 arguments
         # - if arg. 1 and 2 are both inside the repo
 
-        eval $cpcmd
+        eval "$cpcmd"
 
         if [ $nargin -eq 2 ]; then
-            git add "$2" 2> /dev/null; fi
+            git add "$2" 2> >(error); fi
 
 
     # normal mode
     else
-        eval $cpcmd
+        eval "$cpcmd"
     fi
 
     print_list_if_OK $?
@@ -1923,7 +1922,7 @@ _cp_DONTUSE()
 # touch file, taking into account current repo mode
 _touch_DONTUSE()
 {
-    command touch "$@"
+    command touch "$@" 2> >(error)
     print_list_if_OK $?
     if [ $REPO_MODE -eq 1 ]; then
         $REPO_CMD_add "$@"; fi
@@ -1936,15 +1935,15 @@ _touch_DONTUSE()
 # copy all relevant bash config files to a different (bash > 4.0) system
 spread_the_madness()
 {
-    scp ~/.bash_aliases "$@"
-    if (( $? == 0 )); then
-        scp ~/.bash_functions "$@"
-        scp ~/.bashrc "$@"
-        scp ~/.dircolors "$@"
-        scp ~/.inputrc "$@"
-        scp ~/.awk_functions "$@"
-        scp ~/.git_prompt "$@"
-        scp ~/.git_completion "$@"
+    scp ~/.bash_aliases "$@" 2> >(error)
+    if [ $? -eq 0 ]; then
+        scp ~/.bash_functions "$@" 2> >(error) && \
+        scp ~/.bashrc "$@"         2> >(error) && \
+        scp ~/.dircolors "$@"      2> >(error) && \
+        scp ~/.inputrc "$@"        2> >(error) && \
+        scp ~/.awk_functions "$@"  2> >(error) && \
+        scp ~/.git_prompt "$@"     2> >(error) && \
+        scp ~/.git_completion "$@" 2> >(error)
     else
         error "failed to proliferate Rody's bash madness to remote system."
     fi
@@ -1955,17 +1954,17 @@ extract()
 {
     if [[ -f "$1" && -r "$1" ]] ; then
         case "$1" in
-            *.tar.bz2)   tar xjvf "$1"   ;;
-            *.tar.gz)    tar xzvf "$1"   ;;
-            *.bz2)       bunzip2  "$1"   ;;
-            *.rar)       rar x    "$1"   ;;
-            *.gz)        gunzip   "$1"   ;;
-            *.tar)       tar xvf  "$1"   ;;
-            *.tbz2)      tar xjvf "$1"   ;;
-            *.tgz)       tar xzvf "$1"   ;;
-            *.zip)       unzip    "$1"   ;;
-            *.Z)         uncompress "$1" ;;
-            *.7z)        7z x "$1"       ;;
+            *.tar.bz2) tar xjvf "$1"   2> >(error) ;;
+            *.tar.gz)  tar xzvf "$1"   2> >(error) ;;
+            *.bz2)     bunzip2  "$1"   2> >(error) ;;
+            *.rar)     rar x    "$1"   2> >(error) ;;
+            *.gz)      gunzip   "$1"   2> >(error) ;;
+            *.tar)     tar xvf  "$1"   2> >(error) ;;
+            *.tbz2)    tar xjvf "$1"   2> >(error) ;;
+            *.tgz)     tar xzvf "$1"   2> >(error) ;;
+            *.zip)     unzip    "$1"   2> >(error) ;;
+            *.Z)       uncompress "$1" 2> >(error) ;;
+            *.7z)      7z x "$1"       2> >(error) ;;
 
             *) warning "'%s' cannot be extracted via extract()."  "$1";;
         esac
@@ -1999,7 +1998,7 @@ changext()
 
     # loop through file list
     for f in *$before; do
-        command mv "$f" "${f%$before}$after"; done
+        command mv "$f" "${f%$before}$after" 2> >(error); done
 
     clear
     multicolumn_ls
@@ -2063,6 +2062,7 @@ _findbig_DONTUSE()
             printf "%s%s%s\n" $perms $dir $file
         fi
     done
+
     IFS="$IFS_ORIGINAL"
 }
 
@@ -2138,7 +2138,7 @@ _gedit_DONTUSE()
 # grep all processes in wide-format PS, excluding "grep" itself
 psa()
 {
-    ps auxw | egrep -iT --color=auto "[${1:0:1}]${1:1}"
+    ps auxw | egrep -iT --color=auto "[${1:0:1}]${1:1}" 2> >(error)
 }
 
 
