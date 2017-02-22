@@ -1,62 +1,59 @@
-# TODO: put the repository aliases in an associative array
-# TODO: find proper workaround for bash v. < 4
-
 
 # --------------------------------------------------------------------------------------------------
 # Colors are a mess in bash...
 # --------------------------------------------------------------------------------------------------
 
-START_COLORSCHEME_PS1="\[\e["
-END_COLORSCHEME_PS1="m\]"
+readonly START_COLORSCHEME_PS1="\[\e["
+readonly END_COLORSCHEME_PS1="m\]"
 
-START_COLORSCHEME="\e["
-END_COLORSCHEME="m"
+readonly START_COLORSCHEME="\e["
+readonly END_COLORSCHEME="m"
 
 # (Alias for better clarity)
-START_ESCAPE_GROUP="\e["
-END_ESCAPE_GROUP="m"
+readonly START_ESCAPE_GROUP="\e["
+readonly END_ESCAPE_GROUP="m"
 
-RESET_COLORS=$(tput sgr0)
-RESET_COLORS_PS1='\['"${RESET_COLORS}"'\]'
+readonly RESET_COLORS=$(tput sgr0)
+readonly RESET_COLORS_PS1='\['"${RESET_COLORS}"'\]'
 
 
-TXT_BOLD="01"
-TXT_DIM="02"
-TXT_UNDERLINE="04"
+readonly TXT_BOLD="01"
+readonly TXT_DIM="02"
+readonly TXT_UNDERLINE="04"
 
-FG_BLACK="30"
-FG_RED="31"
-FG_GREEN="32"
-FG_YELLOW="33"
-FG_BLUE="34"
-FG_MAGENTA="35"
-FG_CYAN="36"
-FG_LIGHTGRAY="37"
-FG_DARKGRAY="90"
-FG_LIGHTRED="91"
-FG_LIGHTGREEN="92"
-FG_LIGHTYELLOW="93"
-FG_LIGHTBLUE="94"
-FG_LIGHTMAGENTA="95"
-FG_LIGHTCYAN="96"
-FG_WHITE="97"
+readonly FG_BLACK="30"
+readonly FG_RED="31"
+readonly FG_GREEN="32"
+readonly FG_YELLOW="33"
+readonly FG_BLUE="34"
+readonly FG_MAGENTA="35"
+readonly FG_CYAN="36"
+readonly FG_LIGHTGRAY="37"
+readonly FG_DARKGRAY="90"
+readonly FG_LIGHTRED="91"
+readonly FG_LIGHTGREEN="92"
+readonly FG_LIGHTYELLOW="93"
+readonly FG_LIGHTBLUE="94"
+readonly FG_LIGHTMAGENTA="95"
+readonly FG_LIGHTCYAN="96"
+readonly FG_WHITE="97"
 
-BG_BLACK="40"
-BG_RED="41"
-BG_GREEN="42"
-BG_YELLOW="43"
-BG_BLUE="44"
-BG_MAGENTA="45"
-BG_CYAN="46"
-BG_LIGHTGRAY="47"
-BG_DARKGRAY="100"
-BG_LIGHTRED="101"
-BG_LIGHTGREEN="102"
-BG_LIGHTYELLOW="103"
-BG_LIGHTBLUE="104"
-BG_LIGHTMAGENTA="105"
-BG_LIGHTCYAN="106"
-BG_WHITE="107"
+readonly BG_BLACK="40"
+readonly BG_RED="41"
+readonly BG_GREEN="42"
+readonly BG_YELLOW="43"
+readonly BG_BLUE="44"
+readonly BG_MAGENTA="45"
+readonly BG_CYAN="46"
+readonly BG_LIGHTGRAY="47"
+readonly BG_DARKGRAY="100"
+readonly BG_LIGHTRED="101"
+readonly BG_LIGHTGREEN="102"
+readonly BG_LIGHTYELLOW="103"
+readonly BG_LIGHTBLUE="104"
+readonly BG_LIGHTMAGENTA="105"
+readonly BG_LIGHTCYAN="106"
+readonly BG_WHITE="107"
 
 
 
@@ -66,7 +63,7 @@ BG_WHITE="107"
 
 # If/when profiling, surround the function to profile with _START_PROFILING;/_STOP_PROFILING;
 
-DO_PROFILING=0
+declare -i DO_PROFILING=0
 
 _START_PROFILING()
 {
@@ -113,40 +110,72 @@ _STOP_PROFILING()
 # Initialize
 # --------------------------------------------------------------------------------------------------
 
+# Original separators
+declare -r IFS_ORIGINAL=$IFS
 
 # Location of files
 # --------------------------------------------------------------------------------------------------
 
-DIRSTACK_FILE="${HOME}/.dirstack"
+declare -r  DIRSTACK_FILE="${HOME}/.dirstack"
+declare -ir DIRSTACK_COUNTLENGTH=5
+declare -r  DIRSTACK_LOCKFILE="${HOME}/.locks/.dirstack"
+declare -ir DIRSTACK_LOCKFD=9
+
+# Set up locking; see
+# http://stackoverflow.com/a/1985512/1085062
+
+mkdir -p "$(dirname ${DIRSTACK_LOCKFILE})" 2>&1 1> /dev/null
+rm -f "${DIRSTACK_LOCKFILE}" 2>&1 1> /dev/null
+touch "${DIRSTACK_LOCKFILE}"
+
+_dirstack_locker()  { flock -$1 $DIRSTACK_LOCKFD; }
+
+_lock_dirstack()    { _dirstack_locker e; }
+_unlock_dirstack()  { _dirstack_locker u; }
+
+_prepare_locking()  { eval "exec ${DIRSTACK_LOCKFD}>\"${DIRSTACK_LOCKFILE}\""; }
+
+_prepare_locking
 
 
 # Check for external tools and shell specifics
 # --------------------------------------------------------------------------------------------------
 
+declare -i processAcls=0
+declare -i haveAwk=0
+
 command -v lsattr &> /dev/null && processAcls=1 || processAcls=0
 command -v awk &> /dev/null && haveAwk=1 || haveAwk=0
 
-which git &>/dev/null && which svn &>/dev/null && which hg &>/dev/null && which bzr &>/dev/null && haveAllRepoBinaries=1 || haveAllRepoBinaries=0
+declare -i haveAllRepoBinaries=0
+
+which git &>/dev/null && \
+which svn &>/dev/null && \
+which hg &>/dev/null && \
+which bzr &>/dev/null && \
+haveAllRepoBinaries=1 || haveAllRepoBinaries=0
 #TODO: bash native method is virtually always faster...
 haveAllRepoBinaries=0
 
 # (Cygwin)
+declare -i atWork=0
 [ "$(uname -o)" == "Cygwin" ] && atWork=1 || atWork=0
 
 
 # Create global associative arrays
 # --------------------------------
 
+
 declare -A REPO_COLOR
 declare -A ALL_COLORS
 
-USE_COLORS=
+declare -i USE_COLORS=0
 if [ "yes" == "$SHELL_COLORS" ]; then
     USE_COLORS=1
 
-    IFS_=$IFS; IFS=": "
-    tmp=($LS_COLORS)
-    IFS=$IFS_
+    IFS=": "
+        tmp=($LS_COLORS)
+    IFS="$IFS_ORIGINAL"
 
     keys=("${tmp[@]%%=*}")
     keys=(${keys[@]/\*\./})
@@ -159,7 +188,8 @@ if [ "yes" == "$SHELL_COLORS" ]; then
 fi
 
 # Repository info and generic commands
-REPO_MODE=false;       REPO_TYPE=""
+declare -i REPO_MODE=0;
+REPO_TYPE=""
 REPO_PATH=
 
 # colors used for different repositories in prompt/prettyprint
@@ -234,7 +264,7 @@ command_not_found_handle()
     ([[ -f "${1}" && -x "${1}" ]] && "./${1}") ||
 
     # not found
-    error "Command not found: %s" "$@"
+    error 'Command not found: "%s".' "$1"
 }
 
 
@@ -251,7 +281,6 @@ command_not_found_handle()
 
 multicolumn_ls()
 {
-
     if [ $haveAwk -eq 1 ]; then
 
         local colorflag=
@@ -363,13 +392,12 @@ multicolumn_ls()
     else
 
         # preferences
-        local maxColumnWidth=35
-        local minLines=15
+        local -ri maxColumnWidth=35
+        local -ri minLines=15
 
         # derived quantities & declarations
-        local numColumns=$(($COLUMNS/$maxColumnWidth))
-        local maxNameWidth=$(($maxColumnWidth-10))
-        local IFS_=$IFS;
+        local -r numColumns=$(($COLUMNS/$maxColumnWidth))
+        local -r maxNameWidth=$(($maxColumnWidth-10))
 
         # get initial file, as stripped down as possible, but including the file sizes.
         # NOTE: arguments to multicolumn_ls() get appended behind the base ls command
@@ -576,7 +604,7 @@ multicolumn_ls()
             printf "\b\b.\n"
         fi
 
-        IFS=$IFS_
+        IFS="$IFS_ORIGINAL"
 
     fi
 
@@ -593,9 +621,13 @@ promptcmd()
     # NOTE: it is imperative that ALL non-printing characters in PS1 must be enclosed by \[ \].
     # See http://askubuntu.com/questions/24358/
 
+    # NOTE: also, "string" will interpret things like "${..}", but 'string' will leave everything in *literally*.
+    #       This is important when constructing the PS1 string, since specials like \u, \W etc. need to remain
+    #       literal.
+
     # initialize
-    local ES exitstatus=$?    # exitstatus of previous command
-    local pth pthlen
+    local -ri exitstatus=$?    # exitstatus of previous command
+    local ES
 
     # Username color scheme
     local usrName=""
@@ -611,21 +643,15 @@ promptcmd()
     # write previous command to disk
     (history -a &) &> /dev/null
 
-
-    # previous command exit status
+    # Smiley representing previous command exit status
+    ES='o_O '
     if [ $exitstatus -eq 0 ]; then
-        if [ $USE_COLORS -eq 1 ]; then
-            ES="${START_COLORSCHEME_PS1}${TXT_DIM};${FG_GREEN}${END_COLORSCHEME_PS1}^_^ ${RESET_COLORS_PS1}"
-        else
-            ES='^_^ '; fi
-    else
-        if [ $USE_COLORS -eq 1 ]; then
-            ES="${START_COLORSCHEME_PS1}${TXT_DIM};${FG_RED}${END_COLORSCHEME}o_O ${RESET_COLORS_PS1}"
-        else
-            ES='o_O '; fi
-    fi
+        ES='^_^ '; fi
 
-    # System time
+    if [ $USE_COLORS -eq 1 ]; then
+        ES="${START_COLORSCHEME_PS1}${TXT_DIM};${FG_GREEN}${END_COLORSCHEME_PS1}${ES}${RESET_COLORS_PS1}"; fi
+
+    # Append system time
     ES="$ES"'[\t] '
 
 
@@ -655,46 +681,49 @@ promptcmd()
             fi
             ;;
 
+        # Normal prompt
+        *)  if [ $USE_COLORS -eq 1 ]; then
 
-        # normal prompt
-        *)
-            if [ $USE_COLORS -eq 1 ]; then
+                local -r dircolor="${START_COLORSCHEME_PS1}${TXT_BOLD};${FG_BLUE}${END_COLORSCHEME_PS1}"
 
-                dirName="${START_COLORSCHEME_PS1}${TXT_BOLD};${FG_BLUE}${END_COLORSCHEME_PS1}"
+                # non-root user: basename of current dir
+                local working_dir='\W'
 
-                # user is root
+                # Root
                 if [ `id -u` = 0 ]; then
+                    # Different color for the username
                     usrName="${START_COLORSCHEME_PS1}${TXT_BOLD};${FG_RED}${END_COLORSCHEME_PS1}"
-                    PS1="$ES${usrName}"'\u'"${RESET_COLORS_PS1}@${hstName}"'\h'"${RESET_COLORS_PS1} : ${dirName}"'\w'"/${RESET_COLORS_PS1} "'\$'" "
-                # non-root user
-                else
-                    PS1="$ES${usrName}"'\u'"${RESET_COLORS_PS1}@${hstName}"'\h'"${RESET_COLORS_PS1} : ${dirName}"'\W'"/${RESET_COLORS_PS1} "'\$'" "
+                    # Show FULL path
+                    working_dir='\w'
                 fi
+
+                # Build the prompt
+                PS1="$ES${usrName}"'\u'"${RESET_COLORS_PS1}@${hstName}"'\h'"${RESET_COLORS_PS1} : ${dircolor}${working_dir}/${RESET_COLORS_PS1} "'\$'" "
+
             else
                 PS1="$ES"'\u@\h : \w/ \$ '
             fi
             ;;
-
     esac
 
     # put pretty-printed full path in the upper right corner
-    pth="$(prettyprint_dir "$PWD")"
-    move_cursor="\E7\E[001;$(($COLUMNS-${#PWD}-2))H${START_ESCAPE_GROUP}1${END_ESCAPE_GROUP}"
-    reset_cursor="\E8"
+    local -r pth="$(prettyprint_dir "$PWD")"
+    local -r move_cursor="\E7\E[001;$(($COLUMNS-${#PWD}-2))H${START_ESCAPE_GROUP}1${END_ESCAPE_GROUP}"
+    local -r reset_cursor="\E8"
     if [ $USE_COLORS -eq 1 ]; then
-        bracket_open="${START_COLORSCHEME}${FG_GREEN}${END_COLORSCHEME}[${RESET_COLORS}"
-        bracket_close="${START_COLORSCHEME}${TXT_BOLD};${FG_GREEN}${END_COLORSCHEME}]${RESET_COLORS}"
+        local -r bracket_open="${START_COLORSCHEME}${FG_GREEN}${END_COLORSCHEME}[${RESET_COLORS}"
+        local -r bracket_close="${START_COLORSCHEME}${TXT_BOLD};${FG_GREEN}${END_COLORSCHEME}]${RESET_COLORS}"
     else
-        bracket_open="["
-        bracket_close="]"
+        local -r bracket_open="["
+        local -r bracket_close="]"
     fi
 
-    printf "${move_cursor}${bracket_open}$pth${bracket_close}${reset_cursor}"
+    printf "${move_cursor}${bracket_open}${pth}${bracket_close}${reset_cursor}"
 
 }
 
 # make this function the function called at each prompt display
-PROMPT_COMMAND=promptcmd
+export PROMPT_COMMAND=promptcmd
 
 
 # --------------------------------------------------------------------------------------------------
@@ -704,7 +733,7 @@ PROMPT_COMMAND=promptcmd
 # Join input arguments into a single string
 strjoin()
 {
-    local d="$1"
+    local -r d="$1"
     shift
 
     echo -n "$1"
@@ -725,7 +754,6 @@ quoted_list()
     esac
 }
 
-
 # trim bash string
 trim()
 {
@@ -742,9 +770,11 @@ delete_reorder()
     if [[ $# != 2 ]]; then
         echo "Usage:  array=($(delete_reorder array[@] [index]))"; fi
 
-    local array=("${!1}") rmindex="$2"
+    local -ra array=("${!1}")
+    local -ri rmindex="$2"
+
     for ((i=0; i<${#array[@]}; i++)); do
-        if [[ $i == $rmindex ]]; then
+        if [ $i -eq $rmindex ]; then
             continue; fi
         echo ${array[$i]}
     done
@@ -769,8 +799,7 @@ prettyprint_dir()
         return; fi
 
     local -a repoinfo
-    local pwdmaxlen=$(($COLUMNS/3))
-    local pthoffset
+    local -ri pwdmaxlen=$(($COLUMNS/3))
     local original_pth
 
     if [ $USE_COLORS -eq 1 ]; then
@@ -797,8 +826,8 @@ prettyprint_dir()
         if [ $haveAwk ]; then
 
             if [ "${repoinfo[0]}" != "---" ]; then
-                local repoCol=${REPO_COLOR[${repoinfo[0]}]};
-                local repopath="$(dirname "${repoinfo[1]}" 2> /dev/null)"
+                local -r repoCol=${REPO_COLOR[${repoinfo[0]}]};
+                local -r repopath="$(dirname "${repoinfo[1]}" 2> /dev/null)"
                 pth="${pth/${repopath}/${repopath}$'\033'[0m$repoCol}"
             fi
 
@@ -854,6 +883,8 @@ prettyprint_dir()
 
     # non-color print
     else
+        local -i pthoffset
+
         if [ ${#pth} -gt $pwdmaxlen ]; then
             pthoffset=$((${#pth}-$pwdmaxlen))
             pth="...${pth:$pthoffset:$pwdmaxlen}"
@@ -923,8 +954,12 @@ check_repo()
     # directory tree in search of a repository identifier
     else
 
-        local -a repotype reporoot slashes=("${dirs[@]//[^\/]/}")
-        local i j
+        local -ar slashes=("${dirs[@]//[^\/]/}")
+        local -a repotype
+        local -a reporoot
+
+        local -i i
+        local -i j
 
         # Using repeated cd() is slow; It's faster to append ".." in a loop, and
         # only do 2 calls to cd() to cleanup the dir format
@@ -966,7 +1001,10 @@ check_repo()
 # TODO: also update git submodules, svn externals, etc.
 update_all()
 {
+    local -a rp
+
     for d in */; do
+
         rp=($(check_repo "$PWD/$d"))
 
         cd "${rp[@]:1}"
@@ -990,7 +1028,7 @@ __enter_GIT()
 {
     # set type
     REPO_TYPE="git"
-    REPO_MODE=true
+    REPO_MODE=1
     REPO_PATH="$@"
 
     # alias everything
@@ -1026,7 +1064,7 @@ __enter_SVN()
 {
     # enter SVN mode
     REPO_TYPE="svn"
-    REPO_MODE=true
+    REPO_MODE=1
     REPO_PATH="$@"
 
     # alias everything
@@ -1040,7 +1078,7 @@ __enter_HG()
 {
     # enter GIT mode
     REPO_TYPE="hg"
-    REPO_MODE=true
+    REPO_MODE=1
     REPO_PATH="$@"
 
     # alias everything
@@ -1052,7 +1090,7 @@ __enter_BZR()
 {
     # enter BZR mode
     REPO_TYPE="bzr"
-    REPO_MODE=true
+    REPO_MODE=1
     REPO_PATH="$@"
 
     # alias everything
@@ -1062,7 +1100,7 @@ __enter_BZR()
 # leave any and all repositories
 __leave_repos()
 {
-    if [[ $REPO_MODE != true ]]; then
+    if [ $REPO_MODE -eq 0 ]; then
         return; fi
 
     # unalias everything
@@ -1070,9 +1108,10 @@ __leave_repos()
         eval unalias ${!cmd}; done
 
     # reset everything to normal
-    REPO_PATH=       ;  PS1=$PS1_;
+    PS1=$PS1_
+    REPO_PATH=
     REPO_TYPE=
-    REPO_MODE=false;
+    REPO_MODE=0;
 
     unset ${!REPO_CMD_*}
 }
@@ -1085,7 +1124,10 @@ __leave_repos()
 # count and list directory sizes
 lds()
 {
-    local sz h dirs IFS_=$IFS
+    local sz
+    local f
+    local dirs
+
     clear
     IFS=$'\n'
 
@@ -1096,15 +1138,18 @@ lds()
        dirs=$(command ls -dh1 --time-style=+ "${@/%//}" 2> /dev/null)
     fi
 
-    if [ $USE_COLORS  -eq 1 ]; then
+    if [ $USE_COLORS  -eq 1 ]
+    then
         # find proper color used for directories
-        local color="${ALL_COLORS[di]}"
+        local -r color="${ALL_COLORS[di]}"
+
         # loop through dirlist and parse
         for f in $dirs; do
             sz=$(du -bsh --si $f 2> /dev/null);
             sz=${sz%%$'\t'*}
             printf "$sz\t\E[${color#*;}m\E[${color%;*}m$f\n${RESET_COLORS}"
         done
+
     else
         for f in $dirs; do
             sz=$(du -bsh --si $f 2> /dev/null);
@@ -1112,13 +1157,17 @@ lds()
             printf "$sz\t$f\n"
         done
     fi
-    IFS=$IFS_
+
+    IFS="$IFS_ORIGINAL"
 }
 
 # count and list directory sizes, including hidden dirs
 lads()
 {
-    local sz h dirs IFS_=$IFS
+    local sz
+    local f
+    local dirs
+
     clear
     IFS=$'\n'
 
@@ -1130,15 +1179,18 @@ lads()
         dirs=$(command ls -dh1 --time-style=+ "${@/%//}" 2> /dev/null)
     fi
 
-    if [ $USE_COLORS  -eq 1 ]; then
+    if [ $USE_COLORS  -eq 1 ]
+    then
         # find proper color used for directories
-        local color="${ALL_COLORS[di]}"
+        local -r color="${ALL_COLORS[di]}"
+
         # loop through dirlist and parse
         for f in $dirs; do
             sz=$(du -bsh --si $f 2> /dev/null);
             sz=${sz%%$'\t'*}
             printf "$sz\t\E[${color#*;}m\E[${color%;*}m$f\n${RESET_COLORS}"
         done
+
     else
         for f in $dirs; do
             sz=$(du -bsh --si $f 2> /dev/null);
@@ -1146,13 +1198,16 @@ lads()
             printf "$sz\t$f\n"
         done
     fi
-    IFS=$IFS_
+
+    IFS="$IFS_ORIGINAL"
 }
 
 # display only dirs/files with given octal permissions for current user
 lo()
 {
-    local cmd str
+    local cmd
+    local str
+    local -a fs
 
     # Contruct proper command and display string
     case "$1" in
@@ -1176,10 +1231,9 @@ lo()
     echo "$str files:"
 
     # the actual find
-    local fs IFS_=$IFS
     IFS=$'\n'
         fs=($(eval find . -maxdepth 1 -type f $cmd))
-    IFS=$IFS_
+    IFS="$IFS_ORIGINAL"
 
     # parse file list and pass on to multicolumn_ls
     if [[ ${#fs[@]} != 0 ]]; then
@@ -1221,20 +1275,169 @@ lax() { lo 1 "all"; }
 # Save a directory to the dirstack file, and check if its unique
 __add_dir_to_stack()
 {
-    local tmp
-    local dir="$1"
+    # TODO: make sure dir is fully expanded
+    local -r addition="$1"
 
-    if [ -e "${DIRSTACK_FILE}" ]; then
-        echo "${dir}" >> "${DIRSTACK_FILE}"
-        tmp=$(mktemp)
-        sort -u "${DIRSTACK_FILE}" > "${tmp}"
-        mv "${tmp}" "${DIRSTACK_FILE}"
+    _lock_dirstack
+
+    if [ -e "${DIRSTACK_FILE}" ]
+    then
+        local dirline dir
+        local -i counter
+        local -i was_present=0
+        local -r tmp=$(mktemp)
+
+        # Read current dirstack
+        IFS=$'\n'
+            local -ar stack=($(cat "${DIRSTACK_FILE}"))
+        IFS="$IFS_ORIGINAL"
+
+        # - If new directory has already been visited, increment its visits counter
+        # - If directory is not found, add it with its visits counter set to 1
+        for dirline in "${stack[@]}"; do
+
+            dir="${dirline:((${DIRSTACK_COUNTLENGTH}+1))}"
+            counter="${dirline:0:${DIRSTACK_COUNTLENGTH}}"
+
+            if [ "${addition}" == "${dir}" ]; then
+                was_present=1
+                printf "%${DIRSTACK_COUNTLENGTH}d %s\n"   $(($counter+1))   "${dir}"   >> "${tmp}"
+            else
+                echo "${dirline}" >> "${tmp}"
+            fi
+        done
+
+        if [ $was_present -eq 0 ]; then
+            printf "%${DIRSTACK_COUNTLENGTH}d %s\n" 1 "${addition}" >> "${tmp}"; fi
+
+        # Sort according to most visits, and finish up
+        sort -r "${tmp}" > "${DIRSTACK_FILE}"
+        rm "${tmp}"
+
     else
-        echo "${dir}" > "${DIRSTACK_FILE}"
+        printf "%${DIRSTACK_COUNTLENGTH}d %s\n" 1 "${addition}" > "${DIRSTACK_FILE}"
     fi
+
+    _unlock_dirstack
 
     # Check if all directories still exist
     ( __check_dirstack & )
+
+    IFS="$IFS_ORIGINAL"
+}
+
+# Remove a dir from the stack, if it exists
+__remove_dir_from_stack()
+{
+    # No arguments -- quick exit
+    if [ $# -eq 0 ]; then
+        return 0; fi
+
+    # No dir stack -- can't remove anything
+    if [ ! -e "${DIRSTACK_FILE}" ]; then
+        error "No directories in stack."
+        return 1
+    fi
+
+    _lock_dirstack
+
+    IFS=$'\n'
+        local -ar stack=( $(cat "${DIRSTACK_FILE}") )
+    IFS="$IFS_ORIGINAL"
+
+    # File present, but empty -- can't remove anything
+    if [ ${#stack[@]} -eq 0 ]; then
+        error "No directories in stack."
+        _unlock_dirstack
+        return 1
+    fi
+
+    # Recurse for more than one argument
+    if [ $# -gt 1 ]
+    then
+        while (( "$#" )); do
+            __remove_dir_from_stack "$1" || break
+            shift
+        done
+
+    # Single-argument call
+    else
+        local -i was_present=0
+        local -r removal="$1"
+        local -r tmp=$(mktemp)
+
+        # Integer argument
+        if [[ ${removal} =~ ^[0-9]+$ ]]; then
+
+            # Check it!
+            if [ ${removal} -gt ${#stack} ]; then
+               error "Requested index (%d) exceeds number of directories in stack (%d)." ${removal} ${#stack}
+               _unlock_dirstack
+               return 1
+            fi
+
+            # Remove it
+            for ((i=0; i<${#stack}; ++i)); do
+                if [ $i -ne ${removal} ]; then
+                    echo "${stack[$i]}" >> "${tmp}"
+                else
+                    was_present=1
+                fi
+            done
+
+        # String argument: remove first (partial) match
+        else
+            local dir
+            for dir in "${stack[@]}"; do
+                if [[ "${dir:((${DIRSTACK_COUNTLENGTH}+1))}" != *"${removal}"* ]]; then
+                    echo "${stack[$i]}" >> "${tmp}"
+                else
+                    was_present=1
+                fi
+            done
+        fi
+
+        if [ $was_present -eq 1 ]; then
+            mv "${tmp}" "${DIRSTACK_FILE}"
+        else
+            warning 'Given string "%s" did not yield a (partial) match in directory stack; nothing changed.' "${removal}"
+            rm "${tmp}"
+        fi
+    fi
+
+    _unlock_dirstack
+    IFS="$IFS_ORIGINAL"
+}
+
+# Check dirstack file if all directories it contains still exist
+__check_dirstack()
+{
+    if [ -e "${DIRSTACK_FILE}" ]
+    then
+        local -r tmp=$(mktemp)
+        local dir dirline
+
+        # Read current dirstack
+        _lock_dirstack
+
+        IFS=$'\n'
+            local -ar stack=($(cat "${DIRSTACK_FILE}"))
+        IFS="$IFS_ORIGINAL"
+
+        # Loop through all dirs one by one. If they exist, print
+        # them into a tempfile
+        for dirline in "${stack[@]}"; do
+            dir="${dirline:((${DIRSTACK_COUNTLENGTH}+1))}"
+            if [ -e "${dir}" ]; then
+                echo "${dirline}" >> "${tmp}"; fi
+        done
+
+        # Then overwrite the original dirstack file with the tempfile content
+        mv -f "${tmp}" "${DIRSTACK_FILE}"
+        _unlock_dirstack
+    fi
+
+    IFS="$IFS_ORIGINAL"
 }
 
 # Navigate to directory. Check if directory is in a repo
@@ -1293,15 +1496,15 @@ _cd_DONTUSE()
 # TODO: autocomplete dirs in the stack bash-ido style (if none exist in the current path)
 _cdn_DONTUSE()
 {
-    local IFS_old="$IFS"
-
     # Remove non-existent dirs from dirstack
     __check_dirstack
 
     # create initial stack array
+    _lock_dirstack
     IFS=$'\n'
-    local -a stack=( $(cat "${DIRSTACK_FILE}") )
-    IFS="$IFS_old"
+        local -a stack=( $(cat "${DIRSTACK_FILE}") )
+    IFS="$IFS_ORIGINAL"
+    _unlock_dirstack
 
     # list may be empty
     if [ ${#stack[@]} -eq 0 ]; then
@@ -1310,14 +1513,27 @@ _cdn_DONTUSE()
     fi
 
     # Parse arguments
-    local supress_colors=1
-    local intarg=-1
+    local dir dirline
+    local -i supress_colors=1
+    local -i intarg=-1
     local namearg=
+
     while (( "$#" )); do
         case "$1" in
 
             "-c"|"--color"|"--colors")
                 supress_colors=0
+                ;;
+
+            "-r"|"--remove")
+                # Remove all arguments
+                __remove_dir_from_stack "${@:2}"
+                if [ $? -ne 0 ]; then
+                    return $?; fi
+
+                # When still OK, show new list
+                _cdn_DONTUSE
+                return 0
                 ;;
 
             *) if [[ $1 =~ ^[0-9]+$ ]]; then
@@ -1334,9 +1550,11 @@ _cdn_DONTUSE()
     # Integer argument provided: go to dir number
     if [ $intarg -ne -1 ]; then
         if [ $intarg -le ${#stack[@]} ]; then
-            _cd_DONTUSE "${stack[$intarg]}"
+            _cd_DONTUSE "${stack[$intarg]:((${DIRSTACK_COUNTLENGTH}+1))}"
+            return 0
         else
             error "ERROR: given directory index exceeds number of directories visited."
+            return 1
         fi
 
     # String argument provided: Search all dirs in local dir AND dirstack for first partial match
@@ -1344,41 +1562,53 @@ _cdn_DONTUSE()
 
         # Get local dirs
         IFS=$'\n'
-        local local_dirs=($(command ls -1bd */))
-        IFS=$IFS_old
+            local -ar local_dirs=($(command ls -1bd */ 2> /dev/null))
+        IFS="$IFS_ORIGINAL"
 
         # First check for exact match in local dirs
-        for dir in "${local_dirs[@]}"; do
-            if [ "${dir}" = "${namearg}" ]; then
-                _cd_DONTUSE "${dir}"
-                return
-            fi
-        done
+        if [ ${#local_dirs} -ne 0 ]
+        then
+            for dir in "${local_dirs[@]}"; do
+                if [ "${dir}" = "${namearg}" ]; then
+                    _cd_DONTUSE "${dir}"
+                    return 0
+                fi
+            done
+
+            # Add local directories to stack
+            stack=( "${local_dirs[@]}" "${stack[@]}" )
+        fi
 
         # Otherwise, go for partial mathes in local dirs + dirstack.
+        # TODO: prefer matches at the very END of the string
+        for dirline in "${stack[@]}"
+        do
+            # Local dirs have no counter, dirstack dirs do. In the latter case, remove
+            # the counter from the variable
+            dir="${dirline}"
+            if [[ "${dir:0:((${DIRSTACK_COUNTLENGTH}+1))}" =~ ^[0-9]+[[:space:]] ]]; then
+                dir="${dirline:((${DIRSTACK_COUNTLENGTH}+1))}"; fi
 
-        # Add local directories to stack
-        stack=( "${local_dirs[@]}" "${stack[@]}" )
-
-        # Loop through all dirs; cd to first partial match
-        for dir in "${stack[@]}"; do
+            # CD to patially-matched dirname
             if [[ "$dir" == *"${namearg}"* ]]; then
                 _cd_DONTUSE "${dir}"
-                return
+                return 0
             fi
         done
 
-        error "ERROR: no partial match for input string \"%s\".\n" "${namearg}"
+        error "no partial match for input string \"%s\".\n"  "${namearg}"
+        return 1
 
-    # if no function arguments provided, show list
+    # If no function arguments provided, show list
     else
         IFS=$'\n'
 
+        local -i i
         local -a repos=($(check_repo "${stack[@]}"))
         local -a types=($(echo "${repos[*]}" | cut -f 1  -d " "))
         local -a paths=($(echo "${repos[*]}" | cut -f 2- -d " "))
 
-        IFS="$IFS_old"
+        IFS="$IFS_ORIGINAL"
 
         # Colorless
         if [ $supress_colors -eq 1 ]; then
@@ -1386,14 +1616,13 @@ _cdn_DONTUSE()
             # Don't pass through prettyprint_dir(), it's faster to just truncate
             # here and print immediately (Cygwin spawning a hundred processes is something
             # Kaspersky does not like -- cdn() will be crawling)
-            local dir dirlen
-            local pwdmaxlen=$(($COLUMNS/3))
+            local -r pwdmaxlen=$(($COLUMNS/3))
 
             for ((i=0; i<${#repos[@]}; i++)); do
 
-                dir="${stack[$i]}"
-                dirlen=${#dir}
-                if [ $dirlen -gt $pwdmaxlen ]; then
+                dir="${stack[$i]:((${DIRSTACK_COUNTLENGTH}+1))}"
+
+                if [ ${#dir} -gt $pwdmaxlen ]; then
                     dir="...${dir: ((-${pwdmaxlen}-3))}"; fi
 
                 printf "%3d: %-${pwdmaxlen}s\n" $i "${dir}"
@@ -1422,37 +1651,9 @@ _mkdir_DONTUSE()
 {
     command mkdir -p "$@"
     if [ $? == 0 ]; then
-        if [ $REPO_MODE == true ]; then
+        if [ $REPO_MODE -eq 1 ]; then
             eval $REPO_CMD_add "$@"; fi
         print_list_if_OK 0
-    fi
-}
-
-# Check dirstack file if all directories it contains still exist
-__check_dirstack()
-{
-    local -a stack
-    local tmp=$(mktemp)
-    local IFS_=$IFS
-
-    if [ -e "${DIRSTACK_FILE}" ]; then
-
-        # Read current dirstack
-        IFS=$'\n'
-        stack=($(cat "${DIRSTACK_FILE}"))
-
-        # Loop through all dirs one by one. If they exist, print
-        # them into a tempfile
-        for dir in "${stack[@]}"; do
-            if [ -e "${dir}" ]; then
-                echo "${dir}" >> "${tmp}"
-            fi
-        done
-
-        IFS=$IFS_
-
-        # Then overwrite the original dirstack file with the tempfile content
-        command mv -f "${tmp}" "${DIRSTACK_FILE}"
     fi
 }
 
@@ -1469,10 +1670,10 @@ _rmdir_DONTUSE()
 _rm_DONTUSE()
 {
     # we are in REPO mode
-    if [[ $REPO_MODE == true ]]; then
+    if [ $REPO_MODE -eq 1 ]; then
 
         # perform repo-specific delete
-        local err=$(eval ${REPO_CMD_remove} "$@" 2>&1 1> /dev/null)
+        local -r err=$(eval ${REPO_CMD_remove} "$@" 2>&1 1> /dev/null)
 
         # different repositories issue different errors
         case "$REPO_TYPE" in
@@ -1585,7 +1786,7 @@ _mv_DONTUSE()
     #fi
 
     # the old, GIT-only way
-    if [[ $REPO_MODE == true && $REPO_TYPE == "git" ]]; then
+    if [ $REPO_MODE -eq 1 -a $REPO_TYPE == "git" ]; then
 
         local match="outside repository"
 
@@ -1627,7 +1828,7 @@ _ln_DONTUSE()
     command ln -s "$@"
     if [ $? == 0 ]; then
         print_list_if_OK 0
-        if [ $REPO_MODE == "git" ]; then
+        if [ $REPO_TYPE == "git" ]; then
         # TODO: add link ($2, but taking into account spaces)
             echo
             echo "REMEMBER TO ADD NEW FILE!!"
@@ -1654,7 +1855,7 @@ _cp_DONTUSE()
     fi
 
     local cpcmd
-    local nargin=$#
+    local -i nargin=$#
 
     #cpcmd="command cp -ivR $@"
     cpcmd="rsync -aAHch --info=progress2 $@"
@@ -1683,14 +1884,14 @@ _cp_DONTUSE()
 
 
     # allow 1-argument copy
-    if [ $nargin == 1 ]; then
+    if [ $nargin -eq 1 ]; then
         _cp_DONTUSE "$1" "copy_of_$1"
         return
     fi
 
 
     # REPO mode
-    if [[ $REPO_MODE == "git" ]]; then
+    if [[ $REPO_TYPE == "git" ]]; then
 
         # only add copy to repo when
         # - we have exactly 2 arguments
@@ -1698,7 +1899,7 @@ _cp_DONTUSE()
 
         eval $cpcmd
 
-        if [ $nargin == 2 ]; then
+        if [ $nargin -eq 2 ]; then
             git add "$2" 2> /dev/null; fi
 
 
@@ -1715,7 +1916,7 @@ _touch_DONTUSE()
 {
     command touch "$@"
     print_list_if_OK $?
-    if [[ $REPO_MODE == true ]]; then
+    if [ $REPO_MODE -eq 1 ]; then
         $REPO_CMD_add "$@"; fi
 }
 
@@ -1741,7 +1942,7 @@ spread_the_madness()
 }
 
 # Extract some arbitrary archive
-ex()
+extract()
 {
     if [[ -f "$1" && -r "$1" ]] ; then
         case "$1" in
@@ -1757,16 +1958,12 @@ ex()
             *.Z)         uncompress "$1" ;;
             *.7z)        7z x "$1"       ;;
 
-            *) warning "'%s' cannot be extracted via ex()."  "$1";;
+            *) warning "'%s' cannot be extracted via extract()."  "$1";;
         esac
     else
         error "'%s' is not a valid, readable file." "$1"
     fi
 }
-
-
-
-
 
 
 # change extentions of files in current dir
@@ -1778,7 +1975,9 @@ changext()
         return 0
     fi
 
-    local before after f
+    local before
+    local after
+    local f
 
     # period is optional
     before=$1;
@@ -1814,7 +2013,8 @@ _findbig_DONTUSE()
     # parse input arguments
     if [ $# -gt 1 ]; then
         error "Findbig takes at most 1 argument."; return; fi
-    local num
+
+    local -i num
     if [ $# -eq 1 ]; then
         num=$1 # argument is number of files to print
     else
@@ -1822,7 +2022,7 @@ _findbig_DONTUSE()
     fi
 
     # initialize some local variables
-    local lsout perms dir fcolor file f IFS_=$IFS
+    local lsout perms dir fcolor file f
 
     # find proper color used for directories
     if [ $USE_COLORS  -eq 1 ]; then
@@ -1854,7 +2054,7 @@ _findbig_DONTUSE()
             printf "%s%s%s\n" $perms $dir $file
         fi
     done
-    IFS=$IFS_
+    IFS="$IFS_ORIGINAL"
 }
 
 # find biggest applications
@@ -1881,12 +2081,15 @@ chroot_dir()
         return 1
     fi
 
-    local bind_dirs chroot_path dir i
+    local bind_dirs
+    local chroot_path
+    local -i i
+
     bind_dirs=("/proc" "/sys" "/dev" "/dev/pts" "/dev/shm")
 
     # Mount the essentials to the system
     chroot_path="$1"
-    for ((i=0; i<${#bind_dirs[@]}; i++)); do
+    for ((i=0; i<${#bind_dirs[@]}; ++i)); do
         if [ ! -d ${chroot_path}${bind_dirs[$i]} ]; then
             mkdir "${chroot_path}${bind_dirs[$i]}"; fi
         sudo mount --bind "${bind_dirs[$i]}" "${chroot_path}${bind_dirs[$i]}"
@@ -1907,7 +2110,7 @@ chroot_dir()
     fi
 
     # Unmount everything again when chroot exits
-    for ((i--; i>=0; i--)); do
+    for ((; i>=0; --i)); do
         sudo umount "${chroot_path}${bind_dirs[$i]}"; done
 }
 
@@ -1966,8 +2169,8 @@ __spread()
     local -a sources=()
     local -a targets=()
 
-    local collecting_sources=1
-    local do_repository=0
+    local -i collecting_sources=1
+    local -i do_repository=0
 
 
     # Collect arguments
@@ -2088,34 +2291,5 @@ existing_github_repo()
 }
 
 
-# ==================================================
-# Auto(hot)key
-# ==================================================
 
-new_autokey_symbol()
-{
-    local name="$1"
-    local description="$2"
-    local abbreviation="$3"
-    local unicode="$4"
-    local instant="$5"
-
-    if [ -z $instant ]; then
-        instant=1
-    fi
-
-    if [ instant -eq 1 ]; then
-        instant=true
-    else
-        instant=false
-    fi
-
-    cp "~/.config/autokey/skel/.symbol.json*" "~/.config/autokey/data/Symbols/International/.${name}.json"
-
-    sed -i "s/REPLACEME_DESCRIPTION/${description}/g" "~/.config/autokey/data/Symbols/International/.${name}.json"
-    sed -i "s/REPLACEME_ABBREVIATION/${abbreviation}/g" "~/.config/autokey/data/Symbols/International/.${name}.json"
-    sed -i "s/REPLACEME_INSTANT/${instant}/g" "~/.config/autokey/data/Symbols/International/.${name}.json"
-
-    echo "u${unicode} " > "~/.config/autokey/data/Symbols/International/${name}.txt"
-}
 

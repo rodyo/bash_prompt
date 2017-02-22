@@ -180,11 +180,9 @@ ido_get_col_line(){
     COLUMN=${pos##*;} # the current column
 }
 
-
-
 # Clear the ido menu
-ido_clear_menu(){
-
+ido_clear_menu()
+{
     # clear current line, reset all color attributes
     printf "\E[0m\E[$LINE;${COLUMN}H%*s" $(($COLUMNS-$COLUMN+1)) " "
 
@@ -200,11 +198,9 @@ ido_clear_menu(){
     printf "\E[$LINE;${COLUMN}H"
 }
 
-
-
 # print the filtered menu
-ido_print_f_menu(){
-
+ido_print_f_menu()
+{
     # Prints the directories on max. 4 lines
     local prompt menu ido_f_menu_printed ido_result_printed cur IFS_=$IFS ind=0 i=0 j=0
     local maxcols=$(($COLUMNS/$IDO_ITEMLENGTH)) # cols (depends on actual screen width)
@@ -282,10 +278,9 @@ ido_print_f_menu(){
     fi
 }
 
-
-
 # filter the menu generated with ido_gen_dir()
-ido_filter(){
+ido_filter()
+{
     # NOTE: in my opinion, case (in)sensitivity is a user descision
     # on global scale; hence we should not forse case insensitivity
     # here, but rather just use the current shopt setting
@@ -316,8 +311,6 @@ ido_filter(){
         fi
     done
 }
-
-
 
 # add current dir to history file
 # Adopted from i_addToHistory() found in tp_command(), by
@@ -364,7 +357,6 @@ ido_add_to_history()
             unset IDO_HISTORY[dupeIndex]; fi
 
     fi
-
 }
 
 
@@ -392,7 +384,8 @@ ido_read_history()
 
 
 # keyboard event loop
-ido_loop(){
+ido_loop()
+{
     local REPLY c
 
     while : ; do
@@ -407,7 +400,7 @@ ido_loop(){
         ido_print_f_menu >&2
         unset c
 
-ido_filter
+        ido_filter
 
         # loop to read the escape sequences
         while : ; do
@@ -528,10 +521,9 @@ ido_filter
     done
 }
 
-
-
-# generate the original menu (complete list of dirs)
-ido_gen_dir(){
+# Generate the original menu (complete list of dirs)
+ido_gen_dir()
+{
     local IFS_=$IFS
     unset ido_menu
     IFS=$'\n' read -r -d '' -a ido_menu < <(IFS=" ";shopt -s nullglob;\
@@ -550,9 +542,7 @@ ido_gen_dir(){
     IFS=$IFS_
 }
 
-
-
-# main entry point
+# Entry point
 ido_dir(){
 
     # initialize
