@@ -1637,10 +1637,10 @@ _cdn_DONTUSE()
                 printf "%3d: %-${pwdmaxlen}s\n" $i "${dir}"
             done
 
-        # Colored
+        # Colored list, taking into account dir/symlink coloring and repo coloring
         else
             for ((i=0; i<${#repos[@]}; i++)); do
-                (printf "%3d: %s\n" $i "$( prettyprint_dir "${stack[$i]}" "${types[$i]}" "${paths[$i]}" )" &); done
+                (printf "%3d: %s\n" $i "$( prettyprint_dir "${stack[$i]:((${DIRSTACK_COUNTLENGTH}+1))}" "${types[$i]}" "${paths[$i]}" )" &); done
         fi
     fi
 }
