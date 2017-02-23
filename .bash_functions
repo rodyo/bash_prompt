@@ -13,7 +13,7 @@ readonly END_COLORSCHEME="m"
 readonly START_ESCAPE_GROUP="\e["
 readonly END_ESCAPE_GROUP="m"
 
-readonly RESET_COLORS=$(tput sgr0)
+readonly RESET_COLORS="\e[0m"
 readonly RESET_COLORS_PS1='\['"${RESET_COLORS}"'\]'
 
 
