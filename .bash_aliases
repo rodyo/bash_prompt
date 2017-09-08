@@ -155,10 +155,10 @@ alias todo="~/.todo/todo.sh -d ~/.todo/todo.cfg"
 complete -F _todo todo
 
 # matlab
-alias matlab="/bin/matlab -nojvm -nosplash"
-alias matlabfull="/bin/matlab -desktop &"
-alias matlabinline="/bin/matlab -nodesktop -nojvm -nosplash"
-alias matlabrun="/bin/matlab -r"
+MATLAB="/usr/local/bin/matlab"
+alias matlab="$MATLAB -desktop -nosplash &"
+alias matlabinline="$MATLAB -nodesktop -nojvm -nosplash"
+alias matlabrun="$MATLAB -r"
 
 # python
 alias ipython="ipython -pylab"
