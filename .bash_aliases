@@ -149,18 +149,24 @@ alias egrep=grep
 alias catbare='/bin/egrep -v "^#\|^[[:space:]]*$"'
 alias rebash=". ~/.bashrc"
 
-# todo.txt
-alias todo="~/.todo/todo.sh -d ~/.todo/todo.cfg"
-complete -F _todo todo
 
 # matlab
-alias matlab="/bin/matlab -nojvm -nosplash"
-alias matlabfull="/bin/matlab -desktop &"
-alias matlabinline="/bin/matlab -nodesktop -nojvm -nosplash"
-alias matlabrun="/bin/matlab -r"
+
+MATLAB_BASE="/usr/local/MATLAB/"
+MATLAB="/usr/local/bin/matlab"
+
+alias matlab_2010="${MATLAB_BASE}/R2010a/bin/matlab -desktop &"
+alias matlab_2014="${MATLAB_BASE}/R2014a/bin/matlab -desktop &"
+alias matlab_2017="${MATLAB_BASE}/R2017a/bin/matlab -desktop &"
+
+alias matlab="$MATLAB -desktop &"
+alias matlabinline="$MATLAB -nodesktop -nojvm -nosplash"
+alias matlabrun="$MATLAB -r"
+
 
 # python
 alias ipython="ipython -pylab"
+
 
 # WORK
 alias sshimulus="ssh simulus@simulus_box"
