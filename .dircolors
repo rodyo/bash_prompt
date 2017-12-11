@@ -111,7 +111,7 @@ STICKY                37;44     # dir with the sticky bit set (+t) and not other
 STICKY_OTHER_WRITABLE 30;42     # dir that is sticky and other-writable (+t,o+w)
 
 # OTHER_WRITABLE      34;42     # dir that is other-writable (o+w) and not sticky
-OTHER_WRITABLE        01;37     # dir that is other-writable (o+w) and not sticky
+OTHER_WRITABLE        01;30     # dir that is other-writable (o+w) and not sticky
 
 
 # COLORIZE MIME TYPES

@@ -123,8 +123,7 @@ alias ..6="cd ../../../../../.."
 
 # hotdirs
 alias doc="cd ~/Documents/"
-alias work="cd ~/Desktop/Work/"
-alias hh="cd ~/Desktop/Work/Heinrich\ Hertz/trunk/Software/"
+alias work="cd ~/e/Work/"
 
 # various
 alias forget="history -c; clear"
