@@ -2302,3 +2302,31 @@ existing_github_repo()
 
 
 
+# Simulink 
+
+slgrep()
+{
+    if [ $# = 0 ]; then 
+        return; fi
+
+    IFS_="$IFS";
+    IFS=$'\n';  
+
+    for file in $(find . -type f); do 
+
+        filename=$(basename "$file")
+        extension="${filename##*.}"
+        filename="${filename%.*}" 
+
+        if [ "$extension" = "slx" ]; then
+            result=$(unzip -c "$file" | egrep -iIT --color=always --exclude-dir .svn --exclude-dir .git $*)
+            if [[ ! -z "$result" ]]; then 
+                printf "${START_COLORSCHEME}${FG_MAGENTA}${END_COLORSCHEME}%s${RESET_COLORS}: %s\n" "$file" "$result"; fi
+        else
+            egrep -iIT --color=auto --exclude-dir .svn --exclude-dir .git $* "$file" /dev/null
+        fi
+
+    done; 
+
+    IFS="$IFS_"
+}
