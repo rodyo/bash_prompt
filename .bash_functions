@@ -984,6 +984,8 @@ check_repo()
         local -ar slashes=("${dirs[@]//[^\/]/}")
         local -a repotype
         local -a reporoot
+		
+		local -r curdir="$PWD"
 
         local -i i
         local -i j
@@ -1005,13 +1007,13 @@ check_repo()
 
             # NOTE: repeated commands outperform function call by an order of magnitude
             # NOTE: commands without capture "$(...)" outperform commands with capture
-            # NOTE: this is also faster than SED'ing the "../" away
-            # NOTE: ...the main speed problem is Kaspersky :(			
+            # NOTE: this is also faster than SED'ing the "../" away			
+			
             for (( j=${#slashes[$i]}; j>0; --j )); do
-                [ -d "$dir/.git" ] && repotype[$i]="git" && cd "$dir" && reporoot[$i]="$PWD" && break;
-                [ -d "$dir/.svn" ] && repotype[$i]="svn" && cd "$dir" && reporoot[$i]="$PWD" && break;
-                [ -d "$dir/.bzr" ] && repotype[$i]="bzr" && cd "$dir" && reporoot[$i]="$PWD" && break;
-                [ -d "$dir/.hg"  ] && repotype[$i]="hg " && cd "$dir" && reporoot[$i]="$PWD" && break;
+                [ -d "$dir/.git" ] && repotype[$i]="git" && cd "$dir" && reporoot[$i]="$PWD" && cd "$curdir" && break;
+                [ -d "$dir/.svn" ] && repotype[$i]="svn" && cd "$dir" && reporoot[$i]="$PWD" && cd "$curdir" && break;
+                [ -d "$dir/.bzr" ] && repotype[$i]="bzr" && cd "$dir" && reporoot[$i]="$PWD" && cd "$curdir" && break;
+                [ -d "$dir/.hg"  ] && repotype[$i]="hg " && cd "$dir" && reporoot[$i]="$PWD" && cd "$curdir" && break;
                 dir="$dir/.."
             done
 
