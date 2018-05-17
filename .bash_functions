@@ -473,7 +473,7 @@ multicolumn_ls()
 
         # Now print the list
         if [ $USE_COLORS -eq 1 ]; then
-            printf $RESET_COLORS; fi
+            printf "$RESET_COLORS"; fi
 
         local lastColumnWidth ind paint device=0 lastColumn=0 lastsymbol=" "
         local n numDirs=0 numFiles=0 numLinks=0 numDevs=0 numPipes=0 numSockets=0
@@ -584,7 +584,7 @@ multicolumn_ls()
                 fi
             done
 
-            printf "\n"
+            printf '\n'
 
         done
 
@@ -912,7 +912,7 @@ prettyprint_dir()
             pthoffset=$((${#pth}-pwdmaxlen))
             pth="...${pth:$pthoffset:$pwdmaxlen}"
         fi
-        printf "%s" "$pth/"
+        printf "%s/" "$pth"
     fi
 }
 
@@ -948,13 +948,13 @@ check_repo()
     else
         dirs=("$@")
     fi
-
+	
     # All repository systems have been installed; use their native methods to discover
     # where the repository root is located
     if [ $haveAllRepoBinaries -eq 1 ]; then
 
         local check
-
+		
         for dir in "${dirs[@]}"; do
 
             check=$(printf "%s " git && command cd "${dir}" && git rev-parse --show-toplevel 2> /dev/null)
@@ -980,7 +980,7 @@ check_repo()
     # Not all repository systems have been installed; use bash to loop through the
     # directory tree in search of a repository identifier
     else
-
+	
         local -ar slashes=("${dirs[@]//[^\/]/}")
         local -a repotype
         local -a reporoot
@@ -1008,10 +1008,10 @@ check_repo()
             # NOTE: this is also faster than SED'ing the "../" away
             # NOTE: ...the main speed problem is Kaspersky :(			
             for (( j=${#slashes[$i]}; j>0; --j )); do
-                [ -d "$dir/.git" ] && [[ ${repotype[$i]} == "git" ]] && (cd "$dir" && [[ "${reporoot[$i]}" == "$PWD" ]]) && break;
-                [ -d "$dir/.svn" ] && [[ ${repotype[$i]} == "svn" ]] && (cd "$dir" && [[ "${reporoot[$i]}" == "$PWD" ]]) && break;
-                [ -d "$dir/.bzr" ] && [[ ${repotype[$i]} == "bzr" ]] && (cd "$dir" && [[ "${reporoot[$i]}" == "$PWD" ]]) && break;
-                [ -d "$dir/.hg"  ] && [[ ${repotype[$i]} == "hg " ]] && (cd "$dir" && [[ "${reporoot[$i]}" == "$PWD" ]]) && break;
+                [ -d "$dir/.git" ] && repotype[$i]="git" && cd "$dir" && reporoot[$i]="$PWD" && break;
+                [ -d "$dir/.svn" ] && repotype[$i]="svn" && cd "$dir" && reporoot[$i]="$PWD" && break;
+                [ -d "$dir/.bzr" ] && repotype[$i]="bzr" && cd "$dir" && reporoot[$i]="$PWD" && break;
+                [ -d "$dir/.hg"  ] && repotype[$i]="hg " && cd "$dir" && reporoot[$i]="$PWD" && break;
                 dir="$dir/.."
             done
 
@@ -1176,7 +1176,7 @@ lds()
 		if [[ "$f" == "./" || "$f" == ".//" || "$f" == "../" || "$f" == "..//" ]]; then
 			continue; fi
 			
-		printf "processing '%s'...\n" "$f"
+		printf 'processing "%s"...\n' "$f"
 		sz=$(du -bsh --si "$f" 2> /dev/null);
 		sz="${sz%%$'\t'*}"		
 		tput cuu 1 && tput el
@@ -1295,7 +1295,7 @@ __add_dir_to_stack()
 
             if [ "${addition}" == "${dir}" ]; then
                 was_present=1
-                printf '%${DIRSTACK_COUNTLENGTH}d %s\n'   $(($counter+1))   "${dir}"   >> "${tmp}"
+                printf "%${DIRSTACK_COUNTLENGTH}d %s\\n" $(($counter+1)) "${dir}" >> "${tmp}"
             else
                 echo "${dirline}" >> "${tmp}"
             fi
