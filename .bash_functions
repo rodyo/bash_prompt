@@ -1,19 +1,20 @@
+#!/usr/bin/env bash
 
 # --------------------------------------------------------------------------------------------------
 # Colors are a mess in bash...
 # --------------------------------------------------------------------------------------------------
 
-readonly START_COLORSCHEME_PS1="\[\e["
-readonly END_COLORSCHEME_PS1="m\]"
+readonly START_COLORSCHEME_PS1='\[\e['
+readonly END_COLORSCHEME_PS1='m\]'
 
-readonly START_COLORSCHEME="\e["
+readonly START_COLORSCHEME='\e['
 readonly END_COLORSCHEME="m"
 
 # (Alias for better clarity)
-readonly START_ESCAPE_GROUP="\e["
+readonly START_ESCAPE_GROUP='\e['
 readonly END_ESCAPE_GROUP="m"
 
-readonly RESET_COLORS="\e[0m"
+readonly RESET_COLORS='\e[0m'
 readonly RESET_COLORS_PS1='\['"${RESET_COLORS}"'\]'
 
 
@@ -67,8 +68,14 @@ declare -i DO_PROFILING=0
 
 _START_PROFILING()
 {
-    which tee &>/dev/null && which date &>/dev/null && which sed &>/dev/null which paste &>/dev/null || \
-        (error "cannot profile: unmet depenencies" && return)
+    if ! command -v tee   &>/dev/null || \
+	   ! command -v date  &>/dev/null || \
+	   ! command -v sed   &>/dev/null || \
+	   ! command -v paste &>/dev/null 
+	then 
+        error "cannot profile: unmet depenencies" 
+		return
+    fi
 
     if [ $DO_PROFILING -eq 1 ]; then
         PS4='+ $(date "+%s.%N")\011 '
@@ -87,13 +94,13 @@ _STOP_PROFILING()
         set +x
         exec 2>&3 3>&-
 
-        printf " %-11s  %-11s   %s\n" "duration" "cumulative" "command" > ~/profile_report.$$.log
+        printf ' %-11s  %-11s   %s\n' "duration" "cumulative" "command" > ~/profile_report.$$.log
         paste <(
-            while read tim; do
+            while read -r tim; do
                 [ -z "$last" ] && last=${tim//.} && first=${tim//.}
                 crt=000000000$((${tim//.}-10#0$last))
                 ctot=000000000$((${tim//.}-10#0$first))
-                printf "%12.9f %12.9f\n" ${crt:0:${#crt}-9}.${crt:${#crt}-9} \
+                printf '%12.9f %12.9f\n' ${crt:0:${#crt}-9}.${crt:${#crt}-9} \
                                          ${ctot:0:${#ctot}-9}.${ctot:${#ctot}-9}
                 last=${tim//.}
               done < /tmp/sample-time.$$.tim
@@ -124,16 +131,16 @@ declare -ir DIRSTACK_LOCKFD=9
 # Set up locking; see
 # http://stackoverflow.com/a/1985512/1085062
 
-mkdir -p "$(dirname ${DIRSTACK_LOCKFILE})" 2>&1 1> /dev/null
-rm -f "${DIRSTACK_LOCKFILE}" 2>&1 1> /dev/null
+{ mkdir -p "$(dirname "${DIRSTACK_LOCKFILE}")" > /dev/null; } 2>&1 
+{ rm -f "${DIRSTACK_LOCKFILE}" > /dev/null; } 2>&1 
 touch "${DIRSTACK_LOCKFILE}"
 
-_dirstack_locker()  { flock -$1 $DIRSTACK_LOCKFD; }
-
-_lock_dirstack()    { _dirstack_locker e; }
-_unlock_dirstack()  { _dirstack_locker u; }
-
-_prepare_locking()  { eval "exec ${DIRSTACK_LOCKFD}>\"${DIRSTACK_LOCKFILE}\""; }
+_dirstack_locker(){ flock "-$1" $DIRSTACK_LOCKFD; }
+                  
+_lock_dirstack()  { _dirstack_locker e; }
+_unlock_dirstack(){ _dirstack_locker u; }
+                  
+_prepare_locking(){ eval "exec ${DIRSTACK_LOCKFD}>\"${DIRSTACK_LOCKFILE}\""; }
 
 _prepare_locking
 
@@ -149,10 +156,10 @@ command -v awk &> /dev/null && haveAwk=1 || haveAwk=0
 
 declare -i haveAllRepoBinaries=0
 
-which git &>/dev/null && \
-which svn &>/dev/null && \
-which hg &>/dev/null && \
-which bzr &>/dev/null && \
+command -v git &>/dev/null && \
+command -v svn &>/dev/null && \
+command -v hg &>/dev/null  && \
+command -v bzr &>/dev/null && \
 haveAllRepoBinaries=1 || haveAllRepoBinaries=0
 #TODO: bash native method is virtually always faster...
 haveAllRepoBinaries=0
@@ -170,21 +177,22 @@ declare -A REPO_COLOR
 declare -A ALL_COLORS
 
 declare -i USE_COLORS=0
-if [ "yes" == "$SHELL_COLORS" ]; then
+if [ "$SHELL_COLORS" == "yes" ]; then
     USE_COLORS=1
 
-    IFS=": "
+    IFS=": "	
+		# shellcheck disable=SC2207
         tmp=($LS_COLORS)
     IFS="$IFS_ORIGINAL"
 
     keys=("${tmp[@]%%=*}")
-    keys=(${keys[@]/\*\./})
-    values=(${tmp[@]##*=})
-
+    keys=("${keys[@]/\*\./}")
+    values=("${tmp[@]##*=}")
+	
     for ((i=0; i<${#keys[@]}; ++i)); do
         ALL_COLORS["${keys[$i]}"]="${values[$i]}"; done
 
-    unset tmp keys values
+	unset tmp keys values
 fi
 
 # Repository info and generic commands
@@ -205,11 +213,12 @@ error()
 
     # argument
     if [ -n "$1" ]; then
+		# shellcheck disable=SC2059
         msg="$(printf "$@")"
 
     # stdin
     else
-        while read msg; do
+        while read -r msg; do
             error "${msg}"; done
         return 0
     fi
@@ -230,11 +239,12 @@ warning()
 
     # argument
     if [ -n "$1" ]; then
+		# shellcheck disable=SC2059
         msg="$(printf "$@")"
 
     # stdin
     else
-        while read msg; do
+        while read -r msg; do
             warning "${msg}"; done
         return 0
     fi
@@ -277,8 +287,7 @@ command_not_found_handle()
 # TODO: show [seq] and ranges for simple sequences, with min/max file size
 
 # FIXME: seems that passing an argument does not work properly
-# FIXME: breaks when upgrading to Ubuntu 14.04??
-
+# shellcheck disable=SC2120
 multicolumn_ls()
 {
     if [ $haveAwk -eq 1 ]; then
@@ -287,6 +296,8 @@ multicolumn_ls()
         if [ $USE_COLORS -eq 1 ]; then
             colorflag="--color"; fi
 
+		# shellcheck disable=SC2016
+		# shellcheck disable=SC2028
         command ls -opg --si --group-directories-first --time-style=+ ${colorflag} "$@" | awk -f "$HOME/.awk_functions" -f <( echo -E '
 
             BEGIN {
@@ -396,12 +407,13 @@ multicolumn_ls()
         local -ri minLines=15
 
         # derived quantities & declarations
-        local -r numColumns=$(($COLUMNS/$maxColumnWidth))
-        local -r maxNameWidth=$(($maxColumnWidth-10))
+        local -r numColumns=$((COLUMNS/maxColumnWidth))
+        local -r maxNameWidth=$((maxColumnWidth-10))
 
         # get initial file, as stripped down as possible, but including the file sizes.
         # NOTE: arguments to multicolumn_ls() get appended behind the base ls command
         IFS=$'\n'
+		# shellcheck disable=2207
         local dirlist=($(command ls -opgh --group-directories-first --time-style=+ --si "$@"))
 
         # also get the file attribute list (for filesystems that are known to work)
@@ -690,7 +702,7 @@ promptcmd()
                 local working_dir='\W'
 
                 # Root
-                if [ `id -u` = 0 ]; then
+                if [ "$(id -u)" = 0 ]; then
                     # Different color for the username
                     usrName="${START_COLORSCHEME_PS1}${TXT_BOLD};${FG_RED}${END_COLORSCHEME_PS1}"
                     # Show FULL path
@@ -708,8 +720,8 @@ promptcmd()
 
     # put pretty-printed full path in the upper right corner
     local -r pth="$(prettyprint_dir "$PWD")"
-    local -r move_cursor="\E7\E[001;$(($COLUMNS-${#PWD}-2))H${START_ESCAPE_GROUP}1${END_ESCAPE_GROUP}"
-    local -r reset_cursor="\E8"
+    local -r move_cursor='\E7\E[001;'"$((COLUMNS-${#PWD}-2))H${START_ESCAPE_GROUP}1${END_ESCAPE_GROUP}"
+    local -r reset_cursor='\E8'
     if [ $USE_COLORS -eq 1 ]; then
         local -r bracket_open="${START_COLORSCHEME}${FG_GREEN}${END_COLORSCHEME}[${RESET_COLORS}"
         local -r bracket_close="${START_COLORSCHEME}${TXT_BOLD};${FG_GREEN}${END_COLORSCHEME}]${RESET_COLORS}"
@@ -718,6 +730,7 @@ promptcmd()
         local -r bracket_close="]"
     fi
 
+	# shellcheck disable=SC2059
     printf "${move_cursor}${bracket_open}${pth}${bracket_close}${reset_cursor}"
 
 }
@@ -757,7 +770,7 @@ quoted_list()
 # trim bash string
 trim()
 {
-    local var="$@"
+    local var="$*"
     var="${var#"${var%%[![:space:]]*}"}"   # remove leading whitespace characters
     var="${var%"${var##*[![:space:]]}"}"   # remove trailing whitespace characters
     echo -n "$var"
@@ -768,7 +781,7 @@ trim()
 # e.g.,  /foo/bar/../baz  ->  /foo/baz
 normalize_dir()
 {
-    echo "$(readlink -m "$1")"
+    readlink -m "$1"
 }
 
 # delete single element and re-order array
@@ -782,17 +795,18 @@ delete_reorder()
     local -ri rmindex="$2"
 
     for ((i=0; i<${#array[@]}; i++)); do
-        if [ $i -eq $rmindex ]; then
+        if [ $i -eq "$rmindex" ]; then
             continue; fi
-        echo ${array[$i]}
+        echo "${array[$i]}"
     done
 }
 
 # print dirlist if command exited with code 0
 print_list_if_OK()
 {
-    if [ $1 == 0 ]; then
+    if [ "$1" == 0 ]; then
         clear
+		# shellcheck disable=SC2119
         multicolumn_ls
     fi
 }
@@ -807,7 +821,7 @@ prettyprint_dir()
         return; fi
 
     local -a repoinfo
-    local -ri pwdmaxlen=$(($COLUMNS/3))
+    local -ri pwdmaxlen=$((COLUMNS/3))
     local original_pth
 
     if [ $USE_COLORS -eq 1 ]; then
@@ -839,6 +853,7 @@ prettyprint_dir()
                 pth="${pth/${repopath}/${repopath}$'\033'[0m$repoCol}"
             fi
 
+			# shellcheck disable=SC2016
             echo "${pth}" | awk -f "$HOME/.awk_functions" -f <( echo -E '
 
                 {
@@ -894,10 +909,10 @@ prettyprint_dir()
         local -i pthoffset
 
         if [ ${#pth} -gt $pwdmaxlen ]; then
-            pthoffset=$((${#pth}-$pwdmaxlen))
+            pthoffset=$((${#pth}-pwdmaxlen))
             pth="...${pth:$pthoffset:$pwdmaxlen}"
         fi
-        printf "$pth/"
+        printf "%s" "$pth/"
     fi
 }
 
@@ -943,15 +958,19 @@ check_repo()
         for dir in "${dirs[@]}"; do
 
             check=$(printf "%s " git && command cd "${dir}" && git rev-parse --show-toplevel 2> /dev/null)
+			# shellcheck disable=SC2181
             if [ $? -eq 0 ]; then echo "$check"; continue; fi
 
-            check=$(printf "%s " svn && svn info "$dir" 2> /dev/null | awk '/^Working Copy Root Path:/ {print $NF}' && [ ${PIPESTATUS[0]} -ne 1 ])
+            check=$(printf "%s " svn && svn info "$dir" 2> /dev/null | awk '/^Working Copy Root Path:/ {print $NF}' && [ "${PIPESTATUS[0]}" -ne 1 ])
+			# shellcheck disable=SC2181
             if [ $? -eq 0 ]; then echo "$check"; continue; fi
 
             check=$(printf "%s  " hg && hg root --cwd "$dir" 2> /dev/null)
+			# shellcheck disable=SC2181
             if [ $? -eq 0 ]; then echo "$check"; continue; fi
 
-            check=$(printf "%s " bzr && bzr root "$dir" 2> /dev/null) ||
+            check=$(printf "%s " bzr && bzr root "$dir" 2> /dev/null)
+			# shellcheck disable=SC2181			
             if [ $? -eq 0 ]; then echo "$check"; continue; fi
 
             echo "--- [no_repository_found]"
@@ -987,19 +1006,19 @@ check_repo()
             # NOTE: repeated commands outperform function call by an order of magnitude
             # NOTE: commands without capture "$(...)" outperform commands with capture
             # NOTE: this is also faster than SED'ing the "../" away
-            # NOTE: ...the main speed problem on the LuxSpace machine is Kaspersky :(
+            # NOTE: ...the main speed problem is Kaspersky :(			
             for (( j=${#slashes[$i]}; j>0; --j )); do
-                [ -d "$dir/.git" ] && repotype[$i]="git" && cd "$dir" && reporoot[$i]="$PWD" && cd "$curdir" && break;
-                [ -d "$dir/.svn" ] && repotype[$i]="svn" && cd "$dir" && reporoot[$i]="$PWD" && cd "$curdir" && break;
-                [ -d "$dir/.bzr" ] && repotype[$i]="bzr" && cd "$dir" && reporoot[$i]="$PWD" && cd "$curdir" && break;
-                [ -d "$dir/.hg"  ] && repotype[$i]="hg " && cd "$dir" && reporoot[$i]="$PWD" && cd "$curdir" && break;
+                [ -d "$dir/.git" ] && [[ ${repotype[$i]} == "git" ]] && (cd "$dir" && [[ "${reporoot[$i]}" == "$PWD" ]]) && break;
+                [ -d "$dir/.svn" ] && [[ ${repotype[$i]} == "svn" ]] && (cd "$dir" && [[ "${reporoot[$i]}" == "$PWD" ]]) && break;
+                [ -d "$dir/.bzr" ] && [[ ${repotype[$i]} == "bzr" ]] && (cd "$dir" && [[ "${reporoot[$i]}" == "$PWD" ]]) && break;
+                [ -d "$dir/.hg"  ] && [[ ${repotype[$i]} == "hg " ]] && (cd "$dir" && [[ "${reporoot[$i]}" == "$PWD" ]]) && break;
                 dir="$dir/.."
             done
 
         done
 
-        for (( i=0;i<${#repotype[@]}; ++i )); do
-            printf "%s %s\n" "${repotype[$i]} ${reporoot[$i]}"; done
+        for (( i=0;i<${#repotype[@]}; ++i )); do		    
+            printf '%s %s\n' "${repotype[$i]}" "${reporoot[$i]}"; done
     fi
 
 }
@@ -1015,6 +1034,7 @@ update_all()
 
         rp=($(check_repo "$PWD/$d"))
 
+		(
         cd "${rp[@]:1}"
 
         case "${rp[0]}" in
@@ -1022,11 +1042,10 @@ update_all()
             "git") git pull   ;;
             "hg")  hg update  ;;
             "bzr") bzr update ;;
-            *)  warning "Don't know how to update repository."
-                ;;
+            *)     warning "Don't know how to update repository."
+                   ;;
         esac
-
-        cd ..
+        )
 
     done
 }
@@ -1037,7 +1056,7 @@ __enter_GIT()
     # set type
     REPO_TYPE="git"
     REPO_MODE=1
-    REPO_PATH="$@"
+    REPO_PATH="$*"
 
     # alias everything
     alias gf="git fetch"                   ;  REPO_CMD_fetch="gf"
@@ -1073,7 +1092,7 @@ __enter_SVN()
     # enter SVN mode
     REPO_TYPE="svn"
     REPO_MODE=1
-    REPO_PATH="$@"
+    REPO_PATH="$*"
 
     # alias everything
     alias su="svn up"           ; REPO_CMD_update="su"
@@ -1087,7 +1106,7 @@ __enter_HG()
     # enter GIT mode
     REPO_TYPE="hg"
     REPO_MODE=1
-    REPO_PATH="$@"
+    REPO_PATH="$*"
 
     # alias everything
     # TODO
@@ -1099,7 +1118,7 @@ __enter_BZR()
     # enter BZR mode
     REPO_TYPE="bzr"
     REPO_MODE=1
-    REPO_PATH="$@"
+    REPO_PATH="$*"
 
     # alias everything
     # TODO
@@ -1138,33 +1157,36 @@ lds()
 
     clear
     IFS=$'\n'
-
+	
     # When no argument is given, process all dirs. Otherwise: process only given dirs
     if [ $# -eq 0 ]; then
-       dirs=$(command ls -dh1 --time-style=+ */ 2> /dev/null)
+       dirs=$(command ls -Adh1 --time-style=+ -- */ 2> /dev/null)
     else
-       dirs=$(command ls -dh1 --time-style=+ "${@/%//}" 2> /dev/null)
+       dirs=$(command ls -Adh1 --time-style=+ -- ${@/%//} 2> /dev/null)
     fi
+		
+	# find proper color used for directories
+    if [ $USE_COLORS -eq 1 ]; then            
+        local -r color="${ALL_COLORS[di]}"; fi
+		
+	# loop through dirlist and parse
+	for f in $dirs; do
 
-    if [ $USE_COLORS  -eq 1 ]
-    then
-        # find proper color used for directories
-        local -r color="${ALL_COLORS[di]}"
-
-        # loop through dirlist and parse
-        for f in $dirs; do
-            sz=$(du -bsh --si $f 2> /dev/null);
-            sz=${sz%%$'\t'*}
-            printf "$sz\t\E[${color#*;}m\E[${color%;*}m$f\n${RESET_COLORS}"
-        done
-
-    else
-        for f in $dirs; do
-            sz=$(du -bsh --si $f 2> /dev/null);
-            sz=${sz%%$'\t'*}
-            printf "$sz\t$f\n"
-        done
-    fi
+		# ./ and ../ may still be in the list, despite -A flag (lads(), for example)
+		if [[ "$f" == "./" || "$f" == ".//" || "$f" == "../" || "$f" == "..//" ]]; then
+			continue; fi
+			
+		printf "processing '%s'...\n" "$f"
+		sz=$(du -bsh --si "$f" 2> /dev/null);
+		sz="${sz%%$'\t'*}"		
+		tput cuu 1 && tput el
+		
+		if [ $USE_COLORS -eq 1 ]; then
+			printf "%s\t${START_COLORSCHEME}${color}${END_COLORSCHEME}%s\n${RESET_COLORS}" "$sz" "$f"
+		else
+			printf '%s\t%s\n' "$sz" "$f"
+		fi
+	done
 
     IFS="$IFS_ORIGINAL"
 }
@@ -1172,42 +1194,7 @@ lds()
 # count and list directory sizes, including hidden dirs
 lads()
 {
-    local sz
-    local f
-    local dirs
-
-    clear
-    IFS=$'\n'
-
-    # When no argument is given, process all dirs and dot-dirs.
-    # Otherwise: process only given dirs
-    if [ $# -eq 0 ]; then
-        dirs=$(command ls -dh1 --time-style=+ */ .*/ 2> /dev/null)
-    else
-        dirs=$(command ls -dh1 --time-style=+ "${@/%//}" 2> /dev/null)
-    fi
-
-    if [ $USE_COLORS  -eq 1 ]
-    then
-        # find proper color used for directories
-        local -r color="${ALL_COLORS[di]}"
-
-        # loop through dirlist and parse
-        for f in $dirs; do
-            sz=$(du -bsh --si $f 2> /dev/null);
-            sz=${sz%%$'\t'*}
-            printf "$sz\t\E[${color#*;}m\E[${color%;*}m$f\n${RESET_COLORS}"
-        done
-
-    else
-        for f in $dirs; do
-            sz=$(du -bsh --si $f 2> /dev/null);
-            sz=${sz%%$'\t'*}
-            printf "$sz\t$f\n"
-        done
-    fi
-
-    IFS="$IFS_ORIGINAL"
+	lds "*/" ".*/"	
 }
 
 # display only dirs/files with given octal permissions for current user
@@ -1234,7 +1221,7 @@ lo()
     # default: find non-dot files only.
     # when passing 2 args: find also dot-files.
     if [ $# -ne 2 ]; then
-        cmd="-name \"[^\.]*\" "$cmd; fi
+        cmd="-name \"[^\\.]*\" "$cmd; fi
 
     echo "$str files:"
 
@@ -1251,7 +1238,7 @@ lo()
             fs[$i]=\"${fs[i]#./}\"; done
 
         # and call (NOTE: eval required for quote expansion)
-        eval multicolumn_ls ${fs[@]}
+        eval multicolumn_ls "${fs[@]}"
 
     else
         echo "No such files found."
@@ -1292,7 +1279,7 @@ __add_dir_to_stack()
         local dirline dir
         local -i counter
         local -i was_present=0
-        local -r tmp=$(mktemp)
+        local -r tmp="$(mktemp)"
 
         # Read current dirstack
         IFS=$'\n'
@@ -1308,7 +1295,7 @@ __add_dir_to_stack()
 
             if [ "${addition}" == "${dir}" ]; then
                 was_present=1
-                printf "%${DIRSTACK_COUNTLENGTH}d %s\n"   $(($counter+1))   "${dir}"   >> "${tmp}"
+                printf '%${DIRSTACK_COUNTLENGTH}d %s\n'   $(($counter+1))   "${dir}"   >> "${tmp}"
             else
                 echo "${dirline}" >> "${tmp}"
             fi
@@ -2138,7 +2125,7 @@ _gedit_DONTUSE()
 # grep all processes in wide-format PS, excluding "grep" itself
 psa()
 {
-    ps auxw | egrep -iT --color=auto "[${1:0:1}]${1:1}" 2> >(error)
+    ps auxw | grep -EiT --color=auto "[${1:0:1}]${1:1}" 2> >(error)
 }
 
 
@@ -2248,12 +2235,12 @@ __spread()
 # Multi-source, multi-destination copy
 proliferate()
 {
-    __spread -c $@
+    __spread -c "$@"
 }
 # Multi-source, multi-destination move
 spread()
 {
-    __spread -m $@
+    __spread -m "$@"
 }
 
 
@@ -2273,9 +2260,12 @@ svg2png()
 check_XML()
 {
     for file in "$@"; do
-        python -c "import sys,xml.dom.minidom as d; d.parse(sys.argv[1])" "$file" &&
-            echo "XML-file $file is valid and well-formed" ||
+        if python -c "import sys,xml.dom.minidom as d; d.parse(sys.argv[1])" "$file";
+		then
+            echo "XML-file $file is valid and well-formed" 
+		else
             warning "XML-file $file is NOT valid"
+		fi
     done
 }
 
@@ -2319,11 +2309,11 @@ slgrep()
         filename="${filename%.*}" 
 
         if [ "$extension" = "slx" ]; then
-            result=$(unzip -c "$file" | egrep -iIT --color=always --exclude-dir .svn --exclude-dir .git $*)
+            result=$(unzip -c "$file" | grep -EiIT --color=always --exclude-dir .svn --exclude-dir .git "$@")
             if [[ ! -z "$result" ]]; then 
                 printf "${START_COLORSCHEME}${FG_MAGENTA}${END_COLORSCHEME}%s${RESET_COLORS}: %s\n" "$file" "$result"; fi
         else
-            egrep -iIT --color=auto --exclude-dir .svn --exclude-dir .git $* "$file" /dev/null
+            grep -EiIT --color=auto --exclude-dir .svn --exclude-dir .git "$@" "$file" /dev/null
         fi
 
     done; 

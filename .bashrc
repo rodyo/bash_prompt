@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 # disable pango (improves rendering in FireFox)
 export MOZ_DISABLE_PANGO=1
 
