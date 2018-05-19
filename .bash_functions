@@ -94,13 +94,13 @@ _STOP_PROFILING()
         set +x
         exec 2>&3 3>&-
 
-        printf ' %-11s  %-11s   %s\n' "duration" "cumulative" "command" > ~/profile_report.$$.log
+        printf -- ' %-11s  %-11s   %s\n' "duration" "cumulative" "command" > ~/profile_report.$$.log
         paste <(
             while read -r tim; do
                 [ -z "$last" ] && last=${tim//.} && first=${tim//.}
                 crt=000000000$((${tim//.}-10#0$last))
                 ctot=000000000$((${tim//.}-10#0$first))
-                printf '%12.9f %12.9f\n' ${crt:0:${#crt}-9}.${crt:${#crt}-9} \
+                printf -- '%12.9f %12.9f\n' ${crt:0:${#crt}-9}.${crt:${#crt}-9} \
                                          ${ctot:0:${#ctot}-9}.${ctot:${#ctot}-9}
                 last=${tim//.}
               done < /tmp/sample-time.$$.tim
@@ -214,7 +214,7 @@ error()
     # argument
     if [ -n "$1" ]; then
 		# shellcheck disable=SC2059
-        msg="$(printf "$@")"
+        msg="$(printf -- "$@")"
 
     # stdin
     else
@@ -240,7 +240,7 @@ warning()
     # argument
     if [ -n "$1" ]; then
 		# shellcheck disable=SC2059
-        msg="$(printf "$@")"
+        msg="$(printf -- "$@")"
 
     # stdin
     else
@@ -460,10 +460,10 @@ multicolumn_ls()
             numRows=$minLines; fi
 
         # Split dirlist up in permissions, filesizes, names, and extentions
-        local perms=($(printf '%s\n' "${dirlist[@]}" | awk '{print $1}'))
-        local sizes=($(printf '%s\n' "${dirlist[@]}" | awk '{print $3}'))
+        local perms=($(printf -- '%s\n' "${dirlist[@]}" | awk '{print $1}'))
+        local sizes=($(printf -- '%s\n' "${dirlist[@]}" | awk '{print $3}'))
         # NOTE: awkward yes, but the only way to get all spaces etc. right under ALL circumstances
-        local names=($(printf '%s\n' "${dirlist[@]}" | awk '{for(i=4;i<=NF;i++) $(i-3)=$i; if (NF>0)NF=NF-3; print $0}'))
+        local names=($(printf -- '%s\n' "${dirlist[@]}" | awk '{for(i=4;i<=NF;i++) $(i-3)=$i; if (NF>0)NF=NF-3; print $0}'))
         local extensions
         for ((i=0; i<${#names[@]}; i++)); do
             extensions[$i]=${names[$i]##*\.}
@@ -564,10 +564,10 @@ multicolumn_ls()
                     # and finally, print it:
                     if [[ $device = 1 ]]; then
                         # block/character devices
-                        printf "%7s${START_COLORSCHEME}${TXT_BOLD};${FG_RED}${END_COLORSCHEME}%s${RESET_COLORS} ${START_COLORSCHEME}${paint}${END_COLORSCHEME}%-*s ${RESET_COLORS}" "${sizes[$ind]}${names[$ind]%% *}" "$lastsymbol" $maxNameWidth "${names[$ind]#* }"
+                        printf -- "%7s${START_COLORSCHEME}${TXT_BOLD};${FG_RED}${END_COLORSCHEME}%s${RESET_COLORS} ${START_COLORSCHEME}${paint}${END_COLORSCHEME}%-*s ${RESET_COLORS}" "${sizes[$ind]}${names[$ind]%% *}" "$lastsymbol" $maxNameWidth "${names[$ind]#* }"
                     else
                         # all others
-                        printf "%7s${START_COLORSCHEME}${TXT_BOLD};${FG_RED}${END_COLORSCHEME}%s${RESET_COLORS} ${START_COLORSCHEME}${paint}${END_COLORSCHEME}%-*s ${RESET_COLORS}" "${sizes[$ind]}" "$lastsymbol" $maxNameWidth "${names[$ind]}"
+                        printf -- "%7s${START_COLORSCHEME}${TXT_BOLD};${FG_RED}${END_COLORSCHEME}%s${RESET_COLORS} ${START_COLORSCHEME}${paint}${END_COLORSCHEME}%-*s ${RESET_COLORS}" "${sizes[$ind]}" "$lastsymbol" $maxNameWidth "${names[$ind]}"
                     fi
 
                 # we're NOT using colors:
@@ -577,9 +577,9 @@ multicolumn_ls()
                         b|c) device=1;;
                     esac
                     if [[ $device = 1 ]]; then
-                        printf "%7s  %-*s " "${sizes[$ind]}${names[$ind]%% *}" $maxNameWidth "${names[$ind]#* }"
+                        printf -- "%7s  %-*s " "${sizes[$ind]}${names[$ind]%% *}" $maxNameWidth "${names[$ind]#* }"
                     else
-                        printf "%7s  %-*s " "${sizes[$ind]}" $maxNameWidth "${names[$ind]}"
+                        printf -- "%7s  %-*s " "${sizes[$ind]}" $maxNameWidth "${names[$ind]}"
                     fi
                 fi
             done
@@ -595,23 +595,23 @@ multicolumn_ls()
 
         else
             if [ $haveFiles == false ]; then
-                printf "%s in " $firstline
+                printf -- "%s in " $firstline
             else
-                printf "Total "
+                printf -- "Total "
             fi
 
             if [[ $numDirs != 0 ]]; then
-                printf "%d dirs, " $numDirs; fi
+                printf -- "%d dirs, " $numDirs; fi
             if [[ $numFiles != 0 ]]; then
-                printf "%d files, " $numFiles; fi
+                printf -- "%d files, " $numFiles; fi
             if [[ $numLinks != 0 ]]; then
-                printf "%d links, " $numLinks; fi
+                printf -- "%d links, " $numLinks; fi
             if [[ $numDevs != 0 ]]; then
-                printf "%d devices, " $numDevs; fi
+                printf -- "%d devices, " $numDevs; fi
             if [[ $numPipes != 0 ]]; then
-                printf "%d pipes, " $numPipes; fi
+                printf -- "%d pipes, " $numPipes; fi
             if [[ $numSockets != 0 ]]; then
-                printf "%d sockets, " $numSockets; fi
+                printf -- "%d sockets, " $numSockets; fi
 
             printf "\b\b.\n"
         fi
@@ -731,7 +731,7 @@ promptcmd()
     fi
 
 	# shellcheck disable=SC2059
-    printf "${move_cursor}${bracket_open}${pth}${bracket_close}${reset_cursor}"
+    printf -- "${move_cursor}${bracket_open}${pth}${bracket_close}${reset_cursor}"
 
 }
 
@@ -751,7 +751,7 @@ strjoin()
 
     echo -n "$1"
     shift
-    printf "%s" "${@/#/$d}"
+    printf -- "%s" "${@/#/$d}"
 }
 
 # Produce a quoted list, taking into account proper comma placement
@@ -912,7 +912,7 @@ prettyprint_dir()
             pthoffset=$((${#pth}-pwdmaxlen))
             pth="...${pth:$pthoffset:$pwdmaxlen}"
         fi
-        printf "%s/" "$pth"
+        printf -- "%s/" "$pth"
     fi
 }
 
@@ -957,19 +957,19 @@ check_repo()
 		
         for dir in "${dirs[@]}"; do
 
-            check=$(printf "%s " git && command cd "${dir}" && git rev-parse --show-toplevel 2> /dev/null)
+            check=$(printf -- "%s " git && command cd "${dir}" && git rev-parse --show-toplevel 2> /dev/null)
 			# shellcheck disable=SC2181
             if [ $? -eq 0 ]; then echo "$check"; continue; fi
 
-            check=$(printf "%s " svn && svn info "$dir" 2> /dev/null | awk '/^Working Copy Root Path:/ {print $NF}' && [ "${PIPESTATUS[0]}" -ne 1 ])
+            check=$(printf -- "%s " svn && svn info "$dir" 2> /dev/null | awk '/^Working Copy Root Path:/ {print $NF}' && [ "${PIPESTATUS[0]}" -ne 1 ])
 			# shellcheck disable=SC2181
             if [ $? -eq 0 ]; then echo "$check"; continue; fi
 
-            check=$(printf "%s  " hg && hg root --cwd "$dir" 2> /dev/null)
+            check=$(printf -- "%s  " hg && hg root --cwd "$dir" 2> /dev/null)
 			# shellcheck disable=SC2181
             if [ $? -eq 0 ]; then echo "$check"; continue; fi
 
-            check=$(printf "%s " bzr && bzr root "$dir" 2> /dev/null)
+            check=$(printf -- "%s " bzr && bzr root "$dir" 2> /dev/null)
 			# shellcheck disable=SC2181			
             if [ $? -eq 0 ]; then echo "$check"; continue; fi
 
@@ -1020,7 +1020,7 @@ check_repo()
         done
 
         for (( i=0;i<${#repotype[@]}; ++i )); do		    
-            printf '%s %s\n' "${repotype[$i]}" "${reporoot[$i]}"; done
+            printf -- '%s %s\n' "${repotype[$i]}" "${reporoot[$i]}"; done
     fi
 
 }
@@ -1178,15 +1178,15 @@ lds()
 		if [[ "$f" == "./" || "$f" == ".//" || "$f" == "../" || "$f" == "..//" ]]; then
 			continue; fi
 			
-		printf 'processing "%s"...\n' "$f"
+		printf -- 'processing "%s"...\n' "$f"
 		sz=$(du -bsh --si "$f" 2> /dev/null);
 		sz="${sz%%$'\t'*}"		
 		tput cuu 1 && tput el
 		
 		if [ $USE_COLORS -eq 1 ]; then
-			printf "%s\t${START_COLORSCHEME}${color}${END_COLORSCHEME}%s\n${RESET_COLORS}" "$sz" "$f"
+			printf -- "%s\t${START_COLORSCHEME}${color}${END_COLORSCHEME}%s\n${RESET_COLORS}" "$sz" "$f"
 		else
-			printf '%s\t%s\n' "$sz" "$f"
+			printf -- '%s\t%s\n' "$sz" "$f"
 		fi
 	done
 
@@ -1297,21 +1297,21 @@ __add_dir_to_stack()
 
             if [ "${addition}" == "${dir}" ]; then
                 was_present=1
-                printf "%${DIRSTACK_COUNTLENGTH}d %s\\n" $(($counter+1)) "${dir}" >> "${tmp}"
+                printf -- "%${DIRSTACK_COUNTLENGTH}d %s\\n" $(($counter+1)) "${dir}" >> "${tmp}"
             else
                 echo "${dirline}" >> "${tmp}"
             fi
         done
 
         if [ $was_present -eq 0 ]; then
-            printf "%${DIRSTACK_COUNTLENGTH}d %s\n" 1 "${addition}" >> "${tmp}"; fi
+            printf -- "%${DIRSTACK_COUNTLENGTH}d %s\n" 1 "${addition}" >> "${tmp}"; fi
 
         # Sort according to most visits, and finish up
         sort -r "${tmp}" > "${DIRSTACK_FILE}"
         rm "${tmp}"
 
     else
-        printf "%${DIRSTACK_COUNTLENGTH}d %s\n" 1 "${addition}" > "${DIRSTACK_FILE}"
+        printf -- "%${DIRSTACK_COUNTLENGTH}d %s\n" 1 "${addition}" > "${DIRSTACK_FILE}"
     fi
 
     _unlock_dirstack
@@ -1623,13 +1623,13 @@ _cdn_DONTUSE()
                 if [ ${#dir} -gt $pwdmaxlen ]; then
                     dir="...${dir: ((-${pwdmaxlen}-3))}"; fi
 
-                printf "%3d: %-${pwdmaxlen}s\n" $i "${dir}"
+                printf -- "%3d: %-${pwdmaxlen}s\n" $i "${dir}"
             done
 
         # Colored list, taking into account dir/symlink coloring and repo coloring
         else
             for ((i=0; i<${#repos[@]}; i++)); do
-                (printf "%3d: %s\n" $i "$( prettyprint_dir "${stack[$i]:((${DIRSTACK_COUNTLENGTH}+1))}" "${types[$i]}" "${paths[$i]}" )" &); done
+                (printf -- "%3d: %s\n" $i "$( prettyprint_dir "${stack[$i]:((${DIRSTACK_COUNTLENGTH}+1))}" "${types[$i]}" "${paths[$i]}" )" &); done
         fi
     fi
 }
@@ -2046,9 +2046,9 @@ _findbig_DONTUSE()
                 fcolor=${LS_COLORS##*no=};
                 fcolor=${fcolor%%:*}
             fi
-            printf "%s\E[${dcolor#*;}m%s\E[${fcolor#*;}m%s\n${RESET_COLORS}" $perms $dir $file
+            printf -- "%s\E[${dcolor#*;}m%s\E[${fcolor#*;}m%s\n${RESET_COLORS}" $perms $dir $file
         else
-            printf "%s%s%s\n" $perms $dir $file
+            printf -- "%s%s%s\n" $perms $dir $file
         fi
     done
 
@@ -2103,7 +2103,7 @@ chroot_dir()
         # if [ $? -eq 0 ]; then
         #    echo "Target architecture differs from host system architecture; do you have QEMU installed?"
         # else
-            printf "Could not enter chroot: %s" $(cat $tmpErr)
+            printf -- "Could not enter chroot: %s" $(cat $tmpErr)
         # fi
     fi
 
@@ -2142,7 +2142,7 @@ mvq()
     # TODO: nohup doesn't allow for easy redirection
     #(nohup nice -n 19 mv "$@" 2> >(error) &)
     (nice -n 19 cp -r "$@" 1> >(warning) 2> >(error) &)
-    printf 'Moving %s to "%s"...\n'  "$(quoted_list ${@: 1:$(($#-1))})"  "${@: -1}"
+    printf -- 'Moving %s to "%s"...\n'  "$(quoted_list ${@: 1:$(($#-1))})"  "${@: -1}"
 }
 
 # Queued copy
@@ -2156,7 +2156,7 @@ cpq()
     # TODO: nohup doesn't allow for easy redirection
     #(nohup nice -n 19 cp -r "$@" 1> >(warning) 2> >(error) &)
     (nice -n 19 cp -r "$@" 1> >(warning) 2> >(error) &)
-    printf 'Copying %s to "%s"...\n'  "$(quoted_list ${@: 1:$(($#-1))})"  "${@: -1}"
+    printf -- 'Copying %s to "%s"...\n'  "$(quoted_list ${@: 1:$(($#-1))})"  "${@: -1}"
 }
 
 # Multi-source, multi-destination copy/move
@@ -2313,7 +2313,7 @@ slgrep()
         if [ "$extension" = "slx" ]; then
             result=$(unzip -c "$file" | grep -EiIT --color=always --exclude-dir .svn --exclude-dir .git "$@")
             if [[ ! -z "$result" ]]; then 
-                printf "${START_COLORSCHEME}${FG_MAGENTA}${END_COLORSCHEME}%s${RESET_COLORS}: %s\n" "$file" "$result"; fi
+                printf -- "${START_COLORSCHEME}${FG_MAGENTA}${END_COLORSCHEME}%s${RESET_COLORS}: %s\n" "$file" "$result"; fi
         else
             grep -EiIT --color=auto --exclude-dir .svn --exclude-dir .git "$@" "$file" /dev/null
         fi
