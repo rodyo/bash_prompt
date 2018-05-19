@@ -180,3 +180,8 @@ if [ -z "$SSH_AUTH_SOCK" -a -x "$SSHAGENT" ]; then
     eval `ssh-agent -s`
     trap "kill $SSH_AGENT_PID" 0
 fi
+
+
+# Ultimate debugging prompt
+# see https://stackoverflow.com/questions/17804007/how-to-show-line-number-when-executing-bash-script
+export PS4='+(${BASH_SOURCE}:${LINENO}): ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'

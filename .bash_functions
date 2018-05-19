@@ -198,7 +198,7 @@ fi
 # Repository info and generic commands
 declare -i REPO_MODE=0;
 REPO_TYPE=""
-REPO_PATH=
+REPO_PATH=""
 
 # colors used for different repositories in prompt/prettyprint
 REPO_COLOR[svn]=${START_COLORSCHEME}${TXT_BOLD}';'${FG_MAGENTA}${END_COLORSCHEME};    REPO_COLOR[bzr]=${START_COLORSCHEME}${TXT_BOLD}';'${FG_YELLOW}${END_COLORSCHEME}
@@ -1129,7 +1129,7 @@ __enter_BZR()
 # leave any and all repositories
 __leave_repos()
 {
-    if [ $REPO_MODE -eq 0 ]; then
+    if [[ ! -z $REPO_MODE && $REPO_MODE == 0 ]]; then
         return; fi
 
     # unalias everything
@@ -1648,8 +1648,8 @@ _cdn_completer()
 _mkdir_DONTUSE()
 {
     command mkdir -p "$@" 2> >(error)
-    if [ $? -eq 0 ]; then
-        if [ $REPO_MODE -eq 1 ]; then
+    if [[ $? == 0 ]]; then
+        if [[ ! -z $REPO_MODE && $REPO_MODE == 1 ]]; then
             eval $REPO_CMD_add "$@"; fi
         print_list_if_OK 0
     fi
@@ -1668,7 +1668,7 @@ _rmdir_DONTUSE()
 _rm_DONTUSE()
 {
     # we are in REPO mode
-    if [ $REPO_MODE -eq 1 ]; then
+    if [[ ! -z $REPO_MODE && $REPO_MODE -eq 1 ]]; then
 
         # perform repo-specific delete
         local -r err=$(eval ${REPO_CMD_remove} "$@" 2>&1 1> /dev/null)
@@ -1783,7 +1783,7 @@ _mv_DONTUSE()
     #fi
 
     # the old, GIT-only way
-    if [ $REPO_MODE -eq 1 -a $REPO_TYPE == "git" ]; then
+    if [[ ! -z $REPO_MODE && $REPO_MODE == 1 && $REPO_TYPE == "git" ]]; then
 
         local match="outside repository"
 
@@ -1821,9 +1821,9 @@ _ln_DONTUSE()
     fi
 
     command ln -s "$@" 2> >(error)
-    if [ $? -eq 0 ]; then
+    if [[ $? == 0 ]]; then
         print_list_if_OK 0
-        if [ $REPO_TYPE == "git" ]; then
+        if [[ ! -z $REPO_TYPE && $REPO_TYPE == "git" ]]; then
         # TODO: add link ($2, but taking into account spaces)
             echo
             echo "REMEMBER TO ADD NEW FILE!!"
@@ -1888,7 +1888,7 @@ _cp_DONTUSE()
     cpcmd="${cpcmd} 2> >(error)"
 
     # REPO mode
-    if [[ $REPO_TYPE == "git" ]]; then
+    if [[ ! -z $REPO_TYPE && $REPO_TYPE == "git" ]]; then
 
         # only add copy to repo when
         # - we have exactly 2 arguments
@@ -1913,7 +1913,7 @@ _touch_DONTUSE()
 {
     command touch "$@" 2> >(error)
     print_list_if_OK $?
-    if [ $REPO_MODE -eq 1 ]; then
+    if [[ ! -z $REPO_MODE && $REPO_MODE == 1 ]]; then
         $REPO_CMD_add "$@"; fi
 }
 
@@ -2022,7 +2022,7 @@ _findbig_DONTUSE()
     local lsout perms dir fcolor file f
 
     # find proper color used for directories
-    if [ $USE_COLORS  -eq 1 ]; then
+    if [[ $USE_COLORS == 1 ]]; then
         local dcolor="${ALL_COLORS[di]}"; fi
 
     # loop through all big files
