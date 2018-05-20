@@ -172,7 +172,6 @@ declare -i atWork=0
 # Create global associative arrays
 # --------------------------------
 
-
 declare -A REPO_COLOR
 declare -A ALL_COLORS
 
@@ -250,8 +249,8 @@ warning()
     fi
 
     # Print the message, based on color settings
-    if [ $USE_COLORS -eq 1 ]; then
-        echo "${START_COLORSCHEME}${TXT_BOLD};${FG_ORANGE}${END_COLORSCHEME}WARNING: ${msg}${RESET_COLORS}"
+    if [[ $USE_COLORS == 1 ]]; then
+        echo "${START_COLORSCHEME}${TXT_BOLD};${FG_YELLOW}${END_COLORSCHEME}WARNING: ${msg}${RESET_COLORS}"
     else
         echo "WARNING: ${msg}"
     fi
@@ -259,7 +258,31 @@ warning()
     return 0
 }
 
+infomessage()
+{
+    local msg
 
+    # argument
+    if [ -n "$1" ]; then
+		# shellcheck disable=SC2059
+        msg="$(printf -- "$@")"
+
+    # stdin
+    else
+        while read -r msg; do
+            infomessage "${msg}"; done
+        return 0
+    fi
+
+    # Print the message, based on color settings
+    if [[ $USE_COLORS == 1 ]]; then
+        echo "${START_COLORSCHEME}${TXT_BOLD};${FG_GREEN}${END_COLORSCHEME}INFO: ${msg}${RESET_COLORS}"
+    else
+        echo "INFO: ${msg}"
+    fi
+
+    return 0
+}
 
 
 # --------------------------------------------------------------------------------------------------
@@ -917,6 +940,16 @@ prettyprint_dir()
 }
 
 
+# --------------------------------------------------------------------------------------------------
+# Repository-specific functions
+# --------------------------------------------------------------------------------------------------
+
+# Get repository command
+get_repo_cmd()
+{
+	alias | grep "$@" | cut -d= -f2 | tr -d \'
+}
+
 # Check if given dir(s) is (are) (a) repository(ies)
 check_repo()
 {
@@ -1023,6 +1056,14 @@ check_repo()
             printf -- '%s %s\n' "${repotype[$i]}" "${reporoot[$i]}"; done
     fi
 
+}
+
+
+repo_cmd_exit_message()
+{
+	echo
+	infomessage "$@"	
+	echo
 }
 
 
@@ -1711,8 +1752,8 @@ _rm_DONTUSE()
 
             warning "Some files were never added to the repository \n Do you wish to remove them anyway? [N/y]"
 
-            case $(read L && echo $L) in
-                y|Y|yes|Yes|YES)
+            case $(read L) in
+                y|Y|yes|Yes|YES|yEs|yeS|YEs|YeS|yES|ys|Ys|yS|YS)
                     command rm -vI "$@" 2> >(error)
                     print_list_if_OK $?
                     ;;
@@ -1912,9 +1953,16 @@ _cp_DONTUSE()
 _touch_DONTUSE()
 {
     command touch "$@" 2> >(error)
-    print_list_if_OK $?
-    if [[ ! -z $REPO_MODE && $REPO_MODE == 1 ]]; then
-        $REPO_CMD_add "$@"; fi
+	if [[ $? == 0 ]]; then
+		print_list_if_OK 0
+		if [[ ! -z $REPO_MODE && $REPO_MODE == 1 ]]; then						
+			if $(get_repo_cmd $REPO_CMD_add) "$@"; then			
+				repo_cmd_exit_message "Added new file \""$@"\" to the repository."							
+			else
+				warning "Created \""$@"\", but could not add it to the repository."
+			fi			
+		fi
+	fi
 }
 
 # --------------------------------------------------------------------------------------------------
