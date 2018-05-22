@@ -1688,7 +1688,7 @@ _cdn_completer()
 # create dir(s), taking into account current repo mode
 _mkdir_DONTUSE()
 {
-    command mkdir -p "$@" 2> >(error)
+    command mkdir -p -- "$@" 2> >(error)
     if [[ $? == 0 ]]; then
         if [[ ! -z $REPO_MODE && $REPO_MODE == 1 ]]; then
             eval $REPO_CMD_add "$@"; fi
@@ -1712,7 +1712,7 @@ _rm_DONTUSE()
     if [[ ! -z $REPO_MODE && $REPO_MODE -eq 1 ]]; then
 
         # perform repo-specific delete		
-        local -r err=$(eval ${REPO_CMD_remove} -- "$@" 2>&1 > /dev/null)
+        local -r err=$(eval ${REPO_CMD_remove} "$@" 2>&1 > /dev/null)
 		local not_added
 		local outside_repo		
 
@@ -1743,7 +1743,7 @@ _rm_DONTUSE()
                 ;;
 
             *) # anything erroneous does the same as no repo
-                command rm -vI -- "$@" 2> >(error)
+                command rm -vI "$@" 2> >(error)
                 print_list_if_OK $?
                 ;;
 
@@ -1762,7 +1762,7 @@ _rm_DONTUSE()
 
             case $(read L) in
                 y|Y|yes|Yes|YES|yEs|yeS|YEs|YeS|yES|ys|Ys|yS|YS)
-                    command rm -vI -- "$@" 2> >(error)
+                    command rm -vI "$@" 2> >(error)
                     print_list_if_OK $?
                     ;;
                 *)
@@ -1771,7 +1771,7 @@ _rm_DONTUSE()
 
         else
             if [[ "$err" =~ "${outside_repo}" ]]; then
-                command rm -vI -- "$@" 2> >(error)
+                command rm -vI "$@" 2> >(error)
                 if [ $? -eq 0 ]; then
                     print_list_if_OK 0
                     warning "Some files were outside the repository."
@@ -1837,7 +1837,6 @@ _mv_DONTUSE()
     if [[ ! -z $REPO_MODE && $REPO_MODE == 1 && $REPO_TYPE == "git" ]]; then
 
         local match="outside repository"
-
         local err=$(git mv "$@" 1> /dev/null 2> >(error))
 
 
