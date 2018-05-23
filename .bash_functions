@@ -1110,6 +1110,7 @@ __enter_GIT()
     alias gl="git log --oneline"           ;  REPO_CMD_log="gl"
     alias ga="git add"                     ;  REPO_CMD_add="ga"
     alias grm="git rm"                     ;  REPO_CMD_remove="grm"
+	alias unlink="git rm --cached"         ;  REPO_CMD_unlink="unlink"
     alias gm="git merge"                   ;  REPO_CMD_merge="gm"
     alias gmt="git mergetool"              ;  REPO_CMD_mergetool="gmt"
 
