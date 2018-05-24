@@ -1109,12 +1109,15 @@ __enter_GIT()
     alias gs="git status"                  ;  REPO_CMD_status="gs"
     alias gl="git log --oneline"           ;  REPO_CMD_log="gl"
     alias ga="git add"                     ;  REPO_CMD_add="ga"
-    alias grm="git rm"                     ;  REPO_CMD_remove="grm"
-	alias unlink="git rm --cached"         ;  REPO_CMD_unlink="unlink"
+    alias grm="git rm"                     ;  REPO_CMD_remove="grm"	
     alias gm="git merge"                   ;  REPO_CMD_merge="gm"
     alias gmt="git mergetool"              ;  REPO_CMD_mergetool="gmt"
-
-    alias gco="git checkout"               ;  REPO_CMD_checkout="gco"
+	
+		
+	alias unlink="git rm --cached"                ;  REPO_CMD_unlink="unlink"	       # remove from repository, but keep local 
+	alias istracked="git ls-files --error-unmatch";  REPO_CMD_trackcheck="istracked"   # check whether file is tracked 
+    
+	alias gco="git checkout"               ;  REPO_CMD_checkout="gco"
     complete -o default -o nospace -F _git_checkout gco
 
     alias gu="git pull && git push"        ;  REPO_CMD_update="gu"
@@ -1884,14 +1887,6 @@ _ln_DONTUSE()
 }
 
 # copy file(s), taking into account current repo mode
-# TODO: this needs work; there are more possibilities:
-#
-#  - source IN  repo, target IN repo
-#  - source OUT repo, target OUT repo
-#  - source IN  repo, target OUT repo
-#  - source OUT repo, target IN  repo
-#
-# warnings should be issued, files auto-added to repo, etc.
 _cp_DONTUSE()
 {
     # Help call
@@ -1902,10 +1897,12 @@ _cp_DONTUSE()
 
     local cpcmd
     local -ir nargin=$#
+	
+	local -a arglist=("$@")
 	local args=''
 	
 	# Explicitly quote all arguments (needed because eval())
-	for arg in "$@"; do
+	for arg in "${arglist[@]}"; do
 		args="$args \"$arg\""; done
 
 	# nominal copy command
@@ -1933,9 +1930,9 @@ _cp_DONTUSE()
         esac
     done
 
-    # Allow 1-argument copy
+    # 1-argument copy copies to same destination, with "COPY" appended
     if [[ $nargin == 1 ]]; then
-		command cp "$1" "copy_of_$1"
+		command cp "$1" "$1_COPY"
         print_list_if_OK $?
         return
     fi
@@ -1944,28 +1941,73 @@ _cp_DONTUSE()
     cpcmd="${cpcmd} 2> >(error)"
 
     # REPO mode
-    if [[ ! -z $REPO_TYPE && $REPO_TYPE == "git" ]]; then
+	local -i cmd_ok=0
+    if [[ ! -z $REPO_MODE && $REPO_MODE == 1 ]]; then
+	
+		#  - source IN  repo, target IN repo   ← git add "target/source"
+		#  - source OUT repo, target OUT repo  ← do nothing
+		#  - source IN  repo, target OUT repo  ← do nothing
+		#  - source OUT repo, target IN  repo  ← git add "target/source"
+		#		
+		#  - source is DIR, target is DIR    ← OK; "source" will be subdir of "target"
+		#  - source is FILE, target is DIR   ← OK; "source" will be subdir of "target"
+		#  - source is DIR, target is FILE   ← error, with sidenote:
+		#  - source is FILE, target is FILE  ← OK, with sidenote:
+		#    - there is 1 source             ← simple rename operation
+		#    - there are multiple sources    ← ...make tarball?
+		#
+		#  - source EXISTS, target DOESN'T EXIST         ← OK
+		#  - source DOESN'T EXIST, target DOESN'T EXIST  ← error (handled by rsync)
+		#  - source DOESN'T EXIST, target EXISTS         ← error (handled by rsync)
 
-        # only add copy to repo when
-        # - we have exactly 2 arguments
-        # - if arg. 1 and 2 are both inside the repo
-
+		# First, carry out the copy
         eval "$cpcmd"
-
-        if [[ $nargin == 2 ]]; then            
-			if $(get_repo_cmd $REPO_CMD_add) "$2" 2> >(error); then
-				repo_cmd_exit_message "Added \""$@"\" to the repository."
+		
+		# Then add sources to repository if needed
+		local -r target="${arglist[-1]}"
+		local -i target_exists=0
+		local -i target_in_repo=0
+		local -i target_is_dir=0
+		
+		local    src
+		local -i src_is_dir
+		local -i src_in_repo
+		
+		local -i repocmd_ok
+		local -r repo_add=$(get_repo_cmd $REPO_CMD_add)
+		local -r istracked=$(get_repo_cmd $REPO_CMD_trackcheck)
+		
+		if $($istracked "$target" 2> >(error)); then target_in_repo=1; target_exists=1; fi
+		if [[ -d "$target" ]]; then target_is_dir=1; target_exists=1; fi
+		
+		echo ""
+		for src in "${arglist[@]}"; do
+		
+			src_is_dir=0;  if [[ -d "$src" ]]; then src_is_dir=1; fi
+			src_in_repo=0; if $(istracked "$src" 2> >(error)); then src_in_repo=1; fi
+			
+			# TODO: implement the logic as commented above 
+			#if $src_is_dir; then
+			#fi
+			
+			repocmd_ok=$($repo_add "$src" 2> >(error))			
+			
+			if $repocmd_ok; then
+				infomessage "Added \"$src\" to the repository."
 			else
-				warning "Could not add \""$@"\" to the repository."
-			fi
-		fi
-
+				cmd_ok=1
+				warning "Could not add \"$src\" to the repository."
+			fi		
+		
+		done	
+		echo ""
+		
     # normal mode
     else
-        eval "$cpcmd"
+        eval "$cpcmd"		
     fi
 
-    print_list_if_OK $?
+    print_list_if_OK "$cmd_ok"
 }
 
 # touch file, taking into account current repo mode
@@ -1975,7 +2017,7 @@ _touch_DONTUSE()
 	if [[ $? == 0 ]]; then
 		print_list_if_OK 0
 		if [[ ! -z $REPO_MODE && $REPO_MODE == 1 ]]; then						
-			if $(get_repo_cmd $REPO_CMD_add) "$@"; then			
+			if $(get_repo_cmd $REPO_CMD_add "$@"); then			
 				repo_cmd_exit_message "Added new file \""$@"\" to the repository."
 			else
 				warning "Created \""$@"\", but could not add it to the repository."
