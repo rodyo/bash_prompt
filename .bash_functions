@@ -180,7 +180,7 @@ if [ "$SHELL_COLORS" == "yes" ]; then
     USE_COLORS=1
 
     IFS=": "	
-		# shellcheck disable=SC2207
+		# shellcheck disable=SC2206
         tmp=($LS_COLORS)
     IFS="$IFS_ORIGINAL"
 
@@ -448,13 +448,16 @@ multicolumn_ls()
             # TODO: also cifs and fuse.sshfs etc. --might-- support it, but how to check for this...
         esac
 
-        ( ((${BASH_VERSION:0:1}>=4)) && [ $processAcls -eq 1 ] && if [ $haveAttrlist -eq 1 ]; then
+        ( ((${BASH_VERSION:0:1}>=4)) && [ $processAcls -eq 1 ] && if [[ $haveAttrlist == 1 ]]; then
             local -A attrlist
+			# shellcheck disable=2207
             local attlist=($(lsattr 2>&1))
+			# shellcheck disable=2207
             local attribs=($(echo "${attlist[*]%% *}"))
+			# shellcheck disable=2207
             local attnames=($(echo "${attlist[*]##*\.\/}"))
             for ((i=0; i<${#attnames[@]}; i++)); do
-                if [ ${attribs[$i]%%lsattr:*} ]; then
+                if [[ ${attribs[$i]%%lsattr:*} ]]; then
                     attrlist[${attnames[$i]}]="${attribs[$i]}"; fi
             done
             unset attnames attribs attlist
@@ -474,49 +477,53 @@ multicolumn_ls()
         local firstline=
         if [ $haveFiles == false ]; then
             firstline="${dirlist[0]}"
-            unset dirlist[0]
+            unset "dirlist[0]"
         fi
 
         # Compute number of rows to use (equivalent to ceil)
-        local numRows=$(( (${#dirlist[@]}+$numColumns-1)/$numColumns ))
-        if [ $numRows -lt $minLines ]; then
+        local numRows=$(( (${#dirlist[@]}+numColumns-1)/numColumns ))
+        if [[ $numRows < $minLines ]]; then
             numRows=$minLines; fi
 
         # Split dirlist up in permissions, filesizes, names, and extentions
+		# shellcheck disable=2207
         local perms=($(printf -- '%s\n' "${dirlist[@]}" | awk '{print $1}'))
+		# shellcheck disable=2207
         local sizes=($(printf -- '%s\n' "${dirlist[@]}" | awk '{print $3}'))
         # NOTE: awkward yes, but the only way to get all spaces etc. right under ALL circumstances
+		# shellcheck disable=2207
         local names=($(printf -- '%s\n' "${dirlist[@]}" | awk '{for(i=4;i<=NF;i++) $(i-3)=$i; if (NF>0)NF=NF-3; print $0}'))
         local extensions
         for ((i=0; i<${#names[@]}; i++)); do
             extensions[$i]=${names[$i]##*\.}
-            if [ ${extensions[$i]} == ${names[$i]} ]; then
+            if [[ ${extensions[$i]} == "${names[$i]}" ]]; then
                 extensions[$i]="."; fi
         done
 
         # Now print the list
-        if [ $USE_COLORS -eq 1 ]; then
-            printf "$RESET_COLORS"; fi
+        if [[ $USE_COLORS == 1 ]]; then
+			# shellcheck disable=2059
+            printf -- "$RESET_COLORS"; fi
 
         local lastColumnWidth ind paint device=0 lastColumn=0 lastsymbol=" "
         local n numDirs=0 numFiles=0 numLinks=0 numDevs=0 numPipes=0 numSockets=0
 
-        for ((i=0; i<$numRows; i++)); do
-            if [ $i -ge ${#names[@]} ]; then break; fi
-            for ((j=0; j<$numColumns; j++)); do
+        for ((i=0; i<numRows; i++)); do
+            if [[ ! $i < ${#names[@]} ]]; then break; fi
+            for ((j=0; j<numColumns; j++)); do
 
                 device=0
                 lastColumn=0
                 lastsymbol=" "
 
-                ind=$((i+$numRows*j));
-                if [ $ind -ge ${#names[@]} ]; then
+                ind=$((i+numRows*j));
+                if [[ ! $ind < ${#names[@]} ]]; then
                     break; fi
-                if [ $((i+$numRows*((j+1)))) -ge ${#names[@]} ]; then
+                if [[ ! $((i+numRows*((j+1)))) < ${#names[@]} ]]; then
                     lastColumn=1; fi
 
                 # we ARE using colors:
-                if [ $USE_COLORS  -eq 1 ]; then
+                if [[ $USE_COLORS == 1 ]]; then
 
                     # get type (dir, link, file)
                     case ${perms[$ind]:0:1} in
@@ -569,7 +576,7 @@ multicolumn_ls()
 
                         # immutables
                         n=attrlist[${names[$ind]}]; n=${!n}
-                        if [ ${n//[^i]} ]; then
+                        if [[ ${n//[^i]} ]]; then
                             paint=44\;"$paint"
                             lastsymbol="i";
                         fi
@@ -578,9 +585,9 @@ multicolumn_ls()
                     # truncate name if it is longer than maximum displayable length
                     if [ ${#names[$ind]} -gt $maxNameWidth ] && [ $lastColumn -eq 0 ]; then
                         names[$ind]=${names[$ind]:0:$(($maxNameWidth-3))}"...";
-                    elif [ $lastColumn -eq 1 ]; then
-                        lastColumnWidth=$(($COLUMNS-$j*$maxColumnWidth-10-3))
-                        if [ ${#names[$ind]} -gt $lastColumnWidth ]; then
+                    elif [[ $lastColumn == 1 ]]; then
+                        lastColumnWidth=$((COLUMNS-j*maxColumnWidth-10-3))
+                        if [[ ! ${#names[$ind]} < $lastColumnWidth ]]; then
                             names[$ind]=${names[$ind]:0:$lastColumnWidth}"..."; fi
                     fi
 
@@ -599,10 +606,10 @@ multicolumn_ls()
                     case ${perms[$ind]:0:1} in
                         b|c) device=1;;
                     esac
-                    if [[ $device = 1 ]]; then
-                        printf -- "%7s  %-*s " "${sizes[$ind]}${names[$ind]%% *}" $maxNameWidth "${names[$ind]#* }"
+                    if [[ $device == 1 ]]; then
+                        printf -- "%7s  %-*s " "${sizes[$ind]}${names[$ind]%% *}" "$maxNameWidth" "${names[$ind]#* }"
                     else
-                        printf -- "%7s  %-*s " "${sizes[$ind]}" $maxNameWidth "${names[$ind]}"
+                        printf -- "%7s  %-*s " "${sizes[$ind]}" "$maxNameWidth" "${names[$ind]}"
                     fi
                 fi
             done
@@ -612,13 +619,13 @@ multicolumn_ls()
         done
 
         # finish up
-        if [ $numDirs -eq 0 ] && [ $numFiles -eq 0 ] && [ $numLinks -eq 0 ] &&
-           [ $numDevs -eq 0 ] && [ $numPipes -eq 0 ] && [ $numSockets -eq 0 ]; then
+        if [[ $numDirs == 0 ]] && [[ $numFiles == 0 ]] && [[ $numLinks == 0 ]] &&
+           [[ $numDevs == 0 ]] && [[ $numPipes == 0 ]] && [[ $numSockets == 0 ]]; then
             echo "Empty dir."
 
         else
-            if [ $haveFiles == false ]; then
-                printf -- "%s in " $firstline
+            if [[ $haveFiles == false ]]; then
+                printf -- "%s in " "$firstline"
             else
                 printf -- "Total "
             fi
@@ -636,7 +643,7 @@ multicolumn_ls()
             if [[ $numSockets != 0 ]]; then
                 printf -- "%d sockets, " $numSockets; fi
 
-            printf "\b\b.\n"
+            printf '\b\b.\n'
         fi
 
         IFS="$IFS_ORIGINAL"
@@ -697,10 +704,10 @@ promptcmd()
         "git")
             branch=$(git branch | command grep "*")
             branch="${branch#\* }"
-            if [ $? -ne 0 ]; then
+            if [[ $? != 0 ]]; then
                 branch="*unknown branch*"; fi
 
-            if [ $USE_COLORS -eq 1 ]; then
+            if [[ $USE_COLORS == 1 ]]; then
                 PS1="$ES${usrName}"'\u'"${RESET_COLORS_PS1}@${hstName}"'\h'"${RESET_COLORS_PS1} : "'\['"${REPO_COLOR[git]} [git: ${branch}] : "'\W'"/${RESET_COLORS_PS1} "'\$'" "
             else
                 PS1="$ES"'\u@\h : [git: '"${branch}] : "'\W/ \$ ';
@@ -709,7 +716,7 @@ promptcmd()
 
         # SVN, Mercurial, Bazhaar
         "svn"|"hg"|"bzr")
-            if [ $USE_COLORS -eq 1 ]; then
+            if [[ $USE_COLORS == 1 ]]; then
                 PS1="$ES${usrName}"'\u'"${RESET_COLORS_PS1}@${hstName}"'\h'"${RESET_COLORS_PS1} : "'\['"${REPO_COLOR[${REPO_TYPE}]} [${REPO_TYPE}] : "'\W'"/${RESET_COLORS_PS1} "'\$'" "
             else
                 PS1="$ES"'\u@\h : ['"${REPO_TYPE}] : "'\W/ \$ ';
@@ -717,7 +724,7 @@ promptcmd()
             ;;
 
         # Normal prompt
-        *)  if [ $USE_COLORS -eq 1 ]; then
+        *)  if [[ $USE_COLORS = 1 ]]; then
 
                 local -r dircolor="${START_COLORSCHEME_PS1}${TXT_BOLD};${FG_BLUE}${END_COLORSCHEME_PS1}"
 
@@ -857,6 +864,7 @@ prettyprint_dir()
 
 
     if [ $# -lt 3 ]; then
+		# shellcheck disable=2207
         repoinfo=($(check_repo "$@"))
         if [ ${#repoinfo[@]} -gt 2 ]; then
             repoinfo[1]=$(strjoin "${IFS[0]}" "${repoinfo[@]:1}"); fi
@@ -1207,13 +1215,13 @@ lds()
 	
     # When no argument is given, process all dirs. Otherwise: process only given dirs
     if [ $# -eq 0 ]; then
-       dirs=$(command ls -Adh1 --time-style=+ -- */ 2> /dev/null)
+       dirs=$(command ls -Adh1 --time-style=+ -- */ 2> >(error))
     else
-       dirs=$(command ls -Adh1 --time-style=+ -- ${@/%//} 2> /dev/null)
+       dirs=$(command ls -Adh1 --time-style=+ -- ${@/%//} 2> >(error))
     fi
 		
 	# find proper color used for directories
-    if [ $USE_COLORS -eq 1 ]; then            
+    if [[ $USE_COLORS == 1 ]]; then            
         local -r color="${ALL_COLORS[di]}"; fi
 		
 	# loop through dirlist and parse
@@ -1229,7 +1237,7 @@ lds()
 		tput cuu 1 && tput el
 		
 		if [ $USE_COLORS -eq 1 ]; then
-			printf -- "%s\t${START_COLORSCHEME}${color}${END_COLORSCHEME}%s\n${RESET_COLORS}" "$sz" "$f"
+			printf -- '%s\t'"${START_COLORSCHEME}${color}${END_COLORSCHEME}"'%s\n'"${RESET_COLORS}"   "$sz" "$f"
 		else
 			printf -- '%s\t%s\n' "$sz" "$f"
 		fi
@@ -1342,14 +1350,14 @@ __add_dir_to_stack()
 
             if [ "${addition}" == "${dir}" ]; then
                 was_present=1
-                printf -- "%${DIRSTACK_COUNTLENGTH}d %s\\n" $(($counter+1)) "${dir}" >> "${tmp}"
+                printf -- "%${DIRSTACK_COUNTLENGTH}d "'%s\n' $((counter+1)) "${dir}" >> "${tmp}"
             else
                 echo "${dirline}" >> "${tmp}"
             fi
         done
 
-        if [ $was_present -eq 0 ]; then
-            printf -- "%${DIRSTACK_COUNTLENGTH}d %s\n" 1 "${addition}" >> "${tmp}"; fi
+        if [[ $was_present == 0 ]]; then
+            printf -- "%${DIRSTACK_COUNTLENGTH}d %s"'\n' 1 "${addition}" >> "${tmp}"; fi
 
         # Sort according to most visits, and finish up
         sort -r "${tmp}" > "${DIRSTACK_FILE}"
@@ -1411,7 +1419,7 @@ __remove_dir_from_stack()
         if [[ ${removal} =~ ^[0-9]+$ ]]; then
 
             # Check it!
-            if [ ${removal} -gt ${#stack} ]; then
+            if [[ ${removal} > ${#stack} ]]; then
                error "Requested index (%d) exceeds number of directories in stack (%d)." ${removal} ${#stack}
                _unlock_dirstack
                return 1
@@ -1757,10 +1765,10 @@ _rm_DONTUSE()
         # All was OK
         if [[ -z "$err" ]]; then
 		
-			repo_cmd_exit_message "Removed \""$@"\" from repository."
+			repo_cmd_exit_message "Removed \"$*\" from repository."
 		
 		# remove non-added or external files
-		elif [[ "$err" =~ "${not_added}" ]]; then
+		elif [[ "$err" =~ ${not_added} ]]; then
 
             warning "Some files were never added to the repository \nDo you wish to remove them anyway? [N/y]"
 
@@ -1774,7 +1782,7 @@ _rm_DONTUSE()
             esac
 
         else
-            if [[ "$err" =~ "${outside_repo}" ]]; then
+            if [[ "$err" =~ ${outside_repo} ]]; then
                 command rm -vI "$@" 2> >(error)
                 if [ $? -eq 0 ]; then
                     print_list_if_OK 0
@@ -1874,8 +1882,7 @@ _ln_DONTUSE()
         return 0
     fi
 
-    command ln -s "$@" 2> >(error)
-    if [[ $? == 0 ]]; then
+    if command ln -s "$@" 2> >(error); then
         print_list_if_OK 0
         if [[ ! -z $REPO_TYPE && $REPO_TYPE == "git" ]]; then
         # TODO: add link ($2, but taking into account spaces)
@@ -1974,8 +1981,8 @@ _cp_DONTUSE()
 		local -i src_in_repo
 		
 		local -i repocmd_ok
-		local -r repo_add=$(get_repo_cmd $REPO_CMD_add)
-		local -r istracked=$(get_repo_cmd $REPO_CMD_trackcheck)
+		local -r repo_add=$(get_repo_cmd "$REPO_CMD_add")
+		local -r istracked=$(get_repo_cmd "$REPO_CMD_trackcheck")
 		
 		if $($istracked "$target" 2> >(error)); then target_in_repo=1; target_exists=1; fi
 		if [[ -d "$target" ]]; then target_is_dir=1; target_exists=1; fi
@@ -2013,14 +2020,13 @@ _cp_DONTUSE()
 # touch file, taking into account current repo mode
 _touch_DONTUSE()
 {
-    command touch "$@" 2> >(error)
-	if [[ $? == 0 ]]; then
+	if touch "$@" 2> >(error); then
 		print_list_if_OK 0
 		if [[ ! -z $REPO_MODE && $REPO_MODE == 1 ]]; then						
-			if $(get_repo_cmd $REPO_CMD_add "$@"); then			
-				repo_cmd_exit_message "Added new file \""$@"\" to the repository."
+			if $(get_repo_cmd "$REPO_CMD_add" "$@"); then			
+				repo_cmd_exit_message "Added new file \"$*\" to the repository."
 			else
-				warning "Created \""$@"\", but could not add it to the repository."
+				warning "Created \"$*\", but could not add it to the repository."
 			fi			
 		fi
 	fi
@@ -2155,9 +2161,9 @@ _findbig_DONTUSE()
                 fcolor=${LS_COLORS##*no=};
                 fcolor=${fcolor%%:*}
             fi
-            printf -- "%s\E[${dcolor#*;}m%s\E[${fcolor#*;}m%s\n${RESET_COLORS}" $perms $dir $file
+            printf -- "%s\E[${dcolor#*;}m%s\E[${fcolor#*;}m%s\\n${RESET_COLORS}" $perms $dir $file
         else
-            printf -- "%s%s%s\n" $perms $dir $file
+            printf -- '%s%s%s\n' $perms $dir $file
         fi
     done
 
@@ -2225,7 +2231,7 @@ chroot_dir()
 # must be aliased in .bash_aliases
 _gedit_DONTUSE()
 {
-    if [ $atWork -eq 0 ]; then
+    if [[ $atWork == 0 ]]; then
         (gedit "$@" &) | nohup &> /dev/null;
     else
         (notepad "$@" &) | nohup &> /dev/null;
@@ -2388,7 +2394,7 @@ check_XML()
 new_github_repo()
 {
     git init
-    git add * .gitignore
+    git add -- * .gitignore
     git commit -m "First commit"
     git remote add origin git@github.com:rodyo/"${1}".git
     git push -u origin master
@@ -2422,7 +2428,7 @@ slgrep()
         if [ "$extension" = "slx" ]; then
             result=$(unzip -c "$file" | grep -EiIT --color=always --exclude-dir .svn --exclude-dir .git "$@")
             if [[ ! -z "$result" ]]; then 
-                printf -- "${START_COLORSCHEME}${FG_MAGENTA}${END_COLORSCHEME}%s${RESET_COLORS}: %s\n" "$file" "$result"; fi
+                printf -- "${START_COLORSCHEME}${FG_MAGENTA}${END_COLORSCHEME}%s${RESET_COLORS}: %s"'\n' "$file" "$result"; fi
         else
             grep -EiIT --color=auto --exclude-dir .svn --exclude-dir .git "$@" "$file" /dev/null
         fi

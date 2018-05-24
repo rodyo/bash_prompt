@@ -154,7 +154,7 @@ alias rebash=". ~/.bashrc"
 alias ssh_mediabox="ssh -p 2021 media@rastawern.no-ip.org"
 alias ssh_heaven="ssh -p 2022 rody@rastawern.no-ip.org"
 alias ssh_hell="ssh -p 2022 rody@rastawern.no-ip.org"
-alais ssh_rivka="ssh -p 2023 rivka@rastawern.no-ip.org"
+alias ssh_rivka="ssh -p 2023 rivka@rastawern.no-ip.org"
 
 
 # MATLAB 
