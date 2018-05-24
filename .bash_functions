@@ -1901,10 +1901,15 @@ _cp_DONTUSE()
     fi
 
     local cpcmd
-    local -i nargin=$#
+    local -ir nargin=$#
+	local args=''
+	
+	# Explicitly quote all arguments (needed because eval())
+	for arg in "$@"; do
+		args="$args \"$arg\""; done
 
-    #cpcmd="command cp -ivR $@"
-    cpcmd="rsync -aAHch --info=progress2 $@"
+	# nominal copy command
+    cpcmd="rsync -aAHch --info=progress2 ${args}"	
 
     # optional args
     while (( "$#" )); do
@@ -1924,14 +1929,14 @@ _cp_DONTUSE()
                 ;;
             *)
                 break
-                ;;
+				;;
         esac
     done
 
-
-    # allow 1-argument copy
-    if [ $nargin -eq 1 ]; then
-        _cp_DONTUSE "$1" "copy_of_$1"
+    # Allow 1-argument copy
+    if [[ $nargin == 1 ]]; then
+		command cp "$1" "copy_of_$1"
+        print_list_if_OK $?
         return
     fi
 
@@ -1947,9 +1952,13 @@ _cp_DONTUSE()
 
         eval "$cpcmd"
 
-        if [ $nargin -eq 2 ]; then
-            git add "$2" 2> >(error); fi
-
+        if [[ $nargin == 2 ]]; then            
+			if $(get_repo_cmd $REPO_CMD_add) "$2" 2> >(error); then
+				repo_cmd_exit_message "Added \""$@"\" to the repository."
+			else
+				warning "Could not add \""$@"\" to the repository."
+			fi
+		fi
 
     # normal mode
     else
