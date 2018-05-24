@@ -73,15 +73,15 @@ alias tree='find . | sed -e "s/[^-][^\/]*\//  │/g; s/│\([^ ]\)/├─\1/"'
 # FS manipulation & navigation
 alias cdn=_cdn_DONTUSE
 alias cd=_cd_DONTUSE
-alias dc=_cd_DONTUSE
-alias mv=_mv_DONTUSE
+#alias dc=_cd_DONTUSE  # TODO: off, until it's finished
+#alias mv=_mv_DONTUSE  #
 alias rm=_rm_DONTUSE
-alias cp=_cp_DONTUSE
+#alias cp=_cp_DONTUSE  #
 alias ln=_ln_DONTUSE
 alias touch=_touch_DONTUSE
 alias mkdir=_mkdir_DONTUSE
 alias rmdir=_rmdir_DONTUSE
-alias shred="shred -uz -n 36"
+alias shred="shred -uz -n 4"
 alias rmrf="rm -rf"
 alias ged=_gedit_DONTUSE
 alias not=_gedit_DONTUSE
@@ -150,12 +150,18 @@ alias catbare='/bin/egrep -v "^#\|^[[:space:]]*$"'
 alias rebash=". ~/.bashrc"
 
 
-# matlab
+# Home
+alias ssh_mediabox="ssh -p 2021 media@rastawern.no-ip.org"
+alias ssh_heaven="ssh -p 2022 rody@rastawern.no-ip.org"
+alias ssh_hell="ssh -p 2022 rody@rastawern.no-ip.org"
+alais ssh_rivka="ssh -p 2023 rivka@rastawern.no-ip.org"
+
+
+# MATLAB 
 
 MATLAB_BASE="/usr/local/MATLAB/"
 MATLAB="/usr/local/bin/matlab"
 
-alias matlab_2010="${MATLAB_BASE}/R2010a/bin/matlab -desktop &"
 alias matlab_2014="${MATLAB_BASE}/R2014a/bin/matlab -desktop &"
 alias matlab_2017="${MATLAB_BASE}/R2017a/bin/matlab -desktop &"
 
@@ -169,6 +175,4 @@ alias ipython="ipython -pylab"
 
 
 # WORK
-alias sshimulus="ssh simulus@simulus_box"
-alias cdss="cd ~/SIMULUS_5/SIMSAT4-Kernel/"
-alias cded="cd ~/Desktop/Work/EDRS/Software"
+alias ssh_tinker="ssh ispace@ispace-08"
