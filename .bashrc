@@ -162,14 +162,13 @@ fi
 # Default editor
 export EDITOR=nano
 
-
-# Todo.txt
-if [[ -d ~/.todo && -f ~/.todo/todo_completion ]]; then
-    source ~/.todo/todo_completion; fi
-
 # Alias definitions
 if [ -f ~/.bash_aliases ]; then
     source ~/.bash_aliases; fi
+
+# bash ido
+if [ -f ~/.bash_ido ]; then
+    source ~/.bash_ido; fi
 
 # Keyboard shortcut definitions
 export INPUTRC=~/.inputrc
@@ -177,7 +176,7 @@ export INPUTRC=~/.inputrc
 
 # SSH agent (useful on CygWin)
 if [ -z "$SSH_AUTH_SOCK" -a -x "$SSHAGENT" ]; then
-    eval `ssh-agent -s`
+    eval $(ssh-agent -s)
     trap "kill $SSH_AGENT_PID" 0
 fi
 
@@ -185,3 +184,9 @@ fi
 # Ultimate debugging prompt
 # see https://stackoverflow.com/questions/17804007/how-to-show-line-number-when-executing-bash-script
 export PS4='+(${BASH_SOURCE}:${LINENO}): ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
+
+
+# We're done; do a list
+multicolumn_ls
+
+

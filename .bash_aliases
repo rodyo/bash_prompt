@@ -13,10 +13,10 @@
 
 
 # First some exports
-export GIT_MODE=false             # "GIT mode" on or not
-export SVN_MODE=false             # "SVN mode" on or not
-export REPO_PATH=                 # path where repository is located
-PS1_=$PS1;                        # save it to reset it when changed below
+export GIT_MODE=false # "GIT mode" on or not
+export SVN_MODE=false # "SVN mode" on or not
+export REPO_PATH=     # path where repository is located
+PS1_=$PS1;            # save it to reset it when changed below
 
 # global vars
 NUM_PROCESSORS=$(nproc --all)
@@ -32,17 +32,6 @@ if [ "$color_prompt" = yes ]; then
 fi
 
 
-
-# clear function
-# TODO: this belongs in .bash_functions...but, then all the list aliases therein get screwed up
-_clear_DONTUSE(){
-    for (( i=0; i<$LINES; i++)); do
-        printf "\n%*s\r" $COLUMNS " ";
-    done;
-    printf "\E[1;${COLUMN}H"
-}
-alias clear=_clear_DONTUSE
-
 # bash-ido
 # By <pierre.gaston@gmail.com>
 # and <oldenhuis@gmail.com>
@@ -53,7 +42,7 @@ alias clear=_clear_DONTUSE
 # By <oldenhuis@gmail.com>
 if [ -f ~/.bash_functions ]; then
     source ~/.bash_functions;
-    __check_dirstack
+    _check_dirstack
 fi
 
 # list-aliases
@@ -67,16 +56,15 @@ alias l="clear; multicolumn_ls"
 alias lS="l -S"
 alias la="l -A"
 alias laS="l -AS"
-#alias tree='find . -type d | sed -e "s/[^-][^\/]*\//  |/g;s/|\([^ ]\)/|-\1/"'
 alias tree='find . | sed -e "s/[^-][^\/]*\//  │/g; s/│\([^ ]\)/├─\1/"'
 
 # FS manipulation & navigation
 alias cdn=_cdn_DONTUSE
 alias cd=_cd_DONTUSE
-#alias dc=_cd_DONTUSE  # TODO: off, until it's finished
-#alias mv=_mv_DONTUSE  #
-alias rm=_rm_DONTUSE
+alias dc=_cd_DONTUSE
+#alias mv=_mv_DONTUSE  # TODO: off, until it's finished
 #alias cp=_cp_DONTUSE  #
+alias rm=_rm_DONTUSE
 alias ln=_ln_DONTUSE
 alias touch=_touch_DONTUSE
 alias mkdir=_mkdir_DONTUSE
@@ -85,16 +73,15 @@ alias shred="shred -uz -n 4"
 alias rmrf="rm -rf"
 alias ged=_gedit_DONTUSE
 alias not=_gedit_DONTUSE
-alias sged="gksudo _gedit_DONTUSE"
+
 
 # Bind completion of "cd" to "ido_dir()"
 # TODO: work out bugs
 # TODO: make it work better
 #complete -F ido_dir -o nospace cdd
 
-
 # one-letter shorts
-alias c=clear
+alias c="clear"
 alias clc='printf "\033c"'
 alias C='printf "\033c"'
 alias x=exit
@@ -126,8 +113,10 @@ alias doc="cd ~/Documents/"
 alias work="cd ~/e/Work/"
 
 # various
+alias clear="_clear_DONTUSE"
 alias forget="history -c; clear"
 alias findbig=_findbig_DONTUSE
+alias findfile="find . -type f -iname "
 alias newpaper=". newpaper.sh"
 alias sysupdate="sudo apt-get update; sudo apt-get -y dist-upgrade"
 alias remove_old_kernels="dpkg -l 'linux-*' | sed '/^ii/!d;/'"$(uname -r | sed "s/\(.*\)-\([^0-9]\+\)/\1/")"'/d;s/^[^ ]* [^ ]* \([^ ]*\).*/\1/;/[0-9]/!d' | xargs sudo apt-get -y purge"
@@ -141,7 +130,6 @@ alias gzip="gzip -9"
 alias fstab="sgedit /etc/fstab"
 alias bc="/bin/bc -lq"
 alias df="df -ThH"
-#alias psa="ps auxw | command egrep -iT --color=auto"
 alias top10="ps -eo pcpu,pid,user,args | sort -k 1 -r | head -10"
 alias locate="locate -i"
 alias grep="egrep -iIT --color=auto --exclude-dir .svn --exclude-dir .git"
@@ -157,7 +145,7 @@ alias ssh_hell="ssh -p 2022 rody@rastawern.no-ip.org"
 alias ssh_rivka="ssh -p 2023 rivka@rastawern.no-ip.org"
 
 
-# MATLAB 
+# MATLAB
 
 MATLAB_BASE="/usr/local/MATLAB/"
 MATLAB="/usr/local/bin/matlab"

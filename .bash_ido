@@ -146,12 +146,10 @@
 #  * once bugs are out, send everything to Pierre (and lookup the forum you got this from)
 #
 
-
 #  BUGS:
 #  -----
 #  * When we're near the bottom, pressing RETURN will copy the current line...?
 #
-
 
 
 # ido menu options
@@ -167,7 +165,8 @@ export IDO_HISTORY_FILE="~/.ido_history" # File used for persistent history.
 
 
 # Get the current cursor line and column
-ido_get_col_line(){
+ido_get_col_line()
+{
     # Easier said than done:
     local pos old_settings
     old_settings=$(stty -g)
@@ -180,30 +179,40 @@ ido_get_col_line(){
     COLUMN=${pos##*;} # the current column
 }
 
+
 # Clear the ido menu
 ido_clear_menu()
 {
     # clear current line, reset all color attributes
-    printf "\E[0m\E[$LINE;${COLUMN}H%*s" $(($COLUMNS-$COLUMN+1)) " "
+    printf "\E[0m\E[$LINE;${COLUMN}H%*s" $((COLUMNS-COLUMN+1)) " "
 
     # clear the IDO_LINES
     for (( i=0; i<=$IDO_LINES; i++ )); do
-        printf "\n%*s" $COLUMNS " " ; done
+        printf '\n%*s' $COLUMNS " "; done
 
     # we're near the bottom
-    if [ $(($LINE+$IDO_LINES+1)) -ge $LINES ]; then
-        LINE=$(($LINES-$IDO_LINES-1)); fi
+    if [ $((LINE+IDO_LINES+1)) -ge $LINES ]; then
+        LINE=$((LINES-IDO_LINES-1)); fi
 
     # put the cursor back
     printf "\E[$LINE;${COLUMN}H"
 }
 
+
 # print the filtered menu
 ido_print_f_menu()
 {
     # Prints the directories on max. 4 lines
-    local prompt menu ido_f_menu_printed ido_result_printed cur IFS_=$IFS ind=0 i=0 j=0
-    local maxcols=$(($COLUMNS/$IDO_ITEMLENGTH)) # cols (depends on actual screen width)
+    local prompt
+    local menu
+    local ido_f_menu_printed
+    local ido_result_printed
+    local cur
+    local IFS_="$IFS"
+    local ind=0
+    local i=0
+    local j=0
+    local maxcols=$((COLUMNS/IDO_ITEMLENGTH)) # cols (depends on actual screen width)
 
     # are we to use colors?
     if [ -v SHELL_COLORS ]; then
@@ -233,35 +242,41 @@ ido_print_f_menu()
     if [ ${#ido_f_menu[@]} -gt 0 ]; then
 
         # If using colors, set proper dircolor
+        local color_start=""
+        local color_stop=""
         if [ -v SHELL_COLORS ]; then
-            printf "\E[${dattr}m\E[${dcolor}m"; fi
+            color_start="\E[${dattr}m\E[${dcolor}m";
+            color_stop="\E[0m"
+        fi
 
         # We have to sort items by column, but print by row:
-        for ((i=0; i<(($IDO_LINES-1)); i++)); do
+        for ((i=0; i<((IDO_LINES-1)); i++)); do
 
             # first clear the current line
-            printf "\n%*s\r" $COLUMNS " "
+            printf '\n%*s\r' $COLUMNS " "
 
             # print the row
-            for ((j=0; j<(($maxcols-1)); j++)); do
+            for ((j=0; j<((maxcols-1)); j++)); do
 
                 # current index into ido_f_menu
-                ind=$(( i + j*$IDO_LINES ))
+                ind=$((i + j*IDO_LINES))
+
                 # possibly quick exit
-                if [ $ind -gt ${#ido_f_menu[@]} ]; then break; fi
+                if [ $ind -gt ${#ido_f_menu[@]} ]; then
+                    break; fi
 
                 # extract current item (and loose the counter)
                 cur=${ido_f_menu[$ind]#* };
 
                 # limit its length
-                if [ ${#cur} -gt $(($IDO_ITEMLENGTH-$IDO_MINSPACES)) ]; then
-                    cur="${cur:0:$(($IDO_ITEMLENGTH-$IDO_MINSPACES-3))}..."; fi
+                if [ ${#cur} -gt $((IDO_ITEMLENGTH-IDO_MINSPACES)) ]; then
+                    cur="${cur:0:$((IDO_ITEMLENGTH-IDO_MINSPACES-3))}..."; fi
 
                 # append to row to be printed
-                if [[ $i -eq $(($IDO_LINES-1))  &&  $j -eq $(($maxcols-1)) ]]; then
+                if [[ $i -eq $((IDO_LINES-1)) && $j -eq $((maxcols-1)) ]]; then
                     printf "..."
                 else
-                    printf "%s%*s" "$cur" $(($IDO_ITEMLENGTH-${#cur})) " "
+                    printf "${color_start}%s${color_stop}%*s" "$cur" $((IDO_ITEMLENGTH-${#cur})) " "
                 fi
 
             done # j - columns
@@ -269,7 +284,7 @@ ido_print_f_menu()
 
         # Finish the job properly
         printf "\E[0m\E[$LINE;${COLUMN}H%*s\E[$LINE;${COLUMN}H%s" \
-            $(($COLUMNS-$COLUMN-1)) " " "$prompt"
+            $((COLUMNS-COLUMN-1)) " " "$prompt"
 
     # if it is empty, print no-match
     else
@@ -277,6 +292,7 @@ ido_print_f_menu()
         printf "\n%s\E[$LINE;${COLUMN}H%s" "[*No match*]" "$prompt"
     fi
 }
+
 
 # filter the menu generated with ido_gen_dir()
 ido_filter()
@@ -353,7 +369,7 @@ ido_add_to_history()
         done
 
         # now remove the dupe from the IDO_HISTORY
-        if [ $dupeIndex -ne -1 ]; then
+        if [[ $dupeIndex != -1 ]]; then
             unset IDO_HISTORY[dupeIndex]; fi
 
     fi
@@ -382,18 +398,18 @@ ido_read_history()
 }
 
 
-
 # keyboard event loop
 ido_loop()
 {
-    local REPLY c
+    local REPLY
+    local c
 
     while : ; do
 
         # if this is the first time round, and there is only one match, use it
-        if [ $ido_first_entry == 1 ]; then
+        if [[ $ido_first_entry == 1 ]]; then
             ido_first_entry=0
-            if [ ${#ido_f_menu[@]} == 1 ]; then
+            if [[ ${#ido_f_menu[@]} == 1 ]]; then
                 ido_result="${ido_result}${ido_f_menu[0]#* }"; return 255; fi
         fi
 
@@ -521,6 +537,7 @@ ido_loop()
     done
 }
 
+
 # Generate the original menu (complete list of dirs)
 ido_gen_dir()
 {
@@ -541,6 +558,7 @@ ido_gen_dir()
     fi
     IFS=$IFS_
 }
+
 
 # Entry point
 ido_dir(){
@@ -572,7 +590,7 @@ ido_dir(){
     # get the current line/column
     # (used in ido_print_menu)
     ido_get_col_line
-    COLUMN=$(($COLUMN-${#ido_result}))
+    COLUMN=$((COLUMN-${#ido_result}))
 
     # get user home dirs, and proper abbreviations thereof
     # NOTE: it is better to do this in here, to maintain proper
@@ -643,7 +661,9 @@ ido_dir(){
         ido_search_string=""
 
         # break if match is unique, and this is the first pass
-        if [ status == 255 ]; then break; fi
+        if [ status == 255 ]; then
+            break; fi
+
     done
 
     # clean up display
@@ -674,13 +694,8 @@ typeset -r IDO_HISTORY_FILE
 
 # read the history file when first sourcing this script
 if [ ${#IDO_HISTORY[@]} -eq 0 ]; then
-    echo "1Reading IDO history..."
-    ido_read_history; fi
+    echo "Reading IDO history..."
+    ido_read_history;
+fi
 
-complete -v -F ido_dir -o nospace cdn
-
-
-
-
-
-
+complete -F ido_dir -o nospace cd

@@ -293,6 +293,10 @@ infomessage()
     return 0
 }
 
+# Abreviations/descriptive names (use in eval)
+readonly to_error="2> >(error)"
+readonly dump_except_error="1> /dev/null 2> >(error)"
+readonly warning_and_error="1> >(warning) 2> >(error)"
 
 
 # --------------------------------------------------------------------------------------------------
@@ -841,6 +845,13 @@ delete_reorder()
     done
 }
 
+# Clear
+_clear_DONTUSE(){
+    for (( i=0; i<$LINES; i++)); do
+        printf '\n%*s\r' $COLUMNS " "; done;
+    printf "\E[1;${COLUMN}H"
+}
+
 # print dirlist if command exited with code 0
 print_list_if_OK()
 {
@@ -1095,9 +1106,9 @@ update_all()
         rp=($(check_repo "$PWD/$d"))
 
         (
-        cd "${rp[@]:1}"		
+        cd "${rp[@]:1}"
 		updatecmd=$(get_repo_cmd $REPO_CMD_pull)
-		eval "$updatecmd" 1> /dev/null 2> >(error)
+		eval "$updatecmd" "$dump_except_error"
         )
 
     done
@@ -1111,36 +1122,43 @@ _enter_GIT()
     REPO_MODE=1
     REPO_PATH="$*"
 
-    # alias everything
-    alias gf="git fetch"                   ;  REPO_CMD_fetch="gf"
-    alias gp="git push"                    ;  REPO_CMD_push="gp"
-    alias gP="git pull"                    ;  REPO_CMD_pull="gP"
-    alias gc="git commit -am"              ;  REPO_CMD_commit="gc"
-    alias gs="git status"                  ;  REPO_CMD_status="gs"
-    alias gl="git log --oneline"           ;  REPO_CMD_log="gl"
-    alias ga="git add"                     ;  REPO_CMD_add="ga"
-    alias grm="git rm"                     ;  REPO_CMD_remove="grm"
-    alias gm="git merge"                   ;  REPO_CMD_merge="gm"
-    alias gmt="git mergetool"              ;  REPO_CMD_mergetool="gmt"
+    # Basics
+    alias gf="git fetch"                    ;  REPO_CMD_fetch="gf"
+    alias gp="git push"                     ;  REPO_CMD_push="gp"
+    alias gP="git pull --recurse-submodules";  REPO_CMD_pull="gP"
+    alias gc="git commit -am"               ;  REPO_CMD_commit="gc"
+    alias gs="git status"                   ;  REPO_CMD_status="gs"
+    alias gl="git log --oneline"            ;  REPO_CMD_log="gl"
+    alias ga="git add"                      ;  REPO_CMD_add="ga"
+    alias grm="git rm"                      ;  REPO_CMD_remove="grm"
+    alias gm="git merge"                    ;  REPO_CMD_merge="gm"
+    alias gmt="git mergetool"               ;  REPO_CMD_mergetool="gmt"
 
+    alias unlink="git rm --cached"          ;  REPO_CMD_unlink="unlink"        # remove from repository, but keep local
+    alias istracked="git ls-files --error-unmatch"
+											   REPO_CMD_trackcheck="istracked" # check whether file is tracked
 
-    alias unlink="git rm --cached"                ;  REPO_CMD_unlink="unlink"          # remove from repository, but keep local
-    alias istracked="git ls-files --error-unmatch";  REPO_CMD_trackcheck="istracked"   # check whether file is tracked
-
-    alias gco="git checkout"               ;  REPO_CMD_checkout="gco"
+    alias gco="git checkout"                ;  REPO_CMD_checkout="gco"
     complete -o default -o nospace -F _git_checkout gco
 
-    alias gu="git pull && git push"        ;  REPO_CMD_update="gu"
-    alias glg="git log --graph --oneline"  ;  REPO_CMD_loggraph="glg"
-    alias gg=gitg                          ;
+    alias gu="git pull && git push"         ;  REPO_CMD_update="gu"
+    alias glg="git log --graph --oneline"   ;  REPO_CMD_loggraph="glg"
+    alias gg=gitg
 
-    alias gt="git tag"                     ;  REPO_CMD_tag="gt"
-    alias gpt="git push --tags"            ;  REPO_CMD_pushtgs="gpt"
+	# Tagging
+    alias gt="git tag"                      ;  REPO_CMD_tag="gt"
+    alias gpt="git push --tags"             ;  REPO_CMD_pushtgs="gpt"
 
-    alias gcb="git diff --name-status"     ;  REPO_CMD_diffnamestatus="gcb"
-    alias gbr="git branch -r"              ;  REPO_CMD_branchremote="gbr"
-    alias gb="git branch"                  ;  REPO_CMD_branch="gb"
-    alias gd="git diff"                    ;  REPO_CMD_diff="gd"
+	# Branches
+    alias gcb="git diff --name-status"      ;  REPO_CMD_diffnamestatus="gcb"
+    alias gbr="git branch -r"               ;  REPO_CMD_branchremote="gbr"
+    alias gb="git branch"                   ;  REPO_CMD_branch="gb"
+    alias gd="git diff"                     ;  REPO_CMD_diff="gd"
+
+	# Submodules
+	alias gam="git submodule add"           ;  REPO_CMD_add_external="gam"
+    alias gim="git submodule update --init --recursive";  REPO_CMD_init_external="gim"
+
 }
 
 # Enter SVN mode
@@ -1181,7 +1199,7 @@ _enter_BZR()
     # TODO
 }
 
-# leave repository 
+# leave repository
 _leave_repo()
 {
     if [[ ! -z $REPO_MODE && $REPO_MODE == 0 ]]; then
@@ -1217,9 +1235,9 @@ lds()
 
     # When no argument is given, process all dirs. Otherwise: process only given dirs
     if [ $# -eq 0 ]; then
-       dirs=$(command ls -Adh1 --time-style=+ -- */ 2> >(error))
+       dirs=$(ls -Adh1 --time-style=+ -- */ 2> >(error))
     else
-       dirs=$(command ls -Adh1 --time-style=+ -- ${@/%//} 2> >(error))
+       dirs=$(ls -Adh1 --time-style=+ -- ${@/%//} 2> >(error))
     fi
 
     # find proper color used for directories
@@ -1325,7 +1343,7 @@ lax() { lo 1 "all"; }
 # --------------------------------------------------------------------------------------------------
 
 # Save a directory to the dirstack file, and check if its unique
-__add_dir_to_stack()
+_add_dir_to_stack()
 {
     local -r addition="$(normalize_dir "$1")"
 
@@ -1372,13 +1390,13 @@ __add_dir_to_stack()
     _unlock_dirstack
 
     # Check if all directories still exist
-    ( __check_dirstack & )
+    ( _check_dirstack & )
 
     IFS="$IFS_ORIGINAL"
 }
 
 # Remove a dir from the stack, if it exists
-__remove_dir_from_stack()
+_remove_dir_from_stack()
 {
     # No arguments -- quick exit
     if [ $# -eq 0 ]; then
@@ -1407,7 +1425,7 @@ __remove_dir_from_stack()
     if [ $# -gt 1 ]
     then
         while (( "$#" )); do
-            __remove_dir_from_stack "$1" || break
+            _remove_dir_from_stack "$1" || break
             shift
         done
 
@@ -1463,7 +1481,7 @@ __remove_dir_from_stack()
 }
 
 # Check dirstack file if all directories it contains still exist
-__check_dirstack()
+_check_dirstack()
 {
     if [ -e "${DIRSTACK_FILE}" ]
     then
@@ -1496,7 +1514,7 @@ __check_dirstack()
 # Navigate to directory. Check if directory is in a repo
 _cd_DONTUSE()
 {
-    # First cd to given directory    
+    # First cd to given directory
 
     # Home
     if [[ $# == 0 ]]; then
@@ -1521,7 +1539,7 @@ _cd_DONTUSE()
     if [[ $? == 0 ]]; then
 
         # Save to dirstack file and check if unique
-        (__add_dir_to_stack "$PWD" &)
+        (_add_dir_to_stack "$PWD" &)
 
         # Assume we're not going to use any of the repository modes
         _leave_repo
@@ -1549,7 +1567,7 @@ _cd_DONTUSE()
 _cdn_DONTUSE()
 {
     # Remove non-existent dirs from dirstack
-    __check_dirstack
+    _check_dirstack
 
     # create initial stack array
     _lock_dirstack
@@ -1579,7 +1597,7 @@ _cdn_DONTUSE()
 
             "-r"|"--remove")
                 # Remove all arguments
-                __remove_dir_from_stack "${@:2}"
+                _remove_dir_from_stack "${@:2}"
                 if [ $? -ne 0 ]; then
                     return $?; fi
 
@@ -1701,11 +1719,20 @@ _cdn_completer()
 # create dir(s), taking into account current repo mode
 _mkdir_DONTUSE()
 {
-    command mkdir -p -- "$@" 2> >(error)
-    if [[ $? == 0 ]]; then
-        if [[ ! -z $REPO_MODE && $REPO_MODE == 1 ]]; then
-            eval $REPO_CMD_add "$@"; fi
-        print_list_if_OK 0
+    mkdir -p -- "$@" 2> >(error)
+    if [[ $? == 0 ]];
+	then
+        if [[ ! -z $REPO_MODE && $REPO_MODE == 1 ]];
+		then
+			print_list_if_OK 0
+
+			addcmd=$(get_repo_cmd $REPO_CMD_add)
+            if (eval "$addcmd" "$@" "$dump_except_error"); then
+				repo_cmd_exit_message "Added \"$*\" to the repository."
+			else
+				warning "Could not add \"$*\" to the repository."
+			fi
+		fi
     fi
 }
 
@@ -1713,9 +1740,9 @@ _mkdir_DONTUSE()
 # TODO: not done yet
 _rmdir_DONTUSE()
 {
-    command rmdir "$@" 2> >(error)
+    rmdir "$@" 2> >(error)
     print_list_if_OK $?
-    ( __check_dirstack & )
+    (_check_dirstack &)
 }
 
 # remove file(s), taking into account current repo mode
@@ -1725,7 +1752,7 @@ _rm_DONTUSE()
     if [[ ! -z $REPO_MODE && $REPO_MODE -eq 1 ]]; then
 
         # perform repo-specific delete
-        local -r err=$(eval ${REPO_CMD_remove} "$@" 2>&1 > /dev/null)
+        local -r err=$(eval ${REPO_CMD_remove} "$@" "$dump_except_error")
         local not_added
         local outside_repo
 
@@ -1826,12 +1853,13 @@ _mv_DONTUSE()
 {
     # Help call
     if [[ $# -ge 1 && "-h" = "$1" || "--help" = "$1" ]]; then
-        command mv --help
+        mv --help
         return 0
     fi
 
     # check if target is in REPO
-    local source source_repo
+    local source
+	local source_repo
     local target_repo=$(check_repo $(dirname "${@:$#}"))
 
 # TODO!
@@ -1862,11 +1890,10 @@ _mv_DONTUSE()
         local match="outside repository"
         local err=$(git mv "$@" 1> /dev/null 2> >(error))
 
-
         if [ $? -ne 0 ]; then
             if [[ "$err" =~ "${match}" ]]; then
-                command mv -iv "$@" 2> >(error)
-                if [ $? -eq 0 ]; then
+                mv -iv "$@" 2> >(error)
+                if [[ $? == 0 ]]; then
                     print_list_if_OK $?
                     warning "Target and/or source was outside repository";
                 fi
@@ -1876,9 +1903,8 @@ _mv_DONTUSE()
         fi
 
     else
-        command mv -iv "$@" 2> >(error)
+        mv -iv "$@" 2> >(error)
         print_list_if_OK $?
-
     fi
 }
 
@@ -1895,13 +1921,13 @@ _ln_DONTUSE()
 
     if (ln -s "$@" 2> >(error))
 	then
-	
+
         print_list_if_OK 0
-		
-        if [[ ! -z $REPO_TYPE && $REPO_TYPE == "git" ]]; 
-		then		
-			addcmd=$(get_repo_cmd "$REPO_CMD_add")			
-            if (eval "$addcmd" "$2" 1> /dev/null 2> >(error)); then
+
+        if [[ ! -z $REPO_TYPE && $REPO_TYPE == "git" ]];
+		then
+			addcmd=$(get_repo_cmd "$REPO_CMD_add")
+            if (eval "$addcmd" "$2" "$dump_except_error"); then
                 repo_cmd_exit_message "Added new file \"$2\" to the repository."
             else
                 warning "Created link \"$2\", but could not add it to the repository."
@@ -1914,7 +1940,7 @@ _ln_DONTUSE()
 _cp_DONTUSE()
 {
     # Help call
-    if [[ $# -ge 1 && "-h" = "$1" || "--help" = "$1" ]]; then
+    if [[ $# -ge 1 && "-h" == "$1" || "--help" == "$1" ]]; then
         cp --help
         return 0
     fi
@@ -1937,6 +1963,7 @@ _cp_DONTUSE()
 
         case "$1" in
 
+            # cp -M = cp <file> <destination1> <destination2> ...
             "-M"|"--multiple-destination"|"--multidest")
                 cpcmd="echo \"\${@:2:\$nargin}\" | xargs -n1 -P $(nproc --all) -- rsync -aAHch --info=progress2 -- \"\$1\""
                 ((nargin--))
@@ -2001,20 +2028,32 @@ _cp_DONTUSE()
         local -r repo_add=$(get_repo_cmd "$REPO_CMD_add")
         local -r istracked=$(get_repo_cmd "$REPO_CMD_trackcheck")
 
-        if (eval "$istracked" "$target" 1> /dev/null 2> >(error)); then target_in_repo=1; target_exists=1; fi
-        if [[ -d "$target" ]]; then target_is_dir=1; target_exists=1; fi
+        if (eval "$istracked" "$target" "$dump_except_error"); then
+            target_in_repo=1;
+            target_exists=1;
+        fi
+
+        if [[ -d "$target" ]]; then
+            target_is_dir=1;
+            target_exists=1;
+        fi
 
         echo ""
         for src in "${arglist[@]}"; do
 
-            src_is_dir=0;  if [[ -d "$src" ]]; then src_is_dir=1; fi
-            src_in_repo=0; if (eval "$istracked" "$src" 1> /dev/null 2> >(error)); then src_in_repo=1; fi
+            src_is_dir=0;
+            src_in_repo=0;
+
+            if [[ -d "$src" ]]; then
+                src_is_dir=1; fi
+            if (eval "$istracked" "$src" "$dump_except_error");
+                then src_in_repo=1; fi
 
             # TODO: implement the logic as commented above
             #if $src_is_dir; then
             #fi
 
-            eval "$repo_add" "$src" 2> >(error)
+            eval "$repo_add" "$src" "$dump_except_error"
 			repocmd_ok=$?
 
             if $repocmd_ok; then
@@ -2038,14 +2077,14 @@ _cp_DONTUSE()
 # touch file, taking into account current repo mode
 _touch_DONTUSE()
 {
-    if (touch "$@" 1> /dev/null 2> >(error)); 
-	then	
+    if (touch "$@" 1> /dev/null 2> >(error));
+	then
         print_list_if_OK 0
-		
-        if [[ ! -z $REPO_MODE && $REPO_MODE == 1 ]]; 
-		then		
+
+        if [[ ! -z $REPO_MODE && $REPO_MODE == 1 ]];
+		then
 			addcmd=$(get_repo_cmd "$REPO_CMD_add")
-            if eval "$addcmd" "$@" 2> >(error); then
+            if (eval "$addcmd" "$@" "$dump_except_error"); then
                 repo_cmd_exit_message "Added new file \"$*\" to the repository."
             else
                 warning "Created \"$*\", but could not add it to the repository."
@@ -2053,6 +2092,7 @@ _touch_DONTUSE()
         fi
     fi
 }
+
 
 # --------------------------------------------------------------------------------------------------
 # Frequently needed functionality
@@ -2124,7 +2164,7 @@ changext()
 
     # loop through file list
     for f in *$before; do
-        command mv "$f" "${f%$before}$after" 2> >(error); done
+        mv "$f" "${f%$before}$after" 2> >(error); done
 
     clear
     multicolumn_ls
@@ -2260,13 +2300,14 @@ _gedit_DONTUSE()
     fi
 }
 
-
 # grep all processes in wide-format PS, excluding "grep" itself
 psa()
 {
+    if [[ $# == 0 ]]; then
+        return 1; fi
+
     ps auxw | grep -EiT --color=auto "[${1:0:1}]${1:1}" 2> >(error)
 }
-
 
 # Queued move
 mvq()
@@ -2278,7 +2319,7 @@ mvq()
 
     # TODO: nohup doesn't allow for easy redirection
     #(nohup nice -n 19 mv "$@" 2> >(error) &)
-    (nice -n 19 cp -r "$@" 1> >(warning) 2> >(error) &)
+    (nice -n 19 mr "$@" 1> >(warning) 2> >(error) &)
     printf -- 'Moving %s to "%s"...\n'  "$(quoted_list ${@: 1:$(($#-1))})"  "${@: -1}"
 }
 
@@ -2386,20 +2427,26 @@ spread()
 # export hi-res PNG from svg file
 svg2png()
 {
-    local svgname pngname;
-    for f in "$@"; do
-        svgname=$f
-        pngname="${svgname%.svg}.png"
-        inkscape "$svgname" --export-png=$pngname --export-dpi=250
-    done
-}
+	if (which inkscape 2>&1 > /dev/null);
+	then
+		local svgname
+		local pngname
 
+		for f in "$@"; do
+			svgname=$f
+			pngname="${svgname%.svg}.png"
+			inkscape "$svgname" --export-png=$pngname --export-dpi=250
+		done
+	else
+		error "$0() needs an installation of inkscape, which doesn't seem to be present on this system."
+	fi
+}
 
 # check validity of XML
 check_XML()
 {
     for file in "$@"; do
-        if python -c "import sys,xml.dom.minidom as d; d.parse(sys.argv[1])" "$file";
+        if (python -c "import sys,xml.dom.minidom as d; d.parse(sys.argv[1])" "$file");
         then
             echo "XML-file $file is valid and well-formed"
         else
@@ -2428,10 +2475,16 @@ existing_github_repo()
     git push -u origin master
 }
 
+# ==================================================
+# GitLab
+# ==================================================
+# TODO
 
 
 
-# Simulink
+# ==================================================
+# MATLAB / Simulink
+# ==================================================
 
 slgrep()
 {
@@ -2443,12 +2496,12 @@ slgrep()
 
     for file in $(find . -type f); do
 
-        filename=$(basename "$file")
-        extension="${filename##*.}"
+        local filename=$(basename "$file")
+        local extension="${filename##*.}"
         filename="${filename%.*}"
 
         if [ "$extension" = "slx" ]; then
-            result=$(unzip -c "$file" | grep -EiIT --color=always --exclude-dir .svn --exclude-dir .git "$@")
+            local result=$(unzip -c "$file" | grep -EiIT --color=always --exclude-dir .svn --exclude-dir .git "$@")
             if [[ ! -z "$result" ]]; then
                 printf -- "${START_COLORSCHEME}${FG_MAGENTA}${END_COLORSCHEME}%s${RESET_COLORS}: %s"'\n' "$file" "$result"; fi
         else
