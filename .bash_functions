@@ -205,7 +205,7 @@ REPO_COLOR[git]=${START_COLORSCHEME}${TXT_BOLD}';'${FG_RED}${END_COLORSCHEME};  
 REPO_COLOR[---]=${START_COLORSCHEME}${ALL_COLORS[di]}${END_COLORSCHEME}
 
 
-# error/warning functions
+# error/warning/assert functions
 error()
 {
     local msg
@@ -258,6 +258,15 @@ warning()
     return 0
 }
 
+assert()
+{
+	if [ "$1" ]; then
+		return 0;
+	else
+		return error "${@:2}"
+	fi
+}
+
 infomessage()
 {
     local msg
@@ -283,6 +292,7 @@ infomessage()
 
     return 0
 }
+
 
 
 # --------------------------------------------------------------------------------------------------
@@ -847,14 +857,14 @@ print_list_if_OK()
 prettyprint_dir()
 {
     # No arguments, no function
-    if [ $# -eq 0 ]; then
+    if [[ $# == 0 ]]; then
         return; fi
 
     local -a repoinfo
     local -ri pwdmaxlen=$((COLUMNS/3))
     local original_pth
 
-    if [ $USE_COLORS -eq 1 ]; then
+    if [[ $USE_COLORS == 1 ]]; then
         original_pth="$(command ls -d "${1/\~/${HOME}}" --color)"
     else
         original_pth="$(command ls -d "${1/\~/${HOME}}")"
@@ -863,7 +873,7 @@ prettyprint_dir()
     local pth="${original_pth/${HOME}/~}";
 
 
-    if [ $# -lt 3 ]; then
+    if [[ $# < 3 ]]; then
         # shellcheck disable=2207
         repoinfo=($(check_repo "$@"))
         if [ ${#repoinfo[@]} -gt 2 ]; then
@@ -873,7 +883,7 @@ prettyprint_dir()
     fi
 
     # Color print
-    if [ $USE_COLORS -eq 1 ]; then
+    if [[ $USE_COLORS == 1 ]]; then
 
         # TODO: dependency on AWK; include bash-only version
         if [ $haveAwk ]; then
@@ -1076,7 +1086,6 @@ repo_cmd_exit_message()
 
 
 # Update all repositories under the current dir
-# TODO: also update git submodules, svn externals, etc.
 update_all()
 {
     local -a rp
@@ -1086,23 +1095,16 @@ update_all()
         rp=($(check_repo "$PWD/$d"))
 
         (
-        cd "${rp[@]:1}"
-
-        case "${rp[0]}" in
-            "svn") svn update ;;
-            "git") git pull   ;;
-            "hg")  hg update  ;;
-            "bzr") bzr update ;;
-            *)     warning "Don't know how to update repository."
-                   ;;
-        esac
+        cd "${rp[@]:1}"		
+		updatecmd=$(get_repo_cmd $REPO_CMD_pull)
+		eval "$updatecmd" 1> /dev/null 2> >(error)
         )
 
     done
 }
 
 # Enter GIT mode
-__enter_GIT()
+_enter_GIT()
 {
     # set type
     REPO_TYPE="git"
@@ -1142,7 +1144,7 @@ __enter_GIT()
 }
 
 # Enter SVN mode
-__enter_SVN()
+_enter_SVN()
 {
     # enter SVN mode
     REPO_TYPE="svn"
@@ -1156,7 +1158,7 @@ __enter_SVN()
 }
 
 # Enter Mercurial mode
-__enter_HG()
+_enter_HG()
 {
     # enter GIT mode
     REPO_TYPE="hg"
@@ -1168,7 +1170,7 @@ __enter_HG()
 }
 
 # Enter Bazaar mode
-__enter_BZR()
+_enter_BZR()
 {
     # enter BZR mode
     REPO_TYPE="bzr"
@@ -1179,8 +1181,8 @@ __enter_BZR()
     # TODO
 }
 
-# leave any and all repositories
-__leave_repos()
+# leave repository 
+_leave_repo()
 {
     if [[ ! -z $REPO_MODE && $REPO_MODE == 0 ]]; then
         return; fi
@@ -1494,45 +1496,44 @@ __check_dirstack()
 # Navigate to directory. Check if directory is in a repo
 _cd_DONTUSE()
 {
-    # first cd to given directory
-    # NOTE: use "--" to allow dirnames like "+package" or "-some-dir"
+    # First cd to given directory    
 
     # Home
-    if [ $# -eq 0 ]; then
-        builtin cd -- "$HOME" 2> >(error)
+    if [[ $# == 0 ]]; then
+        cd -- "$HOME" 2> >(error)
 
     # Previous
-    elif [[ $# -eq 1 && "-" = "$1" ]]; then
-        builtin cd 2> >(error)
+    elif [[ $# == 1 && "-" == "$1" ]]; then
+        cd - 2> >(error)
 
     # Help call
     elif [[ $# -ge 1 && "-h" = "$1" || "--help" = "$1" ]]; then
-        builtin cd --help
+        cd --help
         return 0
 
     # All others
     else
-        builtin cd -- "$@" 2> >(error)
+        cd -- "$@" 2> >(error)
     fi
 
     # if successful, save to dirstack, display abbreviated dirlist and
     # check if it is a GIT repository
-    if [ $? -eq 0 ]; then
+    if [[ $? == 0 ]]; then
 
         # Save to dirstack file and check if unique
         (__add_dir_to_stack "$PWD" &)
 
         # Assume we're not going to use any of the repository modes
-        __leave_repos
+        _leave_repo
 
         # Check if we're in a repo. If so, enter a repo mode
         repo=($(check_repo))
         if [ $? -eq 0 ]; then
             case "${repo[0]}" in
-                "git") __enter_GIT "${repo[@]:1}" ;;
-                "svn") __enter_SVN "${repo[@]:1}" ;;
-                "hg")  __enter_HG  "${repo[@]:1}" ;;
-                "bzr") __enter_BZR "${repo[@]:1}" ;;
+                "git") _enter_GIT "${repo[@]:1}" ;;
+                "svn") _enter_SVN "${repo[@]:1}" ;;
+                "hg")  _enter_HG  "${repo[@]:1}" ;;
+                "bzr") _enter_BZR "${repo[@]:1}" ;;
                 *) ;;
             esac
         fi
@@ -2037,9 +2038,12 @@ _cp_DONTUSE()
 # touch file, taking into account current repo mode
 _touch_DONTUSE()
 {
-    if touch "$@" 2> >(error); then
+    if (touch "$@" 1> /dev/null 2> >(error)); 
+	then	
         print_list_if_OK 0
-        if [[ ! -z $REPO_MODE && $REPO_MODE == 1 ]]; then		
+		
+        if [[ ! -z $REPO_MODE && $REPO_MODE == 1 ]]; 
+		then		
 			addcmd=$(get_repo_cmd "$REPO_CMD_add")
             if eval "$addcmd" "$@" 2> >(error); then
                 repo_cmd_exit_message "Added new file \"$*\" to the repository."
@@ -2282,7 +2286,7 @@ mvq()
 cpq()
 {
     if [ $# -lt 2 ]; then
-        error "cp requires at least 2 arguments."
+        error "cpq requires at least 2 arguments."
         return 1
     fi
 
@@ -2293,7 +2297,7 @@ cpq()
 }
 
 # Multi-source, multi-destination copy/move
-__spread()
+_spread()
 {
     local cmd="cp"
 
@@ -2322,7 +2326,7 @@ __spread()
                 collecting_sources=0
                 ;;
 
-            *)  if [ $collecting_sources -eq 1 ]; then
+            *)  if [[ $collecting_sources == 1 ]]; then
                     sources+=("$1")
                 else
                     targets+=("$1")
@@ -2333,9 +2337,9 @@ __spread()
     done
 
     # Check arguments
-    if [ ${#sources[@]} -eq 0 ]; then
+    if [[ ${#sources[@]} == 0 ]]; then
         error "No source files/directories given."; return 1; fi
-    if [ ${#sources[@]} -eq 0 ]; then
+    if [[ ${#sources[@]} == 0 ]]; then
         error "No target files/directories given."; return 1; fi
 
     # Execute command
@@ -2370,12 +2374,12 @@ __spread()
 # Multi-source, multi-destination copy
 proliferate()
 {
-    __spread -c "$@"
+    _spread -c "$@"
 }
 # Multi-source, multi-destination move
 spread()
 {
-    __spread -m "$@"
+    _spread -m "$@"
 }
 
 
