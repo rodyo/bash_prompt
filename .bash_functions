@@ -69,12 +69,12 @@ declare -i DO_PROFILING=0
 _START_PROFILING()
 {
     if ! command -v tee   &>/dev/null || \
-	   ! command -v date  &>/dev/null || \
-	   ! command -v sed   &>/dev/null || \
-	   ! command -v paste &>/dev/null 
-	then 
+       ! command -v date  &>/dev/null || \
+       ! command -v sed   &>/dev/null || \
+       ! command -v paste &>/dev/null 
+    then 
         error "cannot profile: unmet depenencies" 
-		return
+        return
     fi
 
     if [ $DO_PROFILING -eq 1 ]; then
@@ -179,19 +179,19 @@ declare -i USE_COLORS=0
 if [ "$SHELL_COLORS" == "yes" ]; then
     USE_COLORS=1
 
-    IFS=": "	
-		# shellcheck disable=SC2206
+    IFS=": "    
+        # shellcheck disable=SC2206
         tmp=($LS_COLORS)
     IFS="$IFS_ORIGINAL"
 
     keys=("${tmp[@]%%=*}")
     keys=("${keys[@]/\*\./}")
     values=("${tmp[@]##*=}")
-	
+    
     for ((i=0; i<${#keys[@]}; ++i)); do
         ALL_COLORS["${keys[$i]}"]="${values[$i]}"; done
 
-	unset tmp keys values
+    unset tmp keys values
 fi
 
 # Repository info and generic commands
@@ -212,7 +212,7 @@ error()
 
     # argument
     if [ -n "$1" ]; then
-		# shellcheck disable=SC2059
+        # shellcheck disable=SC2059
         msg="$(printf -- "$@")"
 
     # stdin (pipe) 
@@ -238,7 +238,7 @@ warning()
 
     # argument
     if [ -n "$1" ]; then
-		# shellcheck disable=SC2059
+        # shellcheck disable=SC2059
         msg="$(printf -- "$@")"
 
     # stdin
@@ -264,7 +264,7 @@ infomessage()
 
     # argument
     if [ -n "$1" ]; then
-		# shellcheck disable=SC2059
+        # shellcheck disable=SC2059
         msg="$(printf -- "$@")"
 
     # stdin
@@ -319,8 +319,8 @@ multicolumn_ls()
         if [ $USE_COLORS -eq 1 ]; then
             colorflag="--color"; fi
 
-		# shellcheck disable=SC2016
-		# shellcheck disable=SC2028
+        # shellcheck disable=SC2016
+        # shellcheck disable=SC2028
         command ls -opg --si --group-directories-first --time-style=+ ${colorflag} "$@" | awk -f "$HOME/.awk_functions" -f <( echo -E '
 
             BEGIN {
@@ -436,7 +436,7 @@ multicolumn_ls()
         # get initial file, as stripped down as possible, but including the file sizes.
         # NOTE: arguments to multicolumn_ls() get appended behind the base ls command
         IFS=$'\n'
-		# shellcheck disable=2207
+        # shellcheck disable=2207
         local dirlist=($(command ls -opgh --group-directories-first --time-style=+ --si "$@"))
 
         # also get the file attribute list (for filesystems that are known to work)
@@ -450,11 +450,11 @@ multicolumn_ls()
 
         ( ((${BASH_VERSION:0:1}>=4)) && [ $processAcls -eq 1 ] && if [[ $haveAttrlist == 1 ]]; then
             local -A attrlist
-			# shellcheck disable=2207
+            # shellcheck disable=2207
             local attlist=($(lsattr 2>&1))
-			# shellcheck disable=2207
+            # shellcheck disable=2207
             local attribs=($(echo "${attlist[*]%% *}"))
-			# shellcheck disable=2207
+            # shellcheck disable=2207
             local attnames=($(echo "${attlist[*]##*\.\/}"))
             for ((i=0; i<${#attnames[@]}; i++)); do
                 if [[ ${attribs[$i]%%lsattr:*} ]]; then
@@ -486,12 +486,12 @@ multicolumn_ls()
             numRows=$minLines; fi
 
         # Split dirlist up in permissions, filesizes, names, and extentions
-		# shellcheck disable=2207
+        # shellcheck disable=2207
         local perms=($(printf -- '%s\n' "${dirlist[@]}" | awk '{print $1}'))
-		# shellcheck disable=2207
+        # shellcheck disable=2207
         local sizes=($(printf -- '%s\n' "${dirlist[@]}" | awk '{print $3}'))
         # NOTE: awkward yes, but the only way to get all spaces etc. right under ALL circumstances
-		# shellcheck disable=2207
+        # shellcheck disable=2207
         local names=($(printf -- '%s\n' "${dirlist[@]}" | awk '{for(i=4;i<=NF;i++) $(i-3)=$i; if (NF>0)NF=NF-3; print $0}'))
         local extensions
         for ((i=0; i<${#names[@]}; i++)); do
@@ -502,7 +502,7 @@ multicolumn_ls()
 
         # Now print the list
         if [[ $USE_COLORS == 1 ]]; then
-			# shellcheck disable=2059
+            # shellcheck disable=2059
             printf -- "$RESET_COLORS"; fi
 
         local lastColumnWidth ind paint device=0 lastColumn=0 lastsymbol=" "
@@ -760,7 +760,7 @@ promptcmd()
         local -r bracket_close="]"
     fi
 
-	# shellcheck disable=SC2059
+    # shellcheck disable=SC2059
     printf -- "${move_cursor}${bracket_open}${pth}${bracket_close}${reset_cursor}"
 
 }
@@ -836,7 +836,7 @@ print_list_if_OK()
 {
     if [ "$1" == 0 ]; then
         clear
-		# shellcheck disable=SC2119
+        # shellcheck disable=SC2119
         multicolumn_ls
     fi
 }
@@ -864,7 +864,7 @@ prettyprint_dir()
 
 
     if [ $# -lt 3 ]; then
-		# shellcheck disable=2207
+        # shellcheck disable=2207
         repoinfo=($(check_repo "$@"))
         if [ ${#repoinfo[@]} -gt 2 ]; then
             repoinfo[1]=$(strjoin "${IFS[0]}" "${repoinfo[@]:1}"); fi
@@ -884,7 +884,7 @@ prettyprint_dir()
                 pth="${pth/${repopath}/${repopath}$'\033'[0m$repoCol}"
             fi
 
-			# shellcheck disable=SC2016
+            # shellcheck disable=SC2016
             echo "${pth}" | awk -f "$HOME/.awk_functions" -f <( echo -E '
 
                 {
@@ -955,7 +955,7 @@ prettyprint_dir()
 # Get repository command
 get_repo_cmd()
 {
-	alias | grep "$@" | cut -d= -f2 | tr -d \'
+    alias | grep "$@" | cut -d= -f2 | tr -d \'
 }
 
 # Check if given dir(s) is (are) (a) repository(ies)
@@ -989,29 +989,29 @@ check_repo()
     else
         dirs=("$@")
     fi
-	
+    
     # All repository systems have been installed; use their native methods to discover
     # where the repository root is located
     if [ $haveAllRepoBinaries -eq 1 ]; then
 
         local check
-		
+        
         for dir in "${dirs[@]}"; do
 
             check=$(printf -- "%s " git && command cd "${dir}" && git rev-parse --show-toplevel 2> /dev/null)
-			# shellcheck disable=SC2181
+            # shellcheck disable=SC2181
             if [ $? -eq 0 ]; then echo "$check"; continue; fi
 
             check=$(printf -- "%s " svn && svn info "$dir" 2> /dev/null | awk '/^Working Copy Root Path:/ {print $NF}' && [ "${PIPESTATUS[0]}" -ne 1 ])
-			# shellcheck disable=SC2181
+            # shellcheck disable=SC2181
             if [ $? -eq 0 ]; then echo "$check"; continue; fi
 
             check=$(printf -- "%s  " hg && hg root --cwd "$dir" 2> /dev/null)
-			# shellcheck disable=SC2181
+            # shellcheck disable=SC2181
             if [ $? -eq 0 ]; then echo "$check"; continue; fi
 
             check=$(printf -- "%s " bzr && bzr root "$dir" 2> /dev/null)
-			# shellcheck disable=SC2181			
+            # shellcheck disable=SC2181         
             if [ $? -eq 0 ]; then echo "$check"; continue; fi
 
             echo "--- [no_repository_found]"
@@ -1021,12 +1021,12 @@ check_repo()
     # Not all repository systems have been installed; use bash to loop through the
     # directory tree in search of a repository identifier
     else
-	
+    
         local -ar slashes=("${dirs[@]//[^\/]/}")
         local -a repotype
         local -a reporoot
-		
-		local -r curdir="$PWD"
+        
+        local -r curdir="$PWD"
 
         local -i i
         local -i j
@@ -1048,8 +1048,8 @@ check_repo()
 
             # NOTE: repeated commands outperform function call by an order of magnitude
             # NOTE: commands without capture "$(...)" outperform commands with capture
-            # NOTE: this is also faster than SED'ing the "../" away			
-			
+            # NOTE: this is also faster than SED'ing the "../" away         
+            
             for (( j=${#slashes[$i]}; j>0; --j )); do
                 [ -d "$dir/.git" ] && repotype[$i]="git" && cd "$dir" && reporoot[$i]="$PWD" && cd "$curdir" && break;
                 [ -d "$dir/.svn" ] && repotype[$i]="svn" && cd "$dir" && reporoot[$i]="$PWD" && cd "$curdir" && break;
@@ -1060,7 +1060,7 @@ check_repo()
 
         done
 
-        for (( i=0;i<${#repotype[@]}; ++i )); do		    
+        for (( i=0;i<${#repotype[@]}; ++i )); do            
             printf -- '%s %s\n' "${repotype[$i]}" "${reporoot[$i]}"; done
     fi
 
@@ -1069,9 +1069,9 @@ check_repo()
 
 repo_cmd_exit_message()
 {
-	echo
-	infomessage "$@"	
-	echo
+    echo
+    infomessage "$@"    
+    echo
 }
 
 
@@ -1085,7 +1085,7 @@ update_all()
 
         rp=($(check_repo "$PWD/$d"))
 
-		(
+        (
         cd "${rp[@]:1}"
 
         case "${rp[0]}" in
@@ -1117,15 +1117,15 @@ __enter_GIT()
     alias gs="git status"                  ;  REPO_CMD_status="gs"
     alias gl="git log --oneline"           ;  REPO_CMD_log="gl"
     alias ga="git add"                     ;  REPO_CMD_add="ga"
-    alias grm="git rm"                     ;  REPO_CMD_remove="grm"	
+    alias grm="git rm"                     ;  REPO_CMD_remove="grm" 
     alias gm="git merge"                   ;  REPO_CMD_merge="gm"
     alias gmt="git mergetool"              ;  REPO_CMD_mergetool="gmt"
-	
-		
-	alias unlink="git rm --cached"                ;  REPO_CMD_unlink="unlink"	       # remove from repository, but keep local 
-	alias istracked="git ls-files --error-unmatch";  REPO_CMD_trackcheck="istracked"   # check whether file is tracked 
     
-	alias gco="git checkout"               ;  REPO_CMD_checkout="gco"
+        
+    alias unlink="git rm --cached"                ;  REPO_CMD_unlink="unlink"          # remove from repository, but keep local 
+    alias istracked="git ls-files --error-unmatch";  REPO_CMD_trackcheck="istracked"   # check whether file is tracked 
+    
+    alias gco="git checkout"               ;  REPO_CMD_checkout="gco"
     complete -o default -o nospace -F _git_checkout gco
 
     alias gu="git pull && git push"        ;  REPO_CMD_update="gu"
@@ -1212,36 +1212,36 @@ lds()
 
     clear
     IFS=$'\n'
-	
+    
     # When no argument is given, process all dirs. Otherwise: process only given dirs
     if [ $# -eq 0 ]; then
        dirs=$(command ls -Adh1 --time-style=+ -- */ 2> >(error))
     else
        dirs=$(command ls -Adh1 --time-style=+ -- ${@/%//} 2> >(error))
     fi
-		
-	# find proper color used for directories
+        
+    # find proper color used for directories
     if [[ $USE_COLORS == 1 ]]; then            
         local -r color="${ALL_COLORS[di]}"; fi
-		
-	# loop through dirlist and parse
-	for f in $dirs; do
+        
+    # loop through dirlist and parse
+    for f in $dirs; do
 
-		# ./ and ../ may still be in the list, despite -A flag (lads(), for example)
-		if [[ "$f" == "./" || "$f" == ".//" || "$f" == "../" || "$f" == "..//" ]]; then
-			continue; fi
-			
-		printf -- 'processing "%s"...\n' "$f"
-		sz=$(du -bsh --si "$f" 2> /dev/null);
-		sz="${sz%%$'\t'*}"		
-		tput cuu 1 && tput el
-		
-		if [ $USE_COLORS -eq 1 ]; then
-			printf -- '%s\t'"${START_COLORSCHEME}${color}${END_COLORSCHEME}"'%s\n'"${RESET_COLORS}"   "$sz" "$f"
-		else
-			printf -- '%s\t%s\n' "$sz" "$f"
-		fi
-	done
+        # ./ and ../ may still be in the list, despite -A flag (lads(), for example)
+        if [[ "$f" == "./" || "$f" == ".//" || "$f" == "../" || "$f" == "..//" ]]; then
+            continue; fi
+            
+        printf -- 'processing "%s"...\n' "$f"
+        sz=$(du -bsh --si "$f" 2> /dev/null);
+        sz="${sz%%$'\t'*}"      
+        tput cuu 1 && tput el
+        
+        if [ $USE_COLORS -eq 1 ]; then
+            printf -- '%s\t'"${START_COLORSCHEME}${color}${END_COLORSCHEME}"'%s\n'"${RESET_COLORS}"   "$sz" "$f"
+        else
+            printf -- '%s\t%s\n' "$sz" "$f"
+        fi
+    done
 
     IFS="$IFS_ORIGINAL"
 }
@@ -1249,7 +1249,7 @@ lds()
 # count and list directory sizes, including hidden dirs
 lads()
 {
-	lds "*/" ".*/"	
+    lds "*/" ".*/"  
 }
 
 # display only dirs/files with given octal permissions for current user
@@ -1723,15 +1723,15 @@ _rm_DONTUSE()
     # we are in REPO mode
     if [[ ! -z $REPO_MODE && $REPO_MODE -eq 1 ]]; then
 
-        # perform repo-specific delete		
+        # perform repo-specific delete      
         local -r err=$(eval ${REPO_CMD_remove} "$@" 2>&1 > /dev/null)
-		local not_added
-		local outside_repo		
+        local not_added
+        local outside_repo      
 
         # different repositories issue different errors
         case "$REPO_TYPE" in
 
-            "git" )
+            "git")
                 not_added="did not match any files"
                 outside_repo="outside repository"
                 ;;
@@ -1755,49 +1755,59 @@ _rm_DONTUSE()
                 ;;
 
             *) # anything erroneous does the same as no repo
-                command rm -vI "$@" 2> >(error)
+                rm -vI "$@" 2> >(error)
                 print_list_if_OK $?
                 ;;
-
-        esac
-		
+        esac        
 
         # All was OK
         if [[ -z "$err" ]]; then
-		
-			repo_cmd_exit_message "Removed \"$*\" from repository."
-		
-		# remove non-added or external files
-		elif [[ "$err" =~ ${not_added} ]]; then
+        
+            repo_cmd_exit_message "Removed \"$*\" from repository."
+        
+        # remove non-added or external files
+        elif [[ "$err" =~ ${not_added} ]]; then
 
-            warning "Some files were never added to the repository \nDo you wish to remove them anyway? [N/y]"
-
-            case $(read L) in
-                y|Y|yes|Yes|YES|yEs|yeS|YEs|YeS|yES|ys|Ys|yS|YS)
-                    command rm -vI "$@" 2> >(error)
-                    print_list_if_OK $?
-                    ;;
-                *)
-                    ;;
-            esac
-
+            while true; do
+        
+                warning "Some files were never added to the repository\nDo you wish to remove them anyway? [N/y] "
+                read -rp " " yn
+                
+                case "$yn" in
+				
+                    [Yy]*) 
+						rm -vI "$@" 2> >(error)                  
+                        print_list_if_OK $? 
+                        break
+                        ;;
+						   
+                    [Nn]*) 
+						break
+                        ;;
+						
+                    *) 	echo "Please answer yes or no."
+						;;
+                esac
+            done
+			
         else
             if [[ "$err" =~ ${outside_repo} ]]; then
-                command rm -vI "$@" 2> >(error)
+                rm -vI "$@" 2> >(error)
                 if [ $? -eq 0 ]; then
                     print_list_if_OK 0
                     warning "Some files were outside the repository."
                 fi
             else
-				# stderr was not empty, but none of the expected strings; rethrow
-				# whatever error git issued
+                # stderr was not empty, but none of the expected strings; rethrow
+                # whatever error git issued
                 error "$err"
             fi
+			
         fi
 
     # not in REPO mode
     else
-        command rm -vI "$@" 2> >(error)
+        rm -vI "$@" 2> >(error)
         print_list_if_OK $?
     fi
 }
@@ -1898,22 +1908,22 @@ _cp_DONTUSE()
 {
     # Help call
     if [[ $# -ge 1 && "-h" = "$1" || "--help" = "$1" ]]; then
-        command cp --help
+        cp --help
         return 0
     fi
 
     local cpcmd
     local -ir nargin=$#
-	
-	local -a arglist=("$@")
-	local args=''
-	
-	# Explicitly quote all arguments (needed because eval())
-	for arg in "${arglist[@]}"; do
-		args="$args \"$arg\""; done
+    
+    local -a arglist=("$@")
+    local args=''
+    
+    # Explicitly quote all arguments (needed because eval())
+    for arg in "${arglist[@]}"; do
+        args="$args \"$arg\""; done
 
-	# nominal copy command
-    cpcmd="rsync -aAHch --info=progress2 ${args}"	
+    # nominal copy command
+    cpcmd="rsync -aAHch --info=progress2 ${args}"   
 
     # optional args
     while (( "$#" )); do
@@ -1933,13 +1943,13 @@ _cp_DONTUSE()
                 ;;
             *)
                 break
-				;;
+                ;;
         esac
     done
 
     # 1-argument copy copies to same destination, with "COPY" appended
     if [[ $nargin == 1 ]]; then
-		command cp "$1" "$1_COPY"
+        cp "$1" "$1_COPY"
         print_list_if_OK $?
         return
     fi
@@ -1948,70 +1958,70 @@ _cp_DONTUSE()
     cpcmd="${cpcmd} 2> >(error)"
 
     # REPO mode
-	local -i cmd_ok=0
+    local -i cmd_ok=0
     if [[ ! -z $REPO_MODE && $REPO_MODE == 1 ]]; then
-	
-		#  - source IN  repo, target IN repo   ← git add "target/source"
-		#  - source OUT repo, target OUT repo  ← do nothing
-		#  - source IN  repo, target OUT repo  ← do nothing
-		#  - source OUT repo, target IN  repo  ← git add "target/source"
-		#		
-		#  - source is DIR, target is DIR    ← OK; "source" will be subdir of "target"
-		#  - source is FILE, target is DIR   ← OK; "source" will be subdir of "target"
-		#  - source is DIR, target is FILE   ← error, with sidenote:
-		#  - source is FILE, target is FILE  ← OK, with sidenote:
-		#    - there is 1 source             ← simple rename operation
-		#    - there are multiple sources    ← ...make tarball?
-		#
-		#  - source EXISTS, target DOESN'T EXIST         ← OK
-		#  - source DOESN'T EXIST, target DOESN'T EXIST  ← error (handled by rsync)
-		#  - source DOESN'T EXIST, target EXISTS         ← error (handled by rsync)
+    
+        #  - source IN  repo, target IN repo   ← git add "target/source"
+        #  - source OUT repo, target OUT repo  ← do nothing
+        #  - source IN  repo, target OUT repo  ← do nothing
+        #  - source OUT repo, target IN  repo  ← git add "target/source"
+        #       
+        #  - source is DIR, target is DIR    ← OK; "source" will be subdir of "target"
+        #  - source is FILE, target is DIR   ← OK; "source" will be subdir of "target"
+        #  - source is DIR, target is FILE   ← error, with sidenote:
+        #  - source is FILE, target is FILE  ← OK, with sidenote:
+        #    - there is 1 source             ← simple rename operation
+        #    - there are multiple sources    ← ...make tarball?
+        #
+        #  - source EXISTS, target DOESN'T EXIST         ← OK
+        #  - source DOESN'T EXIST, target DOESN'T EXIST  ← error (handled by rsync)
+        #  - source DOESN'T EXIST, target EXISTS         ← error (handled by rsync)
 
-		# First, carry out the copy
+        # First, carry out the copy
         eval "$cpcmd"
-		
-		# Then add sources to repository if needed
-		local -r target="${arglist[-1]}"
-		local -i target_exists=0
-		local -i target_in_repo=0
-		local -i target_is_dir=0
-		
-		local    src
-		local -i src_is_dir
-		local -i src_in_repo
-		
-		local -i repocmd_ok
-		local -r repo_add=$(get_repo_cmd "$REPO_CMD_add")
-		local -r istracked=$(get_repo_cmd "$REPO_CMD_trackcheck")
-		
-		if $($istracked "$target" 2> >(error)); then target_in_repo=1; target_exists=1; fi
-		if [[ -d "$target" ]]; then target_is_dir=1; target_exists=1; fi
-		
-		echo ""
-		for src in "${arglist[@]}"; do
-		
-			src_is_dir=0;  if [[ -d "$src" ]]; then src_is_dir=1; fi
-			src_in_repo=0; if $(istracked "$src" 2> >(error)); then src_in_repo=1; fi
-			
-			# TODO: implement the logic as commented above 
-			#if $src_is_dir; then
-			#fi
-			
-			repocmd_ok=$($repo_add "$src" 2> >(error))			
-			
-			if $repocmd_ok; then
-				infomessage "Added \"$src\" to the repository."
-			else
-				cmd_ok=1
-				warning "Could not add \"$src\" to the repository."
-			fi		
-		
-		done	
-		echo ""
-		
+        
+        # Then add sources to repository if needed
+        local -r target="${arglist[-1]}"
+        local -i target_exists=0
+        local -i target_in_repo=0
+        local -i target_is_dir=0
+        
+        local    src
+        local -i src_is_dir
+        local -i src_in_repo
+        
+        local -i repocmd_ok
+        local -r repo_add=$(get_repo_cmd "$REPO_CMD_add")
+        local -r istracked=$(get_repo_cmd "$REPO_CMD_trackcheck")
+        
+        if $($istracked "$target" 2> >(error)); then target_in_repo=1; target_exists=1; fi
+        if [[ -d "$target" ]]; then target_is_dir=1; target_exists=1; fi
+        
+        echo ""
+        for src in "${arglist[@]}"; do
+        
+            src_is_dir=0;  if [[ -d "$src" ]]; then src_is_dir=1; fi
+            src_in_repo=0; if $(istracked "$src" 2> >(error)); then src_in_repo=1; fi
+            
+            # TODO: implement the logic as commented above 
+            #if $src_is_dir; then
+            #fi
+            
+            repocmd_ok=$($repo_add "$src" 2> >(error))          
+            
+            if $repocmd_ok; then
+                infomessage "Added \"$src\" to the repository."
+            else
+                cmd_ok=1
+                warning "Could not add \"$src\" to the repository."
+            fi      
+        
+        done    
+        echo ""
+        
     # normal mode
     else
-        eval "$cpcmd"		
+        eval "$cpcmd"       
     fi
 
     print_list_if_OK "$cmd_ok"
@@ -2020,16 +2030,16 @@ _cp_DONTUSE()
 # touch file, taking into account current repo mode
 _touch_DONTUSE()
 {
-	if touch "$@" 2> >(error); then
-		print_list_if_OK 0
-		if [[ ! -z $REPO_MODE && $REPO_MODE == 1 ]]; then						
-			if $(get_repo_cmd "$REPO_CMD_add" "$@"); then			
-				repo_cmd_exit_message "Added new file \"$*\" to the repository."
-			else
-				warning "Created \"$*\", but could not add it to the repository."
-			fi			
-		fi
-	fi
+    if touch "$@" 2> >(error); then
+        print_list_if_OK 0
+        if [[ ! -z $REPO_MODE && $REPO_MODE == 1 ]]; then                       
+            if $(get_repo_cmd "$REPO_CMD_add" "$@"); then           
+                repo_cmd_exit_message "Added new file \"$*\" to the repository."
+            else
+                warning "Created \"$*\", but could not add it to the repository."
+            fi          
+        fi
+    fi
 }
 
 # --------------------------------------------------------------------------------------------------
@@ -2378,11 +2388,11 @@ check_XML()
 {
     for file in "$@"; do
         if python -c "import sys,xml.dom.minidom as d; d.parse(sys.argv[1])" "$file";
-		then
+        then
             echo "XML-file $file is valid and well-formed" 
-		else
+        else
             warning "XML-file $file is NOT valid"
-		fi
+        fi
     done
 }
 
