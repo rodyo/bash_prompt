@@ -2175,6 +2175,29 @@ C() {
     echo "$@" | /usr/local/bin/bc -lq
 }
 
+# Generalised manpages
+man()
+{
+    #(from https://unix.stackexchange.com/a/18088)
+    case "$(type -t "$1"):$1" in
+
+        # built-in
+        builtin:*) help "$1" | "${PAGER:-less}"
+                   ;;
+
+        # pattern
+        *[[?*]*) help "$1" | "${PAGER:-less}"
+                 ;;
+
+        # something else, presumably an external command
+        # or options for the man command or a section number
+        *) command -p man "$@"
+           ;;
+
+    esac
+}
+
+
 # find N largest files in current directory and all subdirectories
 #
 # Must be aliased in .bash_aliases.
