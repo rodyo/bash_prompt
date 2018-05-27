@@ -260,11 +260,11 @@ warning()
 
 assert()
 {
-	if [ "$1" ]; then
-		return 0;
-	else
-		return error "${@:2}"
-	fi
+    if [ "$1" ]; then
+        return 0;
+    else
+        return error "${@:2}"
+    fi
 }
 
 infomessage()
@@ -1107,8 +1107,8 @@ update_all()
 
         (
         cd "${rp[@]:1}"
-		updatecmd=$(get_repo_cmd $REPO_CMD_pull)
-		eval "$updatecmd" "$dump_except_error"
+        updatecmd=$(get_repo_cmd $REPO_CMD_pull)
+        eval "$updatecmd" "$dump_except_error"
         )
 
     done
@@ -1136,7 +1136,7 @@ _enter_GIT()
 
     alias unlink="git rm --cached"          ;  REPO_CMD_unlink="unlink"        # remove from repository, but keep local
     alias istracked="git ls-files --error-unmatch"
-											   REPO_CMD_trackcheck="istracked" # check whether file is tracked
+                                               REPO_CMD_trackcheck="istracked" # check whether file is tracked
 
     alias gco="git checkout"                ;  REPO_CMD_checkout="gco"
     complete -o default -o nospace -F _git_checkout gco
@@ -1145,18 +1145,18 @@ _enter_GIT()
     alias glg="git log --graph --oneline"   ;  REPO_CMD_loggraph="glg"
     alias gg=gitg
 
-	# Tagging
+    # Tagging
     alias gt="git tag"                      ;  REPO_CMD_tag="gt"
     alias gpt="git push --tags"             ;  REPO_CMD_pushtgs="gpt"
 
-	# Branches
+    # Branches
     alias gcb="git diff --name-status"      ;  REPO_CMD_diffnamestatus="gcb"
     alias gbr="git branch -r"               ;  REPO_CMD_branchremote="gbr"
     alias gb="git branch"                   ;  REPO_CMD_branch="gb"
     alias gd="git diff"                     ;  REPO_CMD_diff="gd"
 
-	# Submodules
-	alias gam="git submodule add"           ;  REPO_CMD_add_external="gam"
+    # Submodules
+    alias gam="git submodule add"           ;  REPO_CMD_add_external="gam"
     alias gim="git submodule update --init --recursive";  REPO_CMD_init_external="gim"
 
 }
@@ -1721,18 +1721,18 @@ _mkdir_DONTUSE()
 {
     mkdir -p -- "$@" 2> >(error)
     if [[ $? == 0 ]];
-	then
+    then
         if [[ ! -z $REPO_MODE && $REPO_MODE == 1 ]];
-		then
-			print_list_if_OK 0
+        then
+            print_list_if_OK 0
 
-			addcmd=$(get_repo_cmd $REPO_CMD_add)
+            addcmd=$(get_repo_cmd $REPO_CMD_add)
             if (eval "$addcmd" "$@" "$dump_except_error"); then
-				repo_cmd_exit_message "Added \"$*\" to the repository."
-			else
-				warning "Could not add \"$*\" to the repository."
-			fi
-		fi
+                repo_cmd_exit_message "Added \"$*\" to the repository."
+            else
+                warning "Could not add \"$*\" to the repository."
+            fi
+        fi
     fi
 }
 
@@ -1804,17 +1804,17 @@ _rm_DONTUSE()
                 case "$yn" in
 
                     [Yy]*)
-						rm -vI "$@" 2> >(error)
+                        rm -vI "$@" 2> >(error)
                         print_list_if_OK $?
                         break
                         ;;
 
                     [Nn]*)
-						break
+                        break
                         ;;
 
-                    *) 	echo "Please answer yes or no."
-						;;
+                    *)  echo "Please answer yes or no."
+                        ;;
                 esac
             done
 
@@ -1859,7 +1859,7 @@ _mv_DONTUSE()
 
     # check if target is in REPO
     local source
-	local source_repo
+    local source_repo
     local target_repo=$(check_repo $(dirname "${@:$#}"))
 
 # TODO!
@@ -1920,13 +1920,13 @@ _ln_DONTUSE()
     fi
 
     if (ln -s "$@" 2> >(error))
-	then
+    then
 
         print_list_if_OK 0
 
         if [[ ! -z $REPO_TYPE && $REPO_TYPE == "git" ]];
-		then
-			addcmd=$(get_repo_cmd "$REPO_CMD_add")
+        then
+            addcmd=$(get_repo_cmd "$REPO_CMD_add")
             if (eval "$addcmd" "$2" "$dump_except_error"); then
                 repo_cmd_exit_message "Added new file \"$2\" to the repository."
             else
@@ -2054,7 +2054,7 @@ _cp_DONTUSE()
             #fi
 
             eval "$repo_add" "$src" "$dump_except_error"
-			repocmd_ok=$?
+            repocmd_ok=$?
 
             if $repocmd_ok; then
                 infomessage "Added \"$src\" to the repository."
@@ -2078,12 +2078,12 @@ _cp_DONTUSE()
 _touch_DONTUSE()
 {
     if (touch "$@" 1> /dev/null 2> >(error));
-	then
+    then
         print_list_if_OK 0
 
         if [[ ! -z $REPO_MODE && $REPO_MODE == 1 ]];
-		then
-			addcmd=$(get_repo_cmd "$REPO_CMD_add")
+        then
+            addcmd=$(get_repo_cmd "$REPO_CMD_add")
             if (eval "$addcmd" "$@" "$dump_except_error"); then
                 repo_cmd_exit_message "Added new file \"$*\" to the repository."
             else
@@ -2450,19 +2450,19 @@ spread()
 # export hi-res PNG from svg file
 svg2png()
 {
-	if (which inkscape 2>&1 > /dev/null);
-	then
-		local svgname
-		local pngname
+    if (which inkscape 2>&1 > /dev/null);
+    then
+        local svgname
+        local pngname
 
-		for f in "$@"; do
-			svgname=$f
-			pngname="${svgname%.svg}.png"
-			inkscape "$svgname" --export-png=$pngname --export-dpi=250
-		done
-	else
-		error "$0() needs an installation of inkscape, which doesn't seem to be present on this system."
-	fi
+        for f in "$@"; do
+            svgname=$f
+            pngname="${svgname%.svg}.png"
+            inkscape "$svgname" --export-png=$pngname --export-dpi=250
+        done
+    else
+        error "$0() needs an installation of inkscape, which doesn't seem to be present on this system."
+    fi
 }
 
 # check validity of XML
