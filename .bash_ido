@@ -667,6 +667,7 @@ ido_dir()
     kill -WINCH $$    # force bash to redraw
 
     # give the ido_result to bash
+    ido_result=${ido_result/$cwd/.}   # NOTE: (Rody Oldenhuis) strip the current path, if applicable
     ido_final_result=${ido_result%./}
 
     # add this result to history

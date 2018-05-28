@@ -1139,7 +1139,8 @@ _enter_GIT()
                                                REPO_CMD_trackcheck="istracked" # check whether file is tracked
 
     alias gco="git checkout"                ;  REPO_CMD_checkout="gco"
-    complete -o default -o nospace -F _git_checkout gco
+    # TODO: (Rody Oldenhuis) missing...
+    #complete -o default -o nospace -F _git_checkout gco
 
     alias gu="git pull && git push"         ;  REPO_CMD_update="gu"
     alias glg="git log --graph --oneline"   ;  REPO_CMD_loggraph="glg"
@@ -1365,7 +1366,7 @@ _add_dir_to_stack()
         # - If directory is not found, add it with its visits counter set to 1
         for dirline in "${stack[@]}"; do
 
-            dir="${dirline:((${DIRSTACK_COUNTLENGTH}+1))}"
+            dir="${dirline:((DIRSTACK_COUNTLENGTH+1))}"
             counter="${dirline:0:${DIRSTACK_COUNTLENGTH}}"
 
             if [ "${addition}" == "${dir}" ]; then
@@ -1460,7 +1461,7 @@ _remove_dir_from_stack()
             local -r deletion="$(normalize_dir "${removal}")"
 
             for dir in "${stack[@]}"; do
-                if [[ "${dir:((${DIRSTACK_COUNTLENGTH}+1))}" != *"${deletion}"* ]]; then
+                if [[ "${dir:((DIRSTACK_COUNTLENGTH+1))}" != *"${deletion}"* ]]; then
                     echo "${stack[$i]}" >> "${tmp}"
                 else
                     was_present=1
@@ -1498,7 +1499,7 @@ _check_dirstack()
         # Loop through all dirs one by one. If they exist, print
         # them into a tempfile
         for dirline in "${stack[@]}"; do
-            dir="${dirline:((${DIRSTACK_COUNTLENGTH}+1))}"
+            dir="${dirline:((DIRSTACK_COUNTLENGTH+1))}"
             if [ -e "${dir}" ]; then
                 echo "${dirline}" >> "${tmp}"; fi
         done
@@ -1563,7 +1564,6 @@ _cd_DONTUSE()
 }
 
 # jump dirs via dir-numbers
-# TODO: autocomplete dirs in the stack bash-ido style (if none exist in the current path)
 _cdn_DONTUSE()
 {
     # Remove non-existent dirs from dirstack
@@ -1620,7 +1620,7 @@ _cdn_DONTUSE()
     # Integer argument provided: go to dir number
     if [ $intarg -ne -1 ]; then
         if [ $intarg -le ${#stack[@]} ]; then
-            _cd_DONTUSE "${stack[$intarg]:((${DIRSTACK_COUNTLENGTH}+1))}"
+            _cd_DONTUSE "${stack[$intarg]:((DIRSTACK_COUNTLENGTH+1))}"
             return 0
         else
             error "given directory index exceeds number of directories visited."
@@ -1656,8 +1656,8 @@ _cdn_DONTUSE()
             # Local dirs have no counter, dirstack dirs do. In the latter case, remove
             # the counter from the variable
             dir="${dirline}"
-            if [[ "${dir:0:((${DIRSTACK_COUNTLENGTH}+1))}" =~ ^[[:space:]]*[0-9]+[[:space:]] ]]; then
-                dir="${dirline:((${DIRSTACK_COUNTLENGTH}+1))}"; fi
+            if [[ "${dir:0:((DIRSTACK_COUNTLENGTH+1))}" =~ ^[[:space:]]*[0-9]+[[:space:]] ]]; then
+                dir="${dirline:((DIRSTACK_COUNTLENGTH+1))}"; fi
 
             # CD to patially-matched dirname
             if [[ "$dir" == *"${namearg}"* ]]; then
@@ -1690,7 +1690,7 @@ _cdn_DONTUSE()
 
             for ((i=0; i<${#repos[@]}; i++)); do
 
-                dir="${stack[$i]:((${DIRSTACK_COUNTLENGTH}+1))}"
+                dir="${stack[$i]:((DIRSTACK_COUNTLENGTH+1))}"
 
                 if [ ${#dir} -gt $pwdmaxlen ]; then
                     dir="...${dir: ((-${pwdmaxlen}-3))}"; fi
@@ -1701,19 +1701,63 @@ _cdn_DONTUSE()
         # Colored list, taking into account dir/symlink coloring and repo coloring
         else
             for ((i=0; i<${#repos[@]}; i++)); do
-                (printf -- "%3d: %s\n" $i "$( prettyprint_dir "${stack[$i]:((${DIRSTACK_COUNTLENGTH}+1))}" "${types[$i]}" "${paths[$i]}" )" &); done
+                (printf -- "%3d: %s\n" $i "$( prettyprint_dir "${stack[$i]:((DIRSTACK_COUNTLENGTH+1))}" "${types[$i]}" "${paths[$i]}" )" &); done
         fi
     fi
 }
 
 
-# TODO: autocomplete dirs in the stack bash-ido style (if none exist in the current path)
+# TODO: autocomplete dirs in the stack bash-ido style
+# (if none exist in the current path)
 _cdn_completer()
 {
-    # TODO
-    exit 0
+    local -r cur=${COMP_WORDS[COMP_CWORD]}
+    local opts=""
+
+    if [ -e "${DIRSTACK_FILE}" ]
+    then
+        local dir dirline
+
+        # Read current dirstack
+        _lock_dirstack
+
+        # HISTORY COMPLETION
+        IFS=$'\n'
+            local -a stack=($(cat "${DIRSTACK_FILE}"))
+        IFS="$IFS_ORIGINAL"
+
+        for ((i=0; i<${#stack[@]}; ++i)); do
+            stack[i]="${stack[i]:((${DIRSTACK_COUNTLENGTH}+1))}"; done
+        opts="${stack[@]}"
+
+        # CURRENT DIR COMPLETION
+        if [ -z "$cur" ]; then
+            cdir="."
+        elif [[ "${cur:${#cur} - 1}" == '/' ]]; then
+            cdir="$cur"
+        else
+            cdir=$(command dirname ${cur})
+        fi
+
+        for i in $(command ls "$cdir" 2>/dev/null);  do
+            opts="$opts $(basename -- "$i" 2>&1 > /dev/null)"
+        done
+
+        _unlock_dirstack
+
+    else
+        COMPREPLY=()
+    fi
+
+    IFS="$IFS_ORIGINAL"
+
+
+
+    COMPREPLY=( $(compgen -W "${opts}" -- ${cur}) )
+    return 0
+
 }
-#complete -F _cdn_completer -o nospace cdn
+complete -F _cdn_completer -o nospace cdn
 
 
 # create dir(s), taking into account current repo mode
