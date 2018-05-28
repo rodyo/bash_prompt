@@ -297,10 +297,6 @@ ido_print_f_menu()
 # filter the menu generated with ido_gen_dir()
 ido_filter()
 {
-    # NOTE: in my opinion, case (in)sensitivity is a user descision
-    # on global scale; hence we should not forse case insensitivity
-    # here, but rather just use the current shopt setting
-
     # initialize
     local i=0 start trans_i quoted show_dot_dirs=0
     start=${ido_f_menu[i]%% *}
@@ -318,7 +314,7 @@ ido_filter()
     # now apply filter
     for i in "${!ido_menu[@]}"; do
         trans_i=$(((i+start)%${#ido_menu[@]}))
-        if [[ "${ido_menu[trans_i]}" = *"$quoted"* && \
+        if [[ "${ido_menu[trans_i],,}" = *"${quoted,,}"* && \
             ($show_dot_dirs -eq 1 || \
             "${ido_menu[trans_i]:0:2}" == "./" || \
             "${ido_menu[trans_i]:0:1}" != ".") ]]; then # TODO: regex?
@@ -561,8 +557,8 @@ ido_gen_dir()
 
 
 # Entry point
-ido_dir(){
-
+ido_dir()
+{
     # initialize
     local cwd=$(pwd)  # don't use $PWD; it's been modified in $PROMPT_COMMAND
     ido_first_entry=1 # first entry into bash ido
@@ -629,7 +625,6 @@ ido_dir(){
             ;;
 
         *)
-            # don't use $PWD; it's been modified in $PROMPT_COMMAND
             ido_search_string=$ido_result
             ido_result=$cwd/
             ;;
@@ -661,7 +656,7 @@ ido_dir(){
         ido_search_string=""
 
         # break if match is unique, and this is the first pass
-        if [ status == 255 ]; then
+        if [[ status == 255 ]]; then
             break; fi
 
     done
@@ -675,7 +670,7 @@ ido_dir(){
     ido_final_result=${ido_result%./}
 
     # add this result to history
-    if [ $status -eq 0 ]; then
+    if [[ $status == 0 ]]; then
         ido_add_to_history; fi
 
     # unset all local,global vars
