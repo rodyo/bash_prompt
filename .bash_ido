@@ -159,7 +159,7 @@ IDO_PROMPTLENGTH=50 # max. length of the displayed prompt
 IDO_MINSPACES=5     # minimum number of spaces between items
 
 # ido history options
-IDO_HISTORY=        # array containing the history (just initializing)
+declare -a IDO_HISTORY      # array containing the history (just initializing)
 export IDO_HISTORY_SIZE=250 # maximum dir entries in the history
 export IDO_HISTORY_FILE="~/.ido_history" # File used for persistent history.
 
@@ -378,8 +378,9 @@ ido_add_to_history()
 ido_read_history()
 {
     # check if the file is actually there
-    if [ -f "$IDO_HISTORY_FILE" ]; then
-        local jj=0
+    if [ -f "$IDO_HISTORY_FILE" ];
+    then
+        local -i jj=0
         IDO_HISTORY=
         while read line; do
             IDO_HISTORY[jj]="$line"
