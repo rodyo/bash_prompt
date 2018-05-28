@@ -125,6 +125,7 @@ declare -r IFS_ORIGINAL=$IFS
 
 declare -r  DIRSTACK_FILE="${HOME}/.dirstack"
 declare -ir DIRSTACK_COUNTLENGTH=5
+declare -ir DIRSTACK_MAXLENGTH=50
 declare -r  DIRSTACK_LOCKFILE="${HOME}/.locks/.dirstack"
 declare -ir DIRSTACK_LOCKFD=9
 
@@ -1380,9 +1381,17 @@ _add_dir_to_stack()
         if [[ $was_present == 0 ]]; then
             printf -- "%${DIRSTACK_COUNTLENGTH}d %s"'\n' 1 "${addition}" >> "${tmp}"; fi
 
-        # Sort according to most visits, and finish up
+        # Sort according to most visits
         sort -r "${tmp}" > "${DIRSTACK_FILE}"
         rm "${tmp}"
+
+        # TODO: (Rody Oldenhuis) this means the newly added dir will be wiped
+        # immediately, never giving it a chance to rise up in popularity...
+        # If size exceeded, chop off the least popular dirs
+        #if [[ $(wc -l < "${DIRSTACK_FILE}") > $DIRSTACK_MAXLENGTH ]]; then
+        #    head -$DIRSTACK_MAXLENGTH > "${tmp}"
+        #    mv -f "${tmp}" "${DIRSTACK_FILE}"
+        #fi
 
     else
         printf -- "%${DIRSTACK_COUNTLENGTH}d %s\n" 1 "${addition}" > "${DIRSTACK_FILE}"
@@ -1400,7 +1409,7 @@ _add_dir_to_stack()
 _remove_dir_from_stack()
 {
     # No arguments -- quick exit
-    if [ $# -eq 0 ]; then
+    if [[ $# == 0 ]]; then
         return 0; fi
 
     # No dir stack -- can't remove anything
@@ -1563,7 +1572,8 @@ _cd_DONTUSE()
     fi
 }
 
-# jump dirs via dir-numbers
+# jump dirs via dir-numbers. Inspired by tp_command(), by
+# Alvin Alexander (DevDaily.com)
 _cdn_DONTUSE()
 {
     # Remove non-existent dirs from dirstack
