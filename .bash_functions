@@ -1,61 +1,26 @@
 #!/usr/bin/env bash
 
+
+
 # --------------------------------------------------------------------------------------------------
-# Colors are a mess in bash...
+# Debugging
 # --------------------------------------------------------------------------------------------------
 
-readonly START_COLORSCHEME_PS1='\[\e['
-readonly END_COLORSCHEME_PS1='m\]'
+# (do the obvious thing to enable this)
+# From https://askubuntu.com/a/1001404/75926
 
-readonly START_COLORSCHEME='\e['
-readonly END_COLORSCHEME="m"
+if [ 0 ]; then
 
-# (Alias for better clarity)
-readonly START_ESCAPE_GROUP='\e['
-readonly END_ESCAPE_GROUP="m"
+    local -r fname="~/BASH_DEBUG.LOG"
 
-readonly RESET_COLORS='\e[0m'
-readonly RESET_COLORS_PS1='\['"${RESET_COLORS}"'\]'
+    exec   > >(tee -ia "$fname")
+    exec  2> >(tee -ia "$fname" >& 2)
+    exec 19> "$fname"
 
+    export BASH_XTRACEFD="19"
+    set -x
 
-readonly TXT_BOLD="01"
-readonly TXT_DIM="02"
-readonly TXT_UNDERLINE="04"
-
-readonly FG_BLACK="30"
-readonly FG_RED="31"
-readonly FG_GREEN="32"
-readonly FG_YELLOW="33"
-readonly FG_BLUE="34"
-readonly FG_MAGENTA="35"
-readonly FG_CYAN="36"
-readonly FG_LIGHTGRAY="37"
-readonly FG_DARKGRAY="90"
-readonly FG_LIGHTRED="91"
-readonly FG_LIGHTGREEN="92"
-readonly FG_LIGHTYELLOW="93"
-readonly FG_LIGHTBLUE="94"
-readonly FG_LIGHTMAGENTA="95"
-readonly FG_LIGHTCYAN="96"
-readonly FG_WHITE="97"
-
-readonly BG_BLACK="40"
-readonly BG_RED="41"
-readonly BG_GREEN="42"
-readonly BG_YELLOW="43"
-readonly BG_BLUE="44"
-readonly BG_MAGENTA="45"
-readonly BG_CYAN="46"
-readonly BG_LIGHTGRAY="47"
-readonly BG_DARKGRAY="100"
-readonly BG_LIGHTRED="101"
-readonly BG_LIGHTGREEN="102"
-readonly BG_LIGHTYELLOW="103"
-readonly BG_LIGHTBLUE="104"
-readonly BG_LIGHTMAGENTA="105"
-readonly BG_LIGHTCYAN="106"
-readonly BG_WHITE="107"
-
+fi
 
 
 # --------------------------------------------------------------------------------------------------
@@ -119,6 +84,7 @@ _STOP_PROFILING()
 
 # Original separators
 declare -r IFS_ORIGINAL=$IFS
+
 
 # Location of files
 # --------------------------------------------------------------------------------------------------
@@ -328,7 +294,7 @@ command_not_found_handle()
 # shellcheck disable=SC2120
 multicolumn_ls()
 {
-    if [ $haveAwk -eq 1 ]; then
+    if [[ $haveAwk == 1 ]]; then
 
         local colorflag=
         if [ $USE_COLORS -eq 1 ]; then

@@ -121,8 +121,7 @@ case "$TERM" in
         ;;
 esac
 
-
-# enable color support of ls
+# enable color support
 if [ "$SHELL_COLORS" = yes ]; then
     if [ -x /usr/bin/dircolors ]; then
         test -r ~/.dircolors && eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
@@ -162,16 +161,50 @@ fi
 # Default editor
 export EDITOR=nano
 
+# Keyboard shortcut definitions
+export INPUTRC=~/.inputrc
+
 # Alias definitions
 if [ -f ~/.bash_aliases ]; then
     source ~/.bash_aliases; fi
 
+
+# TODO: (Rody Oldenhuis) offload this to some other file
+# {
+
+# First some exports
+export GIT_MODE=false # "GIT mode" on or not
+export SVN_MODE=false # "SVN mode" on or not
+export REPO_PATH=     # path where repository is located
+PS1_=$PS1;            # save it to reset it when changed below
+
+# global vars
+NUM_PROCESSORS=$(nproc --all)
+
+# exports for colored man-pages
+if [[ "$SHELL_COLORS" == yes ]]; then
+    export LESS_TERMCAP_mb=$'\E[01;31m'       # begin blinking
+    export LESS_TERMCAP_md=$'\E[01;38;5;74m'  # begin bold
+    export LESS_TERMCAP_me=$'\E[0m'           # end mode
+    export LESS_TERMCAP_se=$'\E[0m'           # end standout-mode
+    export LESS_TERMCAP_so=$'\E[38;5;246m'    # begin standout-mode - info box export LESS_TERMCAP_ue=$'\E[0m' # end underline
+    export LESS_TERMCAP_us=$'\E[04;38;5;146m' # begin underline
+fi
+
+# }
+
+
+# Custom functions
+# By <oldenhuis@gmail.com>
+if [ -f ~/.bash_functions ]; then
+    source ~/.bash_colordefs
+    source ~/.bash_functions
+    _check_dirstack
+fi
+
 # bash ido
 if [ -f ~/.bash_ido ]; then
     source ~/.bash_ido; fi
-
-# Keyboard shortcut definitions
-export INPUTRC=~/.inputrc
 
 
 # SSH agent (useful on CygWin)
@@ -180,13 +213,11 @@ if [ -z "$SSH_AUTH_SOCK" -a -x "$SSHAGENT" ]; then
     trap "kill $SSH_AGENT_PID" 0
 fi
 
-
 # Ultimate debugging prompt
 # see https://stackoverflow.com/questions/17804007/how-to-show-line-number-when-executing-bash-script
 export PS4='+(${BASH_SOURCE}:${LINENO}): ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
 
-
-# We're done; do a list
+# We're done; do an LS
 multicolumn_ls
 
 

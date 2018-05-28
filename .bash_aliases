@@ -1,49 +1,4 @@
-# Customized
-#
-# * .bashrc
-# * .dircolors
-# * .inputrc
-# * .bash_aliases
-# * .bash_functions
-#
-# by
-#
-# Rody Oldenhuis
-# oldenhuis@gmail.com
-
-
-# First some exports
-export GIT_MODE=false # "GIT mode" on or not
-export SVN_MODE=false # "SVN mode" on or not
-export REPO_PATH=     # path where repository is located
-PS1_=$PS1;            # save it to reset it when changed below
-
-# global vars
-NUM_PROCESSORS=$(nproc --all)
-
-# exports for colored man-pages
-if [ "$color_prompt" = yes ]; then
-    export LESS_TERMCAP_mb=$'\E[01;31m'       # begin blinking
-    export LESS_TERMCAP_md=$'\E[01;38;5;74m'  # begin bold
-    export LESS_TERMCAP_me=$'\E[0m'           # end mode
-    export LESS_TERMCAP_se=$'\E[0m'           # end standout-mode
-    export LESS_TERMCAP_so=$'\E[38;5;246m'    # begin standout-mode - info box export LESS_TERMCAP_ue=$'\E[0m' # end underline
-    export LESS_TERMCAP_us=$'\E[04;38;5;146m' # begin underline
-fi
-
-
-# bash-ido
-# By <pierre.gaston@gmail.com>
-# and <oldenhuis@gmail.com>
-#if [ -f ~/.bash_ido ]; then
-#    source ~/.bash_ido; fi
-
-# custom functions
-# By <oldenhuis@gmail.com>
-if [ -f ~/.bash_functions ]; then
-    source ~/.bash_functions;
-    _check_dirstack
-fi
+#!/usr/bin/env bash
 
 # list-aliases
 alias ls="clear; ls --color=auto --si"
@@ -73,12 +28,6 @@ alias shred="shred -uz -n 4"
 alias rmrf="rm -rf"
 alias ged=_gedit_DONTUSE
 alias not=_gedit_DONTUSE
-
-
-# Bind completion of "cd" to "ido_dir()"
-# TODO: work out bugs
-# TODO: make it work better
-#complete -F ido_dir -o nospace cdd
 
 # one-letter shorts
 alias c="clear"
@@ -110,6 +59,7 @@ alias ..6="cd ../../../../../.."
 
 # hotdirs
 alias doc="cd ~/Documents/"
+alias dropbox="cd ~/Dropbox/"
 alias work="cd ~/e/Work/"
 
 # various
@@ -137,7 +87,6 @@ alias egrep=grep
 alias catbare='/bin/egrep -v "^#\|^[[:space:]]*$"'
 alias rebash=". ~/.bashrc"
 
-
 # Home
 alias ssh_mediabox="ssh -p 2021 media@rastawern.no-ip.org"
 alias ssh_heaven="ssh -p 2022 rody@rastawern.no-ip.org"
@@ -146,7 +95,6 @@ alias ssh_rivka="ssh -p 2023 rivka@rastawern.no-ip.org"
 
 
 # MATLAB
-
 MATLAB_BASE="/usr/local/MATLAB/"
 MATLAB="/usr/local/bin/matlab"
 
@@ -161,6 +109,5 @@ alias matlabrun="$MATLAB -r"
 # python
 alias ipython="ipython -pylab"
 
-
-# WORK
+# ispace
 alias ssh_tinker="ssh ispace@ispace-08"
