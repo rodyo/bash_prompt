@@ -164,10 +164,6 @@ export EDITOR=nano
 # Keyboard shortcut definitions
 export INPUTRC=~/.inputrc
 
-# Alias definitions
-if [ -f ~/.bash_aliases ]; then
-    source ~/.bash_aliases; fi
-
 
 # TODO: (Rody Oldenhuis) offload this to some other file
 # {
@@ -201,6 +197,10 @@ if [ -f ~/.bash_functions ]; then
     source ~/.bash_functions
     _check_dirstack
 fi
+
+# Alias definitions
+if [ -f ~/.bash_aliases ]; then
+    source ~/.bash_aliases; fi
 
 # bash ido
 if [ -f ~/.bash_ido ]; then

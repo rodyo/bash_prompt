@@ -9,7 +9,7 @@
 # (do the obvious thing to enable this)
 # From https://askubuntu.com/a/1001404/75926
 
-if [ 0 ]; then
+if false; then
 
     local -r fname="~/BASH_DEBUG.LOG"
 
@@ -17,7 +17,7 @@ if [ 0 ]; then
     exec  2> >(tee -ia "$fname" >& 2)
     exec 19> "$fname"
 
-    export BASH_XTRACEFD="19"
+    export BASH_XTRACEFD=19
     set -x
 
 fi
