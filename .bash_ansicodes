@@ -98,7 +98,7 @@ reset_colors()
 readonly POSITION_CURSOR="H"
 
 readonly MOVE_CURSOR_UP="A"
-readonly MOVE_CURSOR_UP="B"
+readonly MOVE_CURSOR_DOWN="B"
 readonly MOVE_CURSOR_RIGHT="C"
 readonly MOVE_CURSOR_LEFT="D"
 
@@ -140,10 +140,10 @@ position_cursor()
     _cursor_mover "$1;$2${POSITION_CURSOR}"
 }
 
-move_cursor_right() { _move_cursor "${MOVE_CURSOR_RIGHT}" "$@"; }
-move_cursor_left()  { _move_cursor "${MOVE_CURSOR_LEFT}"  "$@"; }
 move_cursor_up()    { _move_cursor "${MOVE_CURSOR_UP}"    "$@"; }
 move_cursor_down()  { _move_cursor "${MOVE_CURSOR_DOWN}"  "$@"; }
+move_cursor_left()  { _move_cursor "${MOVE_CURSOR_LEFT}"  "$@"; }
+move_cursor_right() { _move_cursor "${MOVE_CURSOR_RIGHT}" "$@"; }
 
 erase_to_end_of_line()
 {
