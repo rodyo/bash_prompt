@@ -193,7 +193,7 @@ fi
 # Custom functions
 # By <oldenhuis@gmail.com>
 if [ -f ~/.bash_functions ]; then
-    source ~/.bash_colordefs
+    source ~/.bash_ansicodes
     source ~/.bash_functions
     _check_dirstack
 fi

@@ -731,7 +731,7 @@ promptcmd()
 
     # put pretty-printed full path in the upper right corner
     local -r pth="$(prettyprint_dir "$PWD")"
-    local -r move_cursor='\E7\E[001;'"$((COLUMNS-${#PWD}-2))H${START_ESCAPE_GROUP}1${END_ESCAPE_GROUP}"
+    local -r move_cursor='\E7\E[001;'"$((COLUMNS-${#PWD}-2))H${START_ESCAPE_GROUP}1${END_COLORESCAPE}"
     local -r reset_cursor='\E8'
     if [ $USE_COLORS -eq 1 ]; then
         local -r bracket_open="${START_COLORSCHEME}${FG_GREEN}${END_COLORSCHEME}[${RESET_COLORS}"
@@ -813,10 +813,11 @@ delete_reorder()
 }
 
 # Clear
-_clear_DONTUSE(){
-    for (( i=0; i<$LINES; i++)); do
-        printf '\n%*s\r' $COLUMNS " "; done;
-    printf "\E[1;${COLUMN}H"
+_clear_DONTUSE()
+{
+    for (( i=0; i<LINES; i++)); do
+        printf '\n'"${START_ESCAPE_GROUP}K"; done;
+    printf "${START_ESCAPE_GROUP}0;0H"
 }
 
 # print dirlist if command exited with code 0
