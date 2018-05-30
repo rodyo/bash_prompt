@@ -941,7 +941,7 @@ prettyprint_dir()
 # --------------------------------------------------------------------------------------------------
 
 # Get repository command
-()
+get_repo_cmd()
 {
     alias | grep "alias\s*$@=" | cut -d= -f2 | tr -d \'
 }
@@ -1772,7 +1772,7 @@ _rm_DONTUSE()
     if [[ ! -z $REPO_MODE && $REPO_MODE -eq 1 ]]; then
 
         # perform repo-specific delete
-        local -r err=$(eval ${REPO_CMD_remove} "$@" "$dump_except_error")
+        local -r err=$(eval ${REPO_CMD_remove} "$@" 2>&1)
         local not_added
         local outside_repo
 
