@@ -695,4 +695,4 @@ typeset -r IDO_HISTORY_FILE
 if [ ${#IDO_HISTORY[@]} -eq 0 ]; then
     ido_read_history; fi
 
-complete -F ido_dir -o nospace cd
+complete -F ido_dir -o nospace cdd
