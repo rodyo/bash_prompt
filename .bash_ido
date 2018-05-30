@@ -163,7 +163,7 @@ IDO_MINSPACES=5     # minimum number of spaces between items
 # ido history options
 declare -a IDO_HISTORY      # array containing the history (just initializing)
 export IDO_HISTORY_SIZE=250 # maximum dir entries in the history
-export IDO_HISTORY_FILE="~/.ido_history" # File used for persistent history.
+export IDO_HISTORY_FILE="$HOME/.ido_history" # File used for persistent history.
 
 
 # Get the current cursor line and column
@@ -693,8 +693,6 @@ typeset -r IDO_HISTORY_FILE
 
 # read the history file when first sourcing this script
 if [ ${#IDO_HISTORY[@]} -eq 0 ]; then
-    echo "Reading IDO history..."
-    ido_read_history;
-fi
+    ido_read_history; fi
 
 complete -F ido_dir -o nospace cd

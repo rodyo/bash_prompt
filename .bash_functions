@@ -941,9 +941,9 @@ prettyprint_dir()
 # --------------------------------------------------------------------------------------------------
 
 # Get repository command
-get_repo_cmd()
+()
 {
-    alias | grep "$@" | cut -d= -f2 | tr -d \'
+    alias | grep "alias\s*$@=" | cut -d= -f2 | tr -d \'
 }
 
 # Check if given dir(s) is (are) (a) repository(ies)
@@ -1944,13 +1944,13 @@ _ln_DONTUSE()
 
         print_list_if_OK 0
 
-        if [[ ! -z $REPO_TYPE && $REPO_TYPE == "git" ]];
+        if [[ ! -z $REPO_MODE && $REMO_MODE == 1 ]];
         then
             addcmd=$(get_repo_cmd "$REPO_CMD_add")
-            if (eval "$addcmd" "$2" "$dump_except_error"); then
-                repo_cmd_exit_message "Added new file \"$2\" to the repository."
+            if (eval "$addcmd" "$@" "$dump_except_error"); then
+                repo_cmd_exit_message "Added new file(s) \"$@\" to the repository."
             else
-                warning "Created link \"$2\", but could not add it to the repository."
+                warning "Created link(s) \"$@\", but could not add it to the repository."
             fi
         fi
     fi
@@ -2105,7 +2105,7 @@ _touch_DONTUSE()
         then
             addcmd=$(get_repo_cmd "$REPO_CMD_add")
             if (eval "$addcmd" "$@" "$dump_except_error"); then
-                repo_cmd_exit_message "Added new file \"$*\" to the repository."
+                repo_cmd_exit_message "Added \"$*\" to the repository."
             else
                 warning "Created \"$*\", but could not add it to the repository."
             fi
@@ -2217,6 +2217,14 @@ man()
     esac
 }
 
+# grep all processes in wide-format PS, excluding "grep" itself
+psa()
+{
+    if [[ $# == 0 ]]; then
+        return 1; fi
+
+    ps auxw | grep -EiT --color=auto "[${1:0:1}]${1:1}" 2> >(error)
+}
 
 # find N largest files in current directory and all subdirectories
 #
@@ -2343,15 +2351,6 @@ _gedit_DONTUSE()
     fi
 }
 
-# grep all processes in wide-format PS, excluding "grep" itself
-psa()
-{
-    if [[ $# == 0 ]]; then
-        return 1; fi
-
-    ps auxw | grep -EiT --color=auto "[${1:0:1}]${1:1}" 2> >(error)
-}
-
 # Queued move
 mvq()
 {
@@ -2453,7 +2452,6 @@ _spread()
             return 1; fi
     done
 }
-
 
 # Multi-source, multi-destination copy
 proliferate()
