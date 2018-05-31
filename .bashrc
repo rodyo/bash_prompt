@@ -135,15 +135,24 @@ if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
     source /etc/bash_completion; fi
 
 # Enable git-specific completions and prompt options
-if [ -f ~/.git_completion ]; then
-    source ~/.git_completion; fi
 
-if [ -f ~/.git_prompt ]; then
-    source ~/.git_prompt
+# checkout from https://github.com/git/git/tree/master/contrib/completion
+# and rename the softlink
+if [ -f ~/.git-completion ]; then
+    source ~/.git-completion; fi
+
+if [ -f ~/.git-prompt ]; then
+    source ~/.git-prompt
     export GIT_PS1_SHOWDIRTYSTATE="yes"
     export GIT_PS1_SHOWSTASHSTATE="yes"
     export GIT_PS1_SHOWUPSTREAM="auto"
 fi
+
+# Added as submodule from https://github.com/bobthecow/git-flow-completion
+# NOTE: rename the softlink
+if [ -f ~/.git-flow-completion ]; then
+    source ~/.git-flow-completion ]; fi
+
 
 # Enable svn-specific completions and prompt options
 # TODO
