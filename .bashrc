@@ -208,8 +208,8 @@ if [ -f ~/.bash_ido ]; then
 
 
 # SSH agent (useful on CygWin)
-if [ -z "$SSH_AUTH_SOCK" -a -x "$SSHAGENT" ]; then
-    eval $(ssh-agent -s)
+if [[ -z "$SSH_AUTH_SOCK" ]]; then
+    eval $(ssh-agent) 2>&1 > /dev/null
     trap "kill $SSH_AGENT_PID" 0
 fi
 
@@ -219,5 +219,7 @@ export PS4='+(${BASH_SOURCE}:${LINENO}): ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
 
 # We're done; do an LS
 multicolumn_ls
+
+
 
 
