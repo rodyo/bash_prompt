@@ -187,30 +187,45 @@ if [[ "$SHELL_COLORS" == yes ]]; then
     export LESS_TERMCAP_us=$'\E[04;38;5;146m' # begin underline
 fi
 
+# SSH agent (useful on CygWin)
+if [[ -z "$SSH_AUTH_SOCK" ]]; then
+    eval $(ssh-agent) 2>&1 > /dev/null
+    trap "kill $SSH_AGENT_PID" 0
+fi
+
 # }
 
 
 # Custom functions
 # By <oldenhuis@gmail.com>
-if [ -f ~/.bash_functions ]; then
-    source ~/.bash_ansicodes
-    source ~/.bash_functions
-    _check_dirstack
+_have_fcn=0
+if [ -f ~/.bash_functions ];
+then
+    if [ -f ~/.bash_functions ];
+    then
+        source ~/.bash_ansicodes
+        source ~/.bash_functions
+        _check_dirstack
+        _have_fcn=1
+    else
+        echo "Can't find one or more of .bash_function's dependencies!"
+    fi
 fi
 
 # Alias definitions
-if [ -f ~/.bash_aliases ]; then
-    source ~/.bash_aliases; fi
+if [ -f ~/.bash_aliases ];
+then
+    source ~/.bash_aliases;
+else
+    echo "Can't find .bash_aliases!"
+fi
 
 # bash ido
-if [ -f ~/.bash_ido ]; then
-    source ~/.bash_ido; fi
-
-
-# SSH agent (useful on CygWin)
-if [[ -z "$SSH_AUTH_SOCK" ]]; then
-    eval $(ssh-agent) 2>&1 > /dev/null
-    trap "kill $SSH_AGENT_PID" 0
+if [ -f ~/.bash_ido ];
+then
+    source ~/.bash_ido;
+else
+    echo "Can't find .bash_ido!"
 fi
 
 # Ultimate debugging prompt
@@ -218,7 +233,9 @@ fi
 export PS4='+(${BASH_SOURCE}:${LINENO}): ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
 
 # We're done; do an LS
-multicolumn_ls
+if [[ _have_fcn == 1 ]]; then
+    multicolumn_ls; fi
+unset _have_fcn
 
 
 
