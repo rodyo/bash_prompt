@@ -696,3 +696,4 @@ if [ ${#IDO_HISTORY[@]} -eq 0 ]; then
     ido_read_history; fi
 
 complete -F ido_dir -o nospace cdd
+alias cdd=cd
