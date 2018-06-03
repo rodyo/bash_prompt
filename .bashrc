@@ -145,42 +145,42 @@ if where nano 2>&1 > /dev/null; then
 # Include all Rody's bash stuff
 if [[ -f ~/.bash_globals.sh ]];
 then
-    source ~/.bash_globals
+    source ~/.bash_globals.sh
 
     # Keyboard shortcut definitions
-    if [[ -f ~/.inputrc ]];
+    if [[ -f ~/.inputrc ]]; then
         export INPUTRC=~/.inputrc
     else
-    echo "ERROR: can't find ~/.inputrc" >&2
+        echo "ERROR: can't find ~/.inputrc" >&2
     fi
 
     # Custom functions
     declare -i _have_fcn=0
-    if [[ -f ~/.bash_functions ]];
+    if [[ -f ~/.bash_functions.sh ]];
     then
-        if [[ -f ~/.bash_ansicodes ]];
+        if [[ -f ~/.bash_ansicodes.sh ]];
         then
-            source ~/.bash_ansicodes
-            source ~/.bash_functions
+            source ~/.bash_ansicodes.sh
+            source ~/.bash_functions.sh
             _check_dirstack
             _have_fcn=1
         else
-            echo "ERROR: can't find one or more of .bash_function's dependencies; not loading it. Note that most aliases won't work." >&2
+            echo "ERROR: can't find one or more of .bash_function.sh's dependencies; not loading it. Note that most aliases won't work." >&2
         fi
     fi
 
     # Alias definitions
-    if [[ -f ~/.bash_aliases ]];
+    if [[ -f ~/.bash_aliases.sh ]];
     then
-        source ~/.bash_aliases;
+        source ~/.bash_aliases.sh;
     else
-        echo "ERROR: can't find .bash_aliases" >&2
+        echo "ERROR: can't find .bash_aliases.sh" >&2
     fi
 
     # bash ido
-    if [[ -f ~/.bash_ido ]];
+    if [[ -f ~/.bash_ido.sh ]];
     then
-        source ~/.bash_ido;
+        source ~/.bash_ido.sh;
     else
         echo "ERROR: can't find .bash_ido" >&2
     fi
