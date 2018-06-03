@@ -38,8 +38,7 @@ _START_PROFILING()
        ! command -v sed   &>/dev/null || \
        ! command -v paste &>/dev/null
     then
-        error "cannot profile: unmet depenencies"
-        return
+        return error "cannot profile: unmet depenencies"
     fi
 
     if [ $DO_PROFILING -eq 1 ]; then
@@ -49,7 +48,7 @@ _START_PROFILING()
                        date -f - "+%s.%N" > /tmp/sample-time.$$.tim)
         set -x
     else
-        error "stray _START_PROFILING found"
+        return error "stray _START_PROFILING found"
     fi
 }
 
@@ -73,7 +72,7 @@ _STOP_PROFILING()
         echo "Profiling report available in '~/profile_report.$$.log'"
 
     else
-        error "stray _STOP_PROFILING found"
+        return error "stray _STOP_PROFILING found"
     fi
 }
 
@@ -186,11 +185,11 @@ error()
     else
         while read -r msg; do
             error "${msg}"; done
-        return 0
+        return 1
     fi
 
     # Print the message, based on color settings
-    if [ $USE_COLORS -eq 1 ]; then
+    if [[ $USE_COLORS == 1 ]]; then
         echo "${START_COLORSCHEME}${TXT_BOLD};${FG_RED}${END_COLORSCHEME}ERROR: ${msg}${RESET_COLORS}" >&2
     else
         error "${msg}" >&2
@@ -278,7 +277,7 @@ command_not_found_handle()
     ([[ -f "${1}" && -x "${1}" ]] && "./${1}") ||
 
     # not found
-    error 'Command not found: "%s".' "$1"
+    return error 'Command not found: "%s".' "$1"
 }
 
 
@@ -668,29 +667,27 @@ promptcmd()
 
     # Username color scheme
     local usrName=""
-    if [ $USE_COLORS -eq 1 ]; then
-        usrName="${START_COLORSCHEME_PS1}${TXT_BOLD};${FG_GREEN}${END_COLORSCHEME_PS1}"; fi
+    if [[ $USE_COLORS == 1 ]]; then
+        usrName="$(set_PS1_color "${TXT_BOLD}" "${FG_GREEN}")"; fi
 
     # hostname color scheme
     local hstName=""
-    if [ $USE_COLORS -eq 1 ]; then
-        hstName="${START_COLORSCHEME_PS1}${FG_MAGENTA}${END_COLORSCHEME_PS1}"; fi
+    if [[ $USE_COLORS == 1 ]]; then
+        hstName="$(set_PS1_color "${FG_MAGENTA}")"; fi
 
-
-    # write previous command to disk
+    # Write previous command to disk
     (history -a &) &> /dev/null
 
     # Smiley representing previous command exit status
     ES='o_O '
-    if [ $exitstatus -eq 0 ]; then
+    if [[ $exitstatus == 0 ]]; then
         ES='^_^ '; fi
 
-    if [ $USE_COLORS -eq 1 ]; then
-        ES="${START_COLORSCHEME_PS1}${TXT_DIM};${FG_GREEN}${END_COLORSCHEME_PS1}${ES}${RESET_COLORS_PS1}"; fi
+    if [[ $USE_COLORS == 1 ]]; then
+        ES="$(set_PS1_color "${TXT_DIM}" "${FG_GREEN}")""${ES}""$(reset_PS1_color)"; fi
 
     # Append system time
     ES="$ES"'[\t] '
-
 
     # Set new prompt (taking into account repositories)
     case "${REPO_TYPE}" in
@@ -703,7 +700,10 @@ promptcmd()
                 branch="*unknown branch*"; fi
 
             if [[ $USE_COLORS == 1 ]]; then
-                PS1="$ES${usrName}"'\u'"${RESET_COLORS_PS1}@${hstName}"'\h'"${RESET_COLORS_PS1} : "'\['"${REPO_COLOR[git]} [git: ${branch}] : "'\W'"/${RESET_COLORS_PS1} "'\$'" "
+                PS1="$ES${usrName}"'\u'"${RESET_COLORS_PS1}"
+                PS1="${PS1}@${hstName}"'\h'"${RESET_COLORS_PS1} : "
+                PS1="${PS1}"'\['"${REPO_COLOR[git]}"'\]'" [git: ${branch}] : "'\W'"/${RESET_COLORS_PS1} "
+                PS1="${PS1}"'\$'" "
             else
                 PS1="$ES"'\u@\h : [git: '"${branch}] : "'\W/ \$ ';
             fi
@@ -1273,7 +1273,7 @@ lo()
         6) str="Readable/writable"           ; cmd="-readable -writable"             ;;
         7) str="Readable/writable/executable"; cmd="-readable -writable -executable" ;;
 
-        *) error "Invalid octal permission."; return 1 ;;
+        *) return error "Invalid octal permission."; ;;
     esac
 
     # default: find non-dot files only.
@@ -1395,8 +1395,7 @@ _remove_dir_from_stack()
 
     # No dir stack -- can't remove anything
     if [ ! -e "${DIRSTACK_FILE}" ]; then
-        error "No directories in stack."
-        return 1
+        return error "No directories in stack."
     fi
 
     _lock_dirstack
@@ -1863,7 +1862,7 @@ _rm()
             else
                 # stderr was not empty, but none of the expected strings; rethrow
                 # whatever error git issued
-                error "$err"
+                return error "$err"
             fi
 
         fi
@@ -2040,66 +2039,79 @@ _cp()
         #  - source is DIR, target is FILE   ← error, with sidenote:
         #  - source is FILE, target is FILE  ← OK, with sidenote:
         #    - there is 1 source             ← simple rename operation
-        #    - there are multiple sources    ← ...make tarball?
+        #    - there are multiple sources    ← ask to make tarball
         #
         #  - source EXISTS, target DOESN'T EXIST         ← OK
         #  - source DOESN'T EXIST, target DOESN'T EXIST  ← error (handled by rsync)
         #  - source DOESN'T EXIST, target EXISTS         ← error (handled by rsync)
 
         # First, carry out the copy
-        eval "$cpcmd"
+        if eval "$cpcmd";
+        then
 
-        # Then add sources to repository if needed
-        local -r target="${arglist[-1]}"
-        local -i target_exists=0
-        local -i target_in_repo=0
-        local -i target_is_dir=0
+            # Then add sources to repository if needed
+            local -r target="${arglist[-1]}"
+            local -i target_exists=0
+            local -i target_in_repo=0
+            local -i target_already_tracked=0
+            local -i target_is_dir=0
 
-        local    src
-        local -i src_is_dir
-        local -i src_in_repo
+            local    src
+            local -i src_is_dir
+            local -i src_in_repo
 
-        local -i repocmd_ok
-        local -r repo_add=$(get_repo_cmd "$REPO_CMD_add")
-        local -r istracked=$(get_repo_cmd "$REPO_CMD_trackcheck")
+            local -i repocmd_ok
+            local -r repo_add=$(get_repo_cmd "$REPO_CMD_add")
+            local -r istracked=$(get_repo_cmd "$REPO_CMD_trackcheck")
 
-        if (eval "$istracked" "$target" "$dump_except_error"); then
-            target_in_repo=1;
-            target_exists=1;
-        fi
-
-        if [[ -d "$target" ]]; then
-            target_is_dir=1;
-            target_exists=1;
-        fi
-
-        echo ""
-        for src in "${arglist[@]}"; do
-
-            src_is_dir=0;
-            src_in_repo=0;
-
-            if [[ -d "$src" ]]; then
-                src_is_dir=1; fi
-            if (eval "$istracked" "$src" "$dump_except_error");
-                then src_in_repo=1; fi
-
-            # TODO: implement the logic as commented above
-            #if $src_is_dir; then
-            #fi
-
-            eval "$repo_add" "$src" "$dump_except_error"
-            repocmd_ok=$?
-
-            if $repocmd_ok; then
-                infomessage "Added \"$src\" to the repository."
-            else
-                cmd_ok=1
-                warning "Could not add \"$src\" to the repository."
+            if (eval "$istracked" "$target" "$dump_except_error"); then
+                target_already_tracked=1;
+                target_exists=1;
+            fi
+            if [[ -d "$target" ]]; then
+                target_is_dir=1;
+                target_exists=1;
+            fi
+            if [[ "$REPO_PATH" = *"$target"* ]]; then
+                target_in_repo=1
             fi
 
-        done
-        echo ""
+            echo ""
+            for src in "${arglist[@]}"; do
+
+                src_is_dir=0;
+                src_in_repo=0;
+
+                if [[ -d "$src" ]]; then
+                    src_is_dir=1; fi
+                if (eval "$istracked" "$src" "$dump_except_error");
+                    then src_in_repo=1; fi
+
+                #  - source IN  repo, target IN repo   ← git add "target/source"
+                #  - source OUT repo, target OUT repo  ← do nothing
+                #  - source IN  repo, target OUT repo  ← do nothing
+                #  - source OUT repo, target IN  repo  ← git add "target/source"
+
+                # TODO: implement the logic as commented above
+                if [[ $target_in_repo == 0 ]]; then
+
+                    eval "$repo_add" "$src"* "$dump_except_error"
+                    repocmd_ok=$?
+
+                    if $repocmd_ok; then
+                        infomessage "Added \"$src\" to the repository."
+                    else
+                        cmd_ok=1
+                        warning "Copied \"$src\", but could not add it to the repository."
+                    fi
+
+                fi
+
+
+            done
+            echo ""
+
+        fi
 
     # normal mode
     else
@@ -2137,7 +2149,8 @@ _touch()
 spread_the_madness()
 {
     scp ~/.bash_aliases "$@" 2> >(error)
-    if [ $? -eq 0 ]; then
+    if [ $? -eq 0 ];
+    then
         scp ~/.bash_functions "$@" 2> >(error) && \
         scp ~/.bashrc "$@"         2> >(error) && \
         scp ~/.dircolors "$@"      2> >(error) && \
@@ -2146,7 +2159,7 @@ spread_the_madness()
         scp ~/.git_prompt "$@"     2> >(error) && \
         scp ~/.git_completion "$@" 2> >(error)
     else
-        error "failed to proliferate Rody's bash madness to remote system."
+        return error "failed to proliferate Rody's bash madness to remote system."
     fi
 }
 
@@ -2170,7 +2183,7 @@ extract()
             *) warning "'%s' cannot be extracted via extract()."  "$1";;
         esac
     else
-        error "'%s' is not a valid, readable file." "$1"
+        return error "'%s' is not a valid, readable file." "$1"
     fi
 }
 
@@ -2252,7 +2265,8 @@ _findbig()
 
     # parse input arguments
     if [ $# -gt 1 ]; then
-        error "Findbig takes at most 1 argument."; return; fi
+        return error "Findbig takes at most 1 argument.";
+    fi
 
     local -i num
     if [ $# -eq 1 ]; then
@@ -2355,7 +2369,8 @@ chroot_dir()
         sudo umount "${chroot_path}${bind_dirs[$i]}"; done
 }
 
-# gedit & geany: ALWAYS in background and immune to terminal closing!
+# gedit, geany and pcmanfm (and windows equivalents):
+# ALWAYS in background and immune to terminal closing!
 _gedit()
 {
     if [[ "$on_windows" == 0 ]]; then
@@ -2399,8 +2414,7 @@ _pcmanfm()
 mvq()
 {
     if [ $# -lt 2 ]; then
-        error "mv requires at least 2 arguments."
-        return 1
+        return error "mvq requires at least 2 arguments."
     fi
 
     # TODO: nohup doesn't allow for easy redirection
@@ -2413,8 +2427,7 @@ mvq()
 cpq()
 {
     if [ $# -lt 2 ]; then
-        error "cpq requires at least 2 arguments."
-        return 1
+        return error "cpq requires at least 2 arguments."
     fi
 
     # TODO: nohup doesn't allow for easy redirection
@@ -2465,9 +2478,9 @@ _spread()
 
     # Check arguments
     if [[ ${#sources[@]} == 0 ]]; then
-        error "No source files/directories given."; return 1; fi
+        return error "No source files/directories given."; fi
     if [[ ${#sources[@]} == 0 ]]; then
-        error "No target files/directories given."; return 1; fi
+        return error "No target files/directories given."; fi
 
     # Execute command
     for target in "${targets[@]}"; do
@@ -2477,16 +2490,14 @@ _spread()
             case $cmd in
                 "cp") (_cp "${sources[@]}" "${target}" 1> >(warning) 2> >(error) &); ;;
                 "mv") (_mv "${sources[@]}" "${target}" 1> >(warning) 2> >(error) &); ;;
-                *)    error "Invalid command: '%s'." "$cmd"
-                      return 1
+                *)    return error "Invalid command: '%s'." "$cmd"
                       ;;
             esac
         else
             case $cmd in
                 "cp") cpq "${sources[@]}" "${target}" ;;
                 "mv") mvq "${sources[@]}" "${target}" ;;
-                *)    error "Invalid command: '%s'." "$cmd"
-                      return 1
+                *)    return error "Invalid command: '%s'." "$cmd"
                       ;;
             esac
         fi
@@ -2524,6 +2535,7 @@ svg2png()
         done
     else
         error "$0() needs an installation of inkscape, which doesn't seem to be present on this system."
+        return 1
     fi
 }
 
