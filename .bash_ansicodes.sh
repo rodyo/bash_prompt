@@ -65,12 +65,12 @@ readonly BG_WHITE="107"
 set_color()
 {
     if [[ ! $# < 4 ]]; then
-        return error "set_color() takes max. 3 input arguments."; fi
+        error "set_color() takes max. 3 input arguments."; return; fi
 
     local args="${@//[[:digit:]]/}"
     args="${args//[[:space:]]/}"
     if [[ -n "${args}" ]]; then
-        return error "set_color() accepts only integer input."; fi
+        error "set_color() accepts only integer input.";  return; fi
 
     local codes=("$@")
     local -i i
@@ -86,7 +86,7 @@ set_color()
 reset_colors()
 {
     if [[ $# != 0 ]]; then
-        return error "reset_colors() takes no input arguments."; fi
+        error "reset_colors() takes no input arguments.";  return; fi
 
     printf "${RESET_COLORS}"
 }
@@ -95,12 +95,12 @@ reset_colors()
 set_PS1_color()
 {
     if [[ ! $# < 4 ]]; then
-        return error "set_PS1_color() takes max. 3 input arguments."; fi
+        error "set_PS1_color() takes max. 3 input arguments."; return; fi
 
     local args="${@//[[:digit:]]/}"
     args="${args//[[:space:]]/}"
     if [[ -n "${args}" ]]; then
-        return error "set_PS1_color() accepts only integer input."; fi
+        error "set_PS1_color() accepts only integer input."; return; fi
 
     local codes=("$@")
     local -i i
@@ -116,7 +116,7 @@ set_PS1_color()
 reset_PS1_color()
 {
     if [[ $# != 0 ]]; then
-        return error "reset_PS1_color() takes no input arguments."; fi
+        error "reset_PS1_color() takes no input arguments."; return; fi
 
     printf "${RESET_COLORS_PS1}"
 }
@@ -150,12 +150,12 @@ _cursor_mover()
 _move_cursor()
 {
     if [[ $# != 2 ]]; then
-        return error "_move_cursor() requires 2 input arguments."; fi
+        error "_move_cursor() requires 2 input arguments."; return; fi
 
     local arg="${2//[[:digit:]]/}"
     arg="${arg//[[:space:]]/}"
     if [[ -n "${args}" ]]; then
-        return error "_move_cursor() accepts only integer input."; fi
+        error "_move_cursor() accepts only integer input."; return; fi
 
     _cursor_mover "$2$1"
 }
@@ -163,12 +163,12 @@ _move_cursor()
 position_cursor()
 {
     if [[ $# != 2 ]]; then
-        return error "position_cursor() requires 2 input arguments."; fi
+        error "position_cursor() requires 2 input arguments."; return; fi
 
     local arg="${2//[[:digit:]]/}"
     arg="${arg//[[:space:]]/}"
     if [[ -n "${args}" ]]; then
-        return error "position_cursor() accepts only integer input."; fi
+        error "position_cursor() accepts only integer input."; return; fi
 
     _cursor_mover "$1;$2${POSITION_CURSOR}"
 }
@@ -181,7 +181,7 @@ move_cursor_right() { _move_cursor "${MOVE_CURSOR_RIGHT}" "$@"; }
 erase_to_end_of_line()
 {
     if [[ $# != 0 ]]; then
-        return error "erase_to_end_of_line() takes no input arguments."; fi
+        error "erase_to_end_of_line() takes no input arguments."; return; fi
 
     _cursor_mover "${ERASE_TO_END_OF_LINE}"
 }
@@ -189,7 +189,7 @@ erase_to_end_of_line()
 save_cursor_position()
 {
     if [[ $# != 0 ]]; then
-        return error "save_cursor_position() takes no input arguments."; fi
+        error "save_cursor_position() takes no input arguments."; return; fi
 
     _cursor_mover "${SAVE_CURSOR_POSITION}"
 }
@@ -197,7 +197,7 @@ save_cursor_position()
 restore_cursor_position()
 {
     if [[ $# != 0 ]]; then
-        return error "restore_cursor_position() takes no input arguments."; fi
+        error "restore_cursor_position() takes no input arguments."; return; fi
 
     _cursor_mover "${RESTORE_CURSOR_POSITION}"
 }

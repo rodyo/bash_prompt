@@ -40,7 +40,8 @@ _START_PROFILING()
        ! command -v sed   &>/dev/null || \
        ! command -v paste &>/dev/null
     then
-        return error "cannot profile: unmet depenencies"
+        error "cannot profile: unmet depenencies"
+        return 1
     fi
 
     if [ $DO_PROFILING -eq 1 ]; then
@@ -50,7 +51,8 @@ _START_PROFILING()
                        date -f - "+%s.%N" > /tmp/sample-time.$$.tim)
         set -x
     else
-        return error "stray _START_PROFILING found"
+        error "stray _START_PROFILING found"
+        return 1
     fi
 }
 
@@ -74,7 +76,8 @@ _STOP_PROFILING()
         echo "Profiling report available in '~/profile_report.$$.log'"
 
     else
-        return error "stray _STOP_PROFILING found"
+        error "stray _STOP_PROFILING found"
+        return 1
     fi
 }
 
@@ -231,7 +234,8 @@ assert()
     if [ "$1" ]; then
         return 0;
     else
-        return error "${@:2}"
+        error "${@:2}"
+        return 1
     fi
 }
 
@@ -279,7 +283,8 @@ command_not_found_handle()
     ([[ -f "${1}" && -x "${1}" ]] && "./${1}") ||
 
     # not found
-    return error 'Command not found: "%s".' "$1"
+    error 'Command not found: "%s".' "$1"
+    return 1
 }
 
 
@@ -1275,7 +1280,9 @@ lo()
         6) str="Readable/writable"           ; cmd="-readable -writable"             ;;
         7) str="Readable/writable/executable"; cmd="-readable -writable -executable" ;;
 
-        *) return error "Invalid octal permission."; ;;
+        *) error "Invalid octal permission."
+           return 1
+           ;;
     esac
 
     # default: find non-dot files only.
@@ -1397,7 +1404,8 @@ _remove_dir_from_stack()
 
     # No dir stack -- can't remove anything
     if [ ! -e "${DIRSTACK_FILE}" ]; then
-        return error "No directories in stack."
+        error "No directories in stack."
+        return 1
     fi
 
     _lock_dirstack
@@ -1864,7 +1872,8 @@ _rm()
             else
                 # stderr was not empty, but none of the expected strings; rethrow
                 # whatever error git issued
-                return error "$err"
+                error "$err"
+                return 1
             fi
 
         fi
@@ -2161,7 +2170,8 @@ spread_the_madness()
         scp ~/.git_prompt "$@"     2> >(error) && \
         scp ~/.git_completion "$@" 2> >(error)
     else
-        return error "failed to proliferate Rody's bash madness to remote system."
+        error "failed to proliferate Rody's bash madness to remote system."
+        return 1
     fi
 }
 
@@ -2185,7 +2195,8 @@ extract()
             *) warning "'%s' cannot be extracted via extract()."  "$1";;
         esac
     else
-        return error "'%s' is not a valid, readable file." "$1"
+        error "'%s' is not a valid, readable file." "$1"
+        return 1
     fi
 }
 
@@ -2267,7 +2278,8 @@ _findbig()
 
     # parse input arguments
     if [ $# -gt 1 ]; then
-        return error "Findbig takes at most 1 argument.";
+        error "Findbig takes at most 1 argument.";
+        return 1
     fi
 
     local -i num
@@ -2416,7 +2428,8 @@ _pcmanfm()
 mvq()
 {
     if [ $# -lt 2 ]; then
-        return error "mvq requires at least 2 arguments."
+        error "mvq requires at least 2 arguments."
+        return 1
     fi
 
     # TODO: nohup doesn't allow for easy redirection
@@ -2429,7 +2442,8 @@ mvq()
 cpq()
 {
     if [ $# -lt 2 ]; then
-        return error "cpq requires at least 2 arguments."
+        error "cpq requires at least 2 arguments."
+        return 1
     fi
 
     # TODO: nohup doesn't allow for easy redirection
@@ -2480,9 +2494,9 @@ _spread()
 
     # Check arguments
     if [[ ${#sources[@]} == 0 ]]; then
-        return error "No source files/directories given."; fi
+        error "No source files/directories given."; return 1; fi
     if [[ ${#sources[@]} == 0 ]]; then
-        return error "No target files/directories given."; fi
+        error "No target files/directories given."; return 1; fi
 
     # Execute command
     for target in "${targets[@]}"; do
@@ -2492,14 +2506,16 @@ _spread()
             case $cmd in
                 "cp") (_cp "${sources[@]}" "${target}" 1> >(warning) 2> >(error) &); ;;
                 "mv") (_mv "${sources[@]}" "${target}" 1> >(warning) 2> >(error) &); ;;
-                *)    return error "Invalid command: '%s'." "$cmd"
+                *)    error "Invalid command: '%s'." "$cmd"
+                      return 1
                       ;;
             esac
         else
             case $cmd in
                 "cp") cpq "${sources[@]}" "${target}" ;;
                 "mv") mvq "${sources[@]}" "${target}" ;;
-                *)    return error "Invalid command: '%s'." "$cmd"
+                *)    error "Invalid command: '%s'." "$cmd"
+                      return 1
                       ;;
             esac
         fi
