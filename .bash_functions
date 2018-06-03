@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-
-
 # --------------------------------------------------------------------------------------------------
 # Debugging
 # --------------------------------------------------------------------------------------------------
@@ -12,6 +10,10 @@
 if false; then
 
     local -r fname="~/BASH_DEBUG.LOG"
+
+    # The ultimate debugging prompt
+    # see https://stackoverflow.com/questions/17804007/how-to-show-line-number-when-executing-bash-script
+    export PS4='+(${BASH_SOURCE}:${LINENO}): ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
 
     exec   > >(tee -ia "$fname")
     exec  2> >(tee -ia "$fname" >& 2)

@@ -92,17 +92,7 @@ else
     SHELL_COLORS=
 fi
 
-
-# If this is an xterm set the title to user@host:dir
-case "$TERM" in
-    xterm*|rxvt*)
-#        PS1="\[\e]0;\u@\h: \W\a\]$PS1"
-        ;;
-    *)
-        ;;
-esac
-
-# enable color support
+# Enable color support
 if [ "$SHELL_COLORS" = yes ]; then
     if [ -x /usr/bin/dircolors ]; then
         test -r ~/.dircolors && eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
@@ -110,15 +100,19 @@ if [ "$SHELL_COLORS" = yes ]; then
 fi
 export SHELL_COLORS
 
-
 # Enable programmable completion features
 if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
     source /etc/bash_completion; fi
 
-# Enable git-specific completions and prompt options
+# Start SSH agent
+if [[ -z "$SSH_AUTH_SOCK" ]]; then
+    eval $(ssh-agent) 2>&1 > /dev/null
+    trap "kill $SSH_AGENT_PID" 0
+fi
 
-# checkout from https://github.com/git/git/tree/master/contrib/completion
-# and rename the softlink
+# Enable git-specific completions and prompt options
+# (clone from https://github.com/git/git/tree/master/contrib/completion
+# and rename the softlink)
 if [ -f ~/.git-completion ]; then
     source ~/.git-completion; fi
 
@@ -134,11 +128,7 @@ fi
 if [ -f ~/.git-flow-completion ]; then
     source ~/.git-flow-completion ]; fi
 
-
 # Enable svn-specific completions and prompt options
-# TODO
-
-# Enable CVS-specific completions and prompt options
 # TODO
 
 # Enable mercurial-specific completions and prompt options
@@ -149,83 +139,63 @@ if [ -f ~/.git-flow-completion ]; then
 
 
 # Default editor
-export EDITOR=nano
+if where nano 2>&1 > /dev/null; then
+    export EDITOR=nano; fi
 
-# Keyboard shortcut definitions
-export INPUTRC=~/.inputrc
-
-
-# TODO: (Rody Oldenhuis) offload this to some other file
-# {
-
-# First some exports
-export GIT_MODE=false # "GIT mode" on or not
-export SVN_MODE=false # "SVN mode" on or not
-export REPO_PATH=     # path where repository is located
-PS1_=$PS1;            # save it to reset it when changed below
-
-# global vars
-NUM_PROCESSORS=$(nproc --all)
-
-# exports for colored man-pages
-if [[ "$SHELL_COLORS" == yes ]]; then
-    export LESS_TERMCAP_mb=$'\E[01;31m'       # begin blinking
-    export LESS_TERMCAP_md=$'\E[01;38;5;74m'  # begin bold
-    export LESS_TERMCAP_me=$'\E[0m'           # end mode
-    export LESS_TERMCAP_se=$'\E[0m'           # end standout-mode
-    export LESS_TERMCAP_so=$'\E[38;5;246m'    # begin standout-mode - info box export LESS_TERMCAP_ue=$'\E[0m' # end underline
-    export LESS_TERMCAP_us=$'\E[04;38;5;146m' # begin underline
-fi
-
-# SSH agent (useful on CygWin)
-if [[ -z "$SSH_AUTH_SOCK" ]]; then
-    eval $(ssh-agent) 2>&1 > /dev/null
-    trap "kill $SSH_AGENT_PID" 0
-fi
-
-# }
-
-
-# Custom functions
-# By <oldenhuis@gmail.com>
-_have_fcn=0
-if [ -f ~/.bash_functions ];
+# Include all Rody's bash stuff
+if [[ -f ~/.bash_globals.sh ]];
 then
-    if [ -f ~/.bash_functions ];
-    then
-        source ~/.bash_ansicodes
-        source ~/.bash_functions
-        _check_dirstack
-        _have_fcn=1
+    source ~/.bash_globals
+
+    # Keyboard shortcut definitions
+    if [[ -f ~/.inputrc ]];
+        export INPUTRC=~/.inputrc
     else
-        echo "Can't find one or more of .bash_function's dependencies!"
+    echo "ERROR: can't find ~/.inputrc" >&2
     fi
-fi
 
-# Alias definitions
-if [ -f ~/.bash_aliases ];
-then
-    source ~/.bash_aliases;
+    # Custom functions
+    declare -i _have_fcn=0
+    if [[ -f ~/.bash_functions ]];
+    then
+        if [[ -f ~/.bash_ansicodes ]];
+        then
+            source ~/.bash_ansicodes
+            source ~/.bash_functions
+            _check_dirstack
+            _have_fcn=1
+        else
+            echo "ERROR: can't find one or more of .bash_function's dependencies; not loading it. Note that most aliases won't work." >&2
+        fi
+    fi
+
+    # Alias definitions
+    if [[ -f ~/.bash_aliases ]];
+    then
+        source ~/.bash_aliases;
+    else
+        echo "ERROR: can't find .bash_aliases" >&2
+    fi
+
+    # bash ido
+    if [[ -f ~/.bash_ido ]];
+    then
+        source ~/.bash_ido;
+    else
+        echo "ERROR: can't find .bash_ido" >&2
+    fi
+
+    # We're done; do an LS
+    if [[ _have_fcn == 1 ]]; then
+        multicolumn_ls; fi
+    unset _have_fcn
+
 else
-    echo "Can't find .bash_aliases!"
+    echo "ERROR: can't find ~/.bash_globals.sh; skipping the rest" >&2
+    # TODO: (Rody Oldenhuis) create a basic PS1 here (Ubuntu's original)
 fi
 
-# bash ido
-if [ -f ~/.bash_ido ];
-then
-    source ~/.bash_ido;
-else
-    echo "Can't find .bash_ido!"
-fi
 
-# Ultimate debugging prompt
-# see https://stackoverflow.com/questions/17804007/how-to-show-line-number-when-executing-bash-script
-export PS4='+(${BASH_SOURCE}:${LINENO}): ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
-
-# We're done; do an LS
-if [[ _have_fcn == 1 ]]; then
-    multicolumn_ls; fi
-unset _have_fcn
 
 
 
