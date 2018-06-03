@@ -132,8 +132,8 @@ haveAllRepoBinaries=1 || haveAllRepoBinaries=0
 haveAllRepoBinaries=0
 
 # (Cygwin)
-declare -i atWork=0
-[ "$(uname -o)" == "Cygwin" ] && atWork=1 || atWork=0
+declare -i on_windows=0
+[ "$(uname -o)" == "Cygwin" ] && on_windows=1 || on_windows=0
 
 
 # Create global associative arrays
@@ -648,6 +648,20 @@ promptcmd()
     #       This is important when constructing the PS1 string, since specials like \u, \W etc. need to remain
     #       literal.
 
+    # NOTE: original in .bashrc:
+
+    #if [ "$SHELL_COLORS" = yes ]; then
+    #    # user is root
+    #    if [ `id -u` = 0 ]; then
+    #        PS1='\[\033[01;31m\]\u@\h\[\033[0m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
+    #    # non-root user
+    #    else
+    #        PS1='\[\033[01;32m\]\u@\h\[\033[0m\]:\[\033[01;34m\]\W\[\033[00m\]\$ '
+    #    fi
+    #else
+    #    PS1='\u@\h:\w\$ '
+    #fi
+
     # initialize
     local -ri exitstatus=$?    # exitstatus of previous command
     local ES
@@ -746,7 +760,7 @@ promptcmd()
 
 }
 
-# make this function the function called at each prompt display
+# Make this function the function called at each prompt display
 export PROMPT_COMMAND=promptcmd
 
 
@@ -813,7 +827,7 @@ delete_reorder()
 }
 
 # Clear
-_clear_DONTUSE()
+_clear()
 {
     for (( i=0; i<LINES; i++)); do
         printf '\n'"${START_ESCAPE_GROUP}K"; done;
@@ -1489,7 +1503,7 @@ _check_dirstack()
 }
 
 # Navigate to directory. Check if directory is in a repo
-_cd_DONTUSE()
+_cd()
 {
     # First cd to given directory
 
@@ -1541,7 +1555,7 @@ _cd_DONTUSE()
 
 # jump dirs via dir-numbers. Inspired by tp_command(), by
 # Alvin Alexander (DevDaily.com)
-_cdn_DONTUSE()
+_cdn()
 {
     # Remove non-existent dirs from dirstack
     _check_dirstack
@@ -1579,7 +1593,7 @@ _cdn_DONTUSE()
                     return $?; fi
 
                 # When still OK, show new list
-                _cdn_DONTUSE
+                _cdn
                 return 0
                 ;;
 
@@ -1597,7 +1611,7 @@ _cdn_DONTUSE()
     # Integer argument provided: go to dir number
     if [ $intarg -ne -1 ]; then
         if [ $intarg -le ${#stack[@]} ]; then
-            _cd_DONTUSE "${stack[$intarg]:((DIRSTACK_COUNTLENGTH+1))}"
+            _cd "${stack[$intarg]:((DIRSTACK_COUNTLENGTH+1))}"
             return 0
         else
             error "given directory index exceeds number of directories visited."
@@ -1617,7 +1631,7 @@ _cdn_DONTUSE()
         then
             for dir in "${local_dirs[@]}"; do
                 if [ "${dir}" = "${namearg}" ]; then
-                    _cd_DONTUSE "${dir}"
+                    _cd "${dir}"
                     return 0
                 fi
             done
@@ -1638,7 +1652,7 @@ _cdn_DONTUSE()
 
             # CD to patially-matched dirname
             if [[ "$dir" == *"${namearg}"* ]]; then
-                _cd_DONTUSE "${dir}"
+                _cd "${dir}"
                 return 0
             fi
         done
@@ -1738,7 +1752,7 @@ complete -F _cdn_completer -o nospace cdn
 
 
 # create dir(s), taking into account current repo mode
-_mkdir_DONTUSE()
+_mkdir()
 {
     mkdir -p -- "$@" 2> >(error)
     if [[ $? == 0 ]];
@@ -1759,7 +1773,7 @@ _mkdir_DONTUSE()
 
 # remove dir(s), taking into account current repo mode
 # TODO: not done yet
-_rmdir_DONTUSE()
+_rmdir()
 {
     rmdir "$@" 2> >(error)
     print_list_if_OK $?
@@ -1767,7 +1781,7 @@ _rmdir_DONTUSE()
 }
 
 # remove file(s), taking into account current repo mode
-_rm_DONTUSE()
+_rm()
 {
     # we are in REPO mode
     if [[ ! -z $REPO_MODE && $REPO_MODE -eq 1 ]]; then
@@ -1870,7 +1884,7 @@ _rm_DONTUSE()
 #  - source OUT repo, target IN  repo
 #
 # warnings should be issued, files auto-added to repo, etc.
-_mv_DONTUSE()
+_mv()
 {
     # Help call
     if [[ $# -ge 1 && "-h" = "$1" || "--help" = "$1" ]]; then
@@ -1932,7 +1946,7 @@ _mv_DONTUSE()
 # Make simlink, taking into account current repo mode
 # TODO: needs work...auto-add any new files/dirs, but the 4 different
 # forms of ln make this complicated
-_ln_DONTUSE()
+_ln()
 {
     # Help call
     if [[ $# -ge 1 && "-h" = "$1" || "--help" = "$1" ]]; then
@@ -1958,7 +1972,7 @@ _ln_DONTUSE()
 }
 
 # copy file(s), taking into account current repo mode
-_cp_DONTUSE()
+_cp()
 {
     # Help call
     if [[ $# -ge 1 && "-h" == "$1" || "--help" == "$1" ]]; then
@@ -2096,7 +2110,7 @@ _cp_DONTUSE()
 }
 
 # touch file, taking into account current repo mode
-_touch_DONTUSE()
+_touch()
 {
     if (touch "$@" 1> /dev/null 2> >(error));
     then
@@ -2233,7 +2247,7 @@ psa()
 #
 # no arguments   : list 10 biggest files
 # single argument: list N biggest files
-_findbig_DONTUSE()
+_findbig()
 {
 
     # parse input arguments
@@ -2287,7 +2301,7 @@ _findbig_DONTUSE()
 # find biggest applications
 # must be aliased in .bash_aliases
 # FIXME: can't alias this one directly due to {} symbols
-_findbig_applications_DONTUSE()
+_findbig_applications()
 {
     dpkg-query --show --showformat='${Package;-50}\t${Installed-Size}\n' | sort -k 2 -rn | grep -v deinstall | awk '{printf "%.3f MB \t %s\n", $2/(1024),  $1 }' | head -n 10
 }
@@ -2341,14 +2355,43 @@ chroot_dir()
         sudo umount "${chroot_path}${bind_dirs[$i]}"; done
 }
 
-# gedit ALWAYS in background and immune to terminal closing!
-# must be aliased in .bash_aliases
-_gedit_DONTUSE()
+# gedit & geany: ALWAYS in background and immune to terminal closing!
+_gedit()
 {
-    if [[ $atWork == 0 ]]; then
+    if [[ "$on_windows" == 0 ]]; then
         (gedit "$@" &) | nohup &> /dev/null;
     else
         (notepad "$@" &) | nohup &> /dev/null;
+    fi
+}
+
+_geany()
+{
+    if [[ "$on_windows" == 0 ]]; then
+        if which geany; then
+            (geany "$@" &) | nohup &> /dev/null;
+        else
+            _gedit
+        fi
+    else
+        if which "notepad++"; then
+            (notepad++ "$@" &) | nohup &> /dev/null;
+        else
+            (notepad "$@" &) | nohup &> /dev/null;
+        fi
+    fi
+}
+
+_pcmanfm()
+{
+    if [[ "$on_windows" == 0 ]]; then
+        (pcmanfm . &) | nohup &> /dev/null;
+    else
+        if which "TOTALCMD"; then
+            (TOTALCMD . &) | nohup &> /dev/null;
+        else
+            (explorer . &) | nohup &> /dev/null;
+        fi
     fi
 }
 
@@ -2432,8 +2475,8 @@ _spread()
         # Move/copy sources to current target
         if [ $do_repository -eq 1 ]; then
             case $cmd in
-                "cp") (_cp_DONTUSE "${sources[@]}" "${target}" 1> >(warning) 2> >(error) &); ;;
-                "mv") (_mv_DONTUSE "${sources[@]}" "${target}" 1> >(warning) 2> >(error) &); ;;
+                "cp") (_cp "${sources[@]}" "${target}" 1> >(warning) 2> >(error) &); ;;
+                "mv") (_mv "${sources[@]}" "${target}" 1> >(warning) 2> >(error) &); ;;
                 *)    error "Invalid command: '%s'." "$cmd"
                       return 1
                       ;;

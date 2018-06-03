@@ -14,20 +14,20 @@ alias laS="l -AS"
 alias tree='find . | sed -e "s/[^-][^\/]*\//  │/g; s/│\([^ ]\)/├─\1/"'
 
 # FS manipulation & navigation
-alias cdn=_cdn_DONTUSE
-alias cd=_cd_DONTUSE
-alias dc=_cd_DONTUSE
-#alias mv=_mv_DONTUSE  # TODO: off, until it's finished
-#alias cp=_cp_DONTUSE  #
-alias rm=_rm_DONTUSE
-alias ln=_ln_DONTUSE
-alias touch=_touch_DONTUSE
-alias mkdir=_mkdir_DONTUSE
-alias rmdir=_rmdir_DONTUSE
+alias cdn=_cdn
+alias cd=_cd
+alias dc=_cd
+#alias mv=_mv  # TODO: off, until it's finished
+#alias cp=_cp  #
+alias rm=_rm
+alias ln=_ln
+alias touch=_touch
+alias mkdir=_mkdir
+alias rmdir=_rmdir
 alias shred="shred -uz -n 4"
 alias rmrf="rm -rf"
-alias ged=_gedit_DONTUSE
-alias not=_gedit_DONTUSE
+alias ged=_gedit
+alias not=_gedit
 
 # one-letter shorts
 alias c="clear"
@@ -39,8 +39,10 @@ alias n="nano -w"
 alias m="make -j$NUM_PROCESSORS"
 alias r=xdg-open
 alias t="top -d 1"
-alias p="pcmanfm . &"
-alias g=_geany_DONTUSE
+alias p=_pcmanfm
+alias g=_geany
+alias npp=_geany
+alias n++=_geany
 alias d="cd ~/Desktop/"
 alias s="cd ~/Desktop/sandbox/"
 alias h="history"
@@ -63,14 +65,14 @@ alias dropbox="cd ~/Dropbox/"
 alias work="cd ~/e/Work/"
 
 # various
-alias clear="_clear_DONTUSE"
+alias clear="_clear"
 alias forget="history -c; clear"
-alias findbig=_findbig_DONTUSE
+alias findbig=_findbig
 alias findfile="find . -type f -iname "
 alias newpaper=". newpaper.sh"
 alias sysupdate="sudo apt-get update; sudo apt-get -y dist-upgrade"
 alias remove_old_kernels="dpkg -l 'linux-*' | sed '/^ii/!d;/'"$(uname -r | sed "s/\(.*\)-\([^0-9]\+\)/\1/")"'/d;s/^[^ ]* [^ ]* \([^ ]*\).*/\1/;/[0-9]/!d' | xargs sudo apt-get -y purge"
-alias findbig_applications=_findbig_applications_DONTUSE
+alias findbig_applications=_findbig_applications
 alias install="sudo apt-get -y install"
 alias zipit="gzip -9 *"
 alias zipall="gzip -9r *"

@@ -75,7 +75,7 @@ HISTCONTROL=ignoreboth
 # make "less" more friendly for non-text input files, see lesspipe(1)
 [ -x /usr/bin/lesspipe ] && eval "$(SHELL=/bin/sh lesspipe)"
 
-# set a fancy prompt (non-color, unless we know we want color)
+# Check if this shell supports colors
 SHELL_COLORS=
 case "$TERM" in
     xterm-color)
@@ -83,33 +83,14 @@ case "$TERM" in
         ;;
 esac
 
-
-# uncomment for a colored prompt, if the terminal has the capability
-force_shell_colors=yes
-
-if [ -n "$force_shell_colors" ]; then
-    if [ -x /usr/bin/tput ] && tput setaf 1 &> /dev/null; then
-        # We have color support; assume it's compliant with Ecma-48
-        # (ISO/IEC-6429). (Lack of such support is extremely rare, and such
-        # a case would tend to support setf rather than setaf.)
-        SHELL_COLORS=yes
-    else
-        SHELL_COLORS=
-    fi
-fi
-
-if [ "$SHELL_COLORS" = yes ]; then
-    # user is root
-    if [ `id -u` = 0 ]; then
-        PS1='\[\033[01;31m\]\u@\h\[\033[0m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
-    # non-root user
-    else
-        PS1='\[\033[01;32m\]\u@\h\[\033[0m\]:\[\033[01;34m\]\W\[\033[00m\]\$ '
-    fi
+if [ -x /usr/bin/tput ] && tput setaf 1 &> /dev/null; then
+    # We have color support; assume it's compliant with Ecma-48
+    # (ISO/IEC-6429). (Lack of such support is extremely rare, and such
+    # a case would tend to support setf rather than setaf.)
+    SHELL_COLORS=yes
 else
-    PS1='\u@\h:\w\$ '
+    SHELL_COLORS=
 fi
-unset force_shell_colors
 
 
 # If this is an xterm set the title to user@host:dir
