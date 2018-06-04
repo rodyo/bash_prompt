@@ -65,7 +65,7 @@ alias dropbox="cd ~/Dropbox/"
 alias work="cd ~/e/Work/"
 
 # various
-alias clear="_rbd_clear"
+alias clear="_rbp_clear"
 alias forget="history -c; clear"
 alias findbig=_findbig
 alias findfile="find . -type f -iname "
