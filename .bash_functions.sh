@@ -9,6 +9,12 @@
 
 if false; then
 
+	# NOTE: (Rody Oldenhuis) get location of function definition:
+	# $ declare -F <function name>
+	# see https://unix.stackexchange.com/a/322887/20712
+
+	shopt -s extdebug
+
     local -r fname="~/BASH_DEBUG.LOG"
 
     # The ultimate debugging prompt
@@ -834,7 +840,7 @@ delete_reorder()
 }
 
 # Clear
-_RBP_clear()
+_rbp_clear()
 {
     for (( i=0; i<LINES; i++)); do
         printf '\n'"${START_ESCAPE_GROUP}K"; done;
@@ -1512,7 +1518,7 @@ _check_dirstack()
 }
 
 # Navigate to directory. Check if directory is in a repo
-_RBP_cd()
+_rbp_cd()
 {
     # First cd to given directory
 
@@ -1761,7 +1767,7 @@ complete -F _cdn_completer -o nospace cdn
 
 
 # create dir(s), taking into account current repo mode
-_RBP_mkdir()
+_rbp_mkdir()
 {
     mkdir -p -- "$@" 2> >(error)
     if [[ $? == 0 ]];
@@ -1782,7 +1788,7 @@ _RBP_mkdir()
 
 # remove dir(s), taking into account current repo mode
 # TODO: not done yet
-_RBP_rmdir()
+_rbp_rmdir()
 {
     rmdir "$@" 2> >(error)
     print_list_if_OK $?
@@ -1790,7 +1796,7 @@ _RBP_rmdir()
 }
 
 # remove file(s), taking into account current repo mode
-_RBP_rm()
+_rbp_rm()
 {
     # we are in REPO mode
     if [[ ! -z $REPO_MODE && $REPO_MODE -eq 1 ]]; then
@@ -1894,7 +1900,7 @@ _RBP_rm()
 #  - source OUT repo, target IN  repo
 #
 # warnings should be issued, files auto-added to repo, etc.
-_RBP_mv()
+_rbp_mv()
 {
     # Help call
     if [[ $# -ge 1 && "-h" = "$1" || "--help" = "$1" ]]; then
@@ -1956,7 +1962,7 @@ _RBP_mv()
 # Make simlink, taking into account current repo mode
 # TODO: needs work...auto-add any new files/dirs, but the 4 different
 # forms of ln make this complicated
-_RBP_ln()
+_rbp_ln()
 {
     # Help call
     if [[ $# -ge 1 && "-h" = "$1" || "--help" = "$1" ]]; then
@@ -1982,7 +1988,7 @@ _RBP_ln()
 }
 
 # copy file(s), taking into account current repo mode
-_RBP_cp()
+_rbp_cp()
 {
     # Help call
     if [[ $# -ge 1 && "-h" == "$1" || "--help" == "$1" ]]; then
@@ -2133,7 +2139,7 @@ _RBP_cp()
 }
 
 # touch file, taking into account current repo mode
-_RBP_touch()
+_rbp_touch()
 {
     if (touch "$@" 1> /dev/null 2> >(error));
     then
