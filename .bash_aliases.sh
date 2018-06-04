@@ -14,7 +14,7 @@ alias laS="l -AS"
 alias tree='find . | sed -e "s/[^-][^\/]*\//  │/g; s/│\([^ ]\)/├─\1/"'
 
 # FS manipulation & navigation
-alias cdn=_rbp_cdn
+alias cdn=_cdn
 alias cd=_rbp_cd  # TODO: breaks autocomplete???
 alias dc=_rbp_cd
 #alias mv=_rbp_mv  # TODO: off, until it's finished
@@ -65,7 +65,7 @@ alias dropbox="cd ~/Dropbox/"
 alias work="cd ~/e/Work/"
 
 # various
-alias clear="_clear"
+alias clear="_rbd_clear"
 alias forget="history -c; clear"
 alias findbig=_findbig
 alias findfile="find . -type f -iname "

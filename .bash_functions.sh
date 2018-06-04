@@ -1626,7 +1626,7 @@ _cdn()
     # Integer argument provided: go to dir number
     if [ $intarg -ne -1 ]; then
         if [ $intarg -le ${#stack[@]} ]; then
-            _cd "${stack[$intarg]:((DIRSTACK_COUNTLENGTH+1))}"
+           _rbp_cd "${stack[$intarg]:((DIRSTACK_COUNTLENGTH+1))}"
             return 0
         else
             error "given directory index exceeds number of directories visited."
@@ -1646,7 +1646,7 @@ _cdn()
         then
             for dir in "${local_dirs[@]}"; do
                 if [ "${dir}" = "${namearg}" ]; then
-                    _cd "${dir}"
+                    _rbp_cd "${dir}"
                     return 0
                 fi
             done
@@ -1667,7 +1667,7 @@ _cdn()
 
             # CD to patially-matched dirname
             if [[ "$dir" == *"${namearg}"* ]]; then
-                _cd "${dir}"
+                _rbp_cd "${dir}"
                 return 0
             fi
         done
@@ -2245,11 +2245,16 @@ C() {
 # Generalised manpages
 man()
 {
+
+	# TODO: check for aliases and figure out which manpage to show; see #18
+
     #(from https://unix.stackexchange.com/a/18088)
     case "$(type -t "$1"):$1" in
 
         # built-in
-        builtin:*) help "$1" | "${PAGER:-less}"
+		# also, https://unix.stackexchange.com/a/18092/20712
+        builtin:*) command man bash | less -p "^       $1 ";
+		           #help "$1" | "${PAGER:-less}"
                    ;;
 
         # pattern
