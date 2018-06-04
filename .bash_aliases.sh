@@ -14,16 +14,16 @@ alias laS="l -AS"
 alias tree='find . | sed -e "s/[^-][^\/]*\//  │/g; s/│\([^ ]\)/├─\1/"'
 
 # FS manipulation & navigation
-alias cdn=_cdn
-alias cd=_cd
-alias dc=_cd
-#alias mv=_mv  # TODO: off, until it's finished
-#alias cp=_cp  #
-alias rm=_rm
-alias ln=_ln
-alias touch=_touch
-alias mkdir=_mkdir
-alias rmdir=_rmdir
+alias cdn=_RBP_cdn
+alias cd=_RBP_cd  # TODO: breaks autocomplete???
+alias dc=_RBP_cd
+#alias mv=_RBP_mv  # TODO: off, until it's finished
+#alias cp=_RBP_cp  #
+alias rm=_RBP_rm
+alias ln=_RBP_ln
+alias touch=_RBP_touch
+alias mkdir=_RBP_mkdir
+alias rmdir=_RBP_rmdir
 alias shred="shred -uz -n 4"
 alias rmrf="rm -rf"
 alias ged=_gedit

@@ -834,7 +834,7 @@ delete_reorder()
 }
 
 # Clear
-_clear()
+_RBP_clear()
 {
     for (( i=0; i<LINES; i++)); do
         printf '\n'"${START_ESCAPE_GROUP}K"; done;
@@ -1512,7 +1512,7 @@ _check_dirstack()
 }
 
 # Navigate to directory. Check if directory is in a repo
-_cd()
+_RBP_cd()
 {
     # First cd to given directory
 
@@ -1531,7 +1531,7 @@ _cd()
 
     # All others
     else
-        cd -- "$@" 2> >(error)
+		cd -- "$@" 2> >(error)
     fi
 
     # if successful, save to dirstack, display abbreviated dirlist and
@@ -1546,7 +1546,7 @@ _cd()
 
         # Check if we're in a repo. If so, enter a repo mode
         repo=($(check_repo))
-        if [ $? -eq 0 ]; then
+        if [[ $? == 0 ]]; then
             case "${repo[0]}" in
                 "git") _enter_GIT "${repo[@]:1}" ;;
                 "svn") _enter_SVN "${repo[@]:1}" ;;
@@ -1761,7 +1761,7 @@ complete -F _cdn_completer -o nospace cdn
 
 
 # create dir(s), taking into account current repo mode
-_mkdir()
+_RBP_mkdir()
 {
     mkdir -p -- "$@" 2> >(error)
     if [[ $? == 0 ]];
@@ -1782,7 +1782,7 @@ _mkdir()
 
 # remove dir(s), taking into account current repo mode
 # TODO: not done yet
-_rmdir()
+_RBP_rmdir()
 {
     rmdir "$@" 2> >(error)
     print_list_if_OK $?
@@ -1790,7 +1790,7 @@ _rmdir()
 }
 
 # remove file(s), taking into account current repo mode
-_rm()
+_RBP_rm()
 {
     # we are in REPO mode
     if [[ ! -z $REPO_MODE && $REPO_MODE -eq 1 ]]; then
@@ -1894,7 +1894,7 @@ _rm()
 #  - source OUT repo, target IN  repo
 #
 # warnings should be issued, files auto-added to repo, etc.
-_mv()
+_RBP_mv()
 {
     # Help call
     if [[ $# -ge 1 && "-h" = "$1" || "--help" = "$1" ]]; then
@@ -1956,7 +1956,7 @@ _mv()
 # Make simlink, taking into account current repo mode
 # TODO: needs work...auto-add any new files/dirs, but the 4 different
 # forms of ln make this complicated
-_ln()
+_RBP_ln()
 {
     # Help call
     if [[ $# -ge 1 && "-h" = "$1" || "--help" = "$1" ]]; then
@@ -1982,7 +1982,7 @@ _ln()
 }
 
 # copy file(s), taking into account current repo mode
-_cp()
+_RBP_cp()
 {
     # Help call
     if [[ $# -ge 1 && "-h" == "$1" || "--help" == "$1" ]]; then
@@ -2133,7 +2133,7 @@ _cp()
 }
 
 # touch file, taking into account current repo mode
-_touch()
+_RBP_touch()
 {
     if (touch "$@" 1> /dev/null 2> >(error));
     then
