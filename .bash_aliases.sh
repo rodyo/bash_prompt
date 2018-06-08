@@ -89,6 +89,13 @@ alias egrep=grep
 alias catbare='/bin/egrep -v "^#\|^[[:space:]]*$"'
 alias rebash=". ~/.bashrc"
 
+if [[ $on_windows == 1 ]]; then
+    alias run=cygstart
+else
+    alias run=xdgopen
+fi
+
+
 # Home
 alias ssh_mediabox="ssh -p 2021 media@rastawern.no-ip.org"
 alias ssh_heaven="ssh -p 2022 rody@rastawern.no-ip.org"
