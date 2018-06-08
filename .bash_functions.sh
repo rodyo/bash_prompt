@@ -1109,6 +1109,13 @@ update_all()
     done
 }
 
+# epic oneliner (git-specific
+update_all_git()
+{
+    find . -type d -iname .git -exec git -C {}/.. pull -v \;
+}
+
+
 # Enter GIT mode
 _enter_GIT()
 {
