@@ -1112,8 +1112,26 @@ update_all()
 # epic oneliner (git-specific
 update_all_git()
 {
-    find . -type d -iname .git -exec git -C {}/.. pull -v \;
+    find . -type d -iname .git -exec git -C {}/.. pull -v 2> >(error) \;
 }
+list_all_dirty_git()
+{
+    while IFS= read -r -d '' file;
+    do
+        local dir="$(dirname "$file")"
+
+        if [[ $(git -C "$dir" diff --stat) != '' ]]; then
+            if [[ $USE_COLORS == 1 ]]; then
+                echo "${START_COLORSCHEME}${TXT_BOLD};${FG_RED}${END_COLORSCHEME}${dir}: dirty${RESET_COLORS}"
+            else
+                echo "${dir}: dirty"
+            fi
+        else
+            echo "${dir}: clean"
+        fi
+    done < <(find . -type d -name .git -print0)
+}
+
 
 
 # Enter GIT mode
@@ -1160,8 +1178,13 @@ _enter_GIT()
 
     # Submodules
     alias gam="git submodule add"           ;  REPO_CMD_add_external="gam"
-    alias gim="git submodule update --init --recursive";  REPO_CMD_init_external="gim"
+    alias gim="_git_update_submodules"      ;  REPO_CMD_init_external="gim"
 
+}
+_git_update_submodules()
+{
+    git submodule update --init --recursive
+    git submodule foreach --recursive git pull origin master
 }
 
 # Enter SVN mode

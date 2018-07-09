@@ -139,7 +139,7 @@ if [ -f ~/.git-flow-completion ]; then
 
 
 # Default editor
-if where nano 2>&1 > /dev/null; then
+if which nano 2>&1 > /dev/null; then
     export EDITOR=nano; fi
 
 # Include all Rody's bash stuff
