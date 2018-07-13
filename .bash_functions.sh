@@ -1145,7 +1145,7 @@ _enter_GIT()
     # Basics
     alias gf="git fetch"                    ;  REPO_CMD_fetch="gf"
     alias gp="git push"                     ;  REPO_CMD_push="gp"
-    alias gP="git pull --recurse-submodules";  REPO_CMD_pull="gP"
+    alias gP="_git_pull_all"                ;  REPO_CMD_pull="gP"
     alias gc="git commit -am"               ;  REPO_CMD_commit="gc"
     alias gs="git status"                   ;  REPO_CMD_status="gs"
     alias gl="git log --oneline"            ;  REPO_CMD_log="gl"
@@ -1181,10 +1181,19 @@ _enter_GIT()
     alias gim="_git_update_submodules"      ;  REPO_CMD_init_external="gim"
 
 }
+_git_pull_all_masters()
+{
+    git submodule foreach --recursive git pull origin master
+}
+_git_pull_all()
+{
+    git pull # --recurse-submodules # TODO: doesn't always work???
+    _git_pull_all_masters
+}
 _git_update_submodules()
 {
     git submodule update --init --recursive
-    git submodule foreach --recursive git pull origin master
+    _git_pull_all_masters
 }
 
 # Enter SVN mode
