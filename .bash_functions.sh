@@ -1109,11 +1109,28 @@ update_all()
     done
 }
 
-# epic oneliner (git-specific
+# Update all git repositories found recursively under the current dir
+_gp_with_err()
+{
+    if (git -C "$*" pull -v); then
+        infomessage "Pulling '$*' completed successfully."
+    else
+        error "Pull failed on '$*'"
+    fi    
+    echo ""
+}
 update_all_git()
 {
-    find . -type d -iname .git -exec git -C {}/.. pull -v 2> >(error) \;
+    # NOTE: git outputs everything to stderr, so 2> >(error) won't work as expected...
+    #find . -type d -iname .git -exec git -C {}/.. pull -v 2> >(error) \;
+    
+    infomessage "Pulling all repositories under current path..."
+    echo ""
+    
+    for gitdir in $(find . -type d -iname .git); do
+        _gp_with_err "$gitdir/.."; done
 }
+
 list_all_dirty_git()
 {
     while IFS= read -r -d '' file;
@@ -2554,8 +2571,8 @@ _spread()
         # Move/copy sources to current target
         if [ $do_repository -eq 1 ]; then
             case $cmd in
-                "cp") (_cp "${sources[@]}" "${target}" 1> >(warning) 2> >(error) &); ;;
-                "mv") (_mv "${sources[@]}" "${target}" 1> >(warning) 2> >(error) &); ;;
+                "cp") (_rbp_cd "${sources[@]}" "${target}" 1> >(warning) 2> >(error) &); ;;
+                "mv") (_rbp_mv "${sources[@]}" "${target}" 1> >(warning) 2> >(error) &); ;;
                 *)    error "Invalid command: '%s'." "$cmd"
                       return 1
                       ;;
