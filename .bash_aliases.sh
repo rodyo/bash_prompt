@@ -122,8 +122,10 @@ alias ipython="ipython -pylab"
 alias ATeamMatlab="cd /home/defaultuser0/Dev/work_repos/ATeam Projects/ATeamProjects/ATeamMatlab"
 alias StartTodayCommon="cd /home/defaultuser0/Dev/work_repos/StartToday/StartTodayCommon"
 alias ZoZoShoe="cd /home/defaultuser0/Dev/work_repos/StartToday/ZoZoShoe"
+alias PatternRelease="cd /home/defaultuser0/Dev/work_repos/StartToday/PatternRelease"
 
 alias ATM="cd /home/defaultuser0/Dev/work_repos/ATeam Projects/ATeamProjects/ATeamMatlab"
 alias STC="cd /home/defaultuser0/Dev/work_repos/StartToday/StartTodayCommon"
 alias ZZS="cd /home/defaultuser0/Dev/work_repos/StartToday/ZoZoShoe"
+alias PAT="cd /home/defaultuser0/Dev/work_repos/StartToday/PatternRelease"
 
