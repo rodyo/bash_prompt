@@ -118,5 +118,12 @@ alias matlabrun="$MATLAB -r"
 # python
 alias ipython="ipython -pylab"
 
-# ispace
-alias ssh_tinker="ssh ispace@ispace-08"
+# Algorithm Team
+alias ATeamMatlab="cd /home/defaultuser0/Dev/work_repos/ATeam Projects/ATeamProjects/ATeamMatlab"
+alias StartTodayCommon="cd /home/defaultuser0/Dev/work_repos/StartToday/StartTodayCommon"
+alias ZoZoShoe="cd /home/defaultuser0/Dev/work_repos/StartToday/ZoZoShoe"
+
+alias ATM="cd /home/defaultuser0/Dev/work_repos/ATeam Projects/ATeamProjects/ATeamMatlab"
+alias STC="cd /home/defaultuser0/Dev/work_repos/StartToday/StartTodayCommon"
+alias ZZS="cd /home/defaultuser0/Dev/work_repos/StartToday/ZoZoShoe"
+
