@@ -17,7 +17,7 @@
 
 
 ## Use auto-indentation.
-#set autoindent
+set autoindent
 
 ## Backup files to filename~.
 # set backup
@@ -71,13 +71,13 @@ set matchbrackets "(<[{)>]}"
 ## double click), and execute shortcuts.  The mouse will work in the X
 ## Window System, and on the console when gpm is running.
 ##
-unset mouse
+set mouse
 
 ## Allow multiple file buffers (inserting a file will put it into a
 ## separate buffer).  You must have configured with --enable-multibuffer
 ## for this to work.
 ##
-# set multibuffer
+set multibuffer
 
 ## Don't convert files from DOS/Mac format.
 # set noconvert
@@ -92,7 +92,7 @@ unset mouse
 # set nonewlines
 
 ## Don't wrap text at all.
-set nowrap
+unset nowrap
 
 ## Set operating directory.  nano will not read or write files outside
 ## this directory and its subdirectories.  Also, the current directory
@@ -114,7 +114,7 @@ set nowrap
 ## Do quick statusbar blanking.  Statusbar messages will disappear after
 ## 1 keystroke instead of 26.  Note that "const" overrides this.
 ##
-# set quickblank
+set quickblank
 
 ## The email-quote string, used to justify email-quoted paragraphs.
 ## This is an extended regular expression if your system supports them,
@@ -130,7 +130,7 @@ set nowrap
 # set rebindkeypad
 
 ## Do extended regular expression searches by default.
-# set regexp
+set regexp
 
 ## Make the Home key smarter.  When Home is pressed anywhere but at the
 ## very beginning of non-whitespace characters on a line, the cursor
@@ -140,7 +140,7 @@ set nowrap
 set smarthome
 
 ## Use smooth scrolling as the default.
-# set smooth
+set smooth
 
 ## Use this spelling checker instead of the internal one.  This option
 ## does not properly have a default value.
@@ -175,7 +175,7 @@ set wordbounds
 # set undo
 
 ## Enable soft line wrapping (AKA full line display)
-# set softwrap
+set softwrap
 
 
 ## Color setup
@@ -288,4 +288,4 @@ include "/usr/share/nano/sh.nanorc"
 include "/usr/share/nano/pov.nanorc"
 
 ## XML-type files
-#include "/usr/share/nano/xml.nanorc"
+include "/usr/share/nano/xml.nanorc"
