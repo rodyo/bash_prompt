@@ -95,6 +95,22 @@ else
     alias run=xdgopen
 fi
 
+# python
+alias ipython="ipython -pylab"
+
+
+
+# So much for the generic part.
+# Machine-specific part:
+if [[ -f ~/.bash_aliases_local.sh ]];
+then
+    source ~/.bash_aliases_local.sh
+fi
+
+
+
+
+# TODO: put this in machine-specific files:
 
 # Home
 alias ssh_mediabox="ssh -p 2021 media@rastawern.no-ip.org"
@@ -107,25 +123,9 @@ alias ssh_rivka="ssh -p 2023 rivka@rastawern.no-ip.org"
 MATLAB_BASE="/usr/local/MATLAB/"
 MATLAB="/usr/local/bin/matlab"
 
-alias matlab_2014="${MATLAB_BASE}/R2014a/bin/matlab -desktop &"
-alias matlab_2017="${MATLAB_BASE}/R2017a/bin/matlab -desktop &"
-
 alias matlab="$MATLAB -desktop &"
 alias matlabinline="$MATLAB -nodesktop -nojvm -nosplash"
 alias matlabrun="$MATLAB -r"
 
 
-# python
-alias ipython="ipython -pylab"
-
-# Algorithm Team
-alias ATeamMatlab="cd /home/defaultuser0/Dev/work_repos/ATeam Projects/ATeamProjects/ATeamMatlab"
-alias StartTodayCommon="cd /home/defaultuser0/Dev/work_repos/StartToday/StartTodayCommon"
-alias ZoZoShoe="cd /home/defaultuser0/Dev/work_repos/StartToday/ZoZoShoe"
-alias PatternRelease="cd /home/defaultuser0/Dev/work_repos/StartToday/PatternRelease"
-
-alias ATM="cd /home/defaultuser0/Dev/work_repos/ATeam Projects/ATeamProjects/ATeamMatlab"
-alias STC="cd /home/defaultuser0/Dev/work_repos/StartToday/StartTodayCommon"
-alias ZZS="cd /home/defaultuser0/Dev/work_repos/StartToday/ZoZoShoe"
-alias PAT="cd /home/defaultuser0/Dev/work_repos/StartToday/PatternRelease"
 
