@@ -271,6 +271,26 @@ infomessage()
     return 0
 }
 
+# Autocompletion generator for aliases
+# https://unix.stackexchange.com/questions/4219/how-do-i-get-bash-completion-for-command-aliases
+function make-completion-wrapper ()
+{
+  local function_name="$2"
+  local arg_count=$(($#-3))
+  local comp_function_name="$1"
+  shift 2
+  local function="
+    function $function_name {
+      ((COMP_CWORD+=$arg_count))
+      COMP_WORDS=( "$@" \${COMP_WORDS[@]:1} )
+      "$comp_function_name"
+      return 0
+    }"
+  eval "$function"
+  echo $function_name
+  echo "$function"
+}
+
 # Abreviations/descriptive names (use in eval)
 readonly to_error="2> >(error)"
 readonly dump_except_error="1> /dev/null 2> >(error)"
@@ -1116,17 +1136,17 @@ _gp_with_err()
         infomessage "Pulling '$*' completed successfully."
     else
         error "Pull failed on '$*'"
-    fi    
+    fi
     echo ""
 }
 update_all_git()
 {
     # NOTE: git outputs everything to stderr, so 2> >(error) won't work as expected...
     #find . -type d -iname .git -exec git -C {}/.. pull -v 2> >(error) \;
-    
+
     infomessage "Pulling all repositories under current path..."
     echo ""
-    
+
     for gitdir in $(find . -type d -iname .git); do
         _gp_with_err "$gitdir/.."; done
 }
@@ -1160,28 +1180,36 @@ _enter_GIT()
     REPO_PATH="$*"
 
     # Basics
-    alias gf="git fetch"                    ;  REPO_CMD_fetch="gf"
+    alias gf="git fetch --prune"            ;  REPO_CMD_fetch="gf"
     alias gp="git push"                     ;  REPO_CMD_push="gp"
     alias gP="_git_pull_all"                ;  REPO_CMD_pull="gP"
+    alias gu="git pull && git push"         ;  REPO_CMD_update="gu"
     alias gc="git commit -am"               ;  REPO_CMD_commit="gc"
     alias gs="git status"                   ;  REPO_CMD_status="gs"
     alias gl="git log --oneline"            ;  REPO_CMD_log="gl"
+    alias glg="git log --graph --pretty=oneline --abbrev-commit"    ;  REPO_CMD_loggraph="glg"
     alias ga="git add"                      ;  REPO_CMD_add="ga"
     alias grm="git rm"                      ;  REPO_CMD_remove="grm"
     alias gm="git merge"                    ;  REPO_CMD_merge="gm"
     alias gmt="git mergetool"               ;  REPO_CMD_mergetool="gmt"
+    alias grb="git rebase"                  ;  REPO_CMD_rebase="grb"
 
-    alias unlink="git rm --cached"          ;  REPO_CMD_unlink="unlink"        # remove from repository, but keep local
+    # Autocompletion
+    make-completion-wrapper __git_wrap__git_main _gco git checkout
+    complete -F _gco gco
+
+    # remove from repository, but keep local
+    alias unlink="git rm --cached"
+    alias untrack=unlink
+    REPO_CMD_unlink="unlink"
+
+    # check whether file is tracked
     alias istracked="git ls-files --error-unmatch"
-                                               REPO_CMD_trackcheck="istracked" # check whether file is tracked
+    REPO_CMD_trackcheck="istracked"
 
     alias gco="git checkout"                ;  REPO_CMD_checkout="gco"
     # TODO: (Rody Oldenhuis) missing...
     #complete -o default -o nospace -F _git_checkout gco
-
-    alias gu="git pull && git push"         ;  REPO_CMD_update="gu"
-    alias glg="git log --graph --oneline"   ;  REPO_CMD_loggraph="glg"
-    alias gg=gitg
 
     # Tagging
     alias gt="git tag"                      ;  REPO_CMD_tag="gt"
@@ -1396,6 +1424,37 @@ lax() { lo 1 "all"; }
 # More advanced cd, mkdir, rmdir, mv, rm, cp, ln
 # --------------------------------------------------------------------------------------------------
 
+# Check dirstack file if all directories it contains still exist
+_check_dirstack()
+{
+    if [ -e "${DIRSTACK_FILE}" ]
+    then
+        local -r tmp=$(mktemp)
+        local dir dirline
+
+        # Read current dirstack
+        _lock_dirstack
+
+        IFS=$'\n'
+            local -ar stack=($(cat "${DIRSTACK_FILE}"))
+        IFS="$IFS_ORIGINAL"
+
+        # Loop through all dirs one by one. If they exist, print
+        # them into a tempfile
+        for dirline in "${stack[@]}"; do
+            dir="${dirline:((DIRSTACK_COUNTLENGTH+1))}"
+            if [ -e "${dir}" ]; then
+                echo "${dirline}" >> "${tmp}"; fi
+        done
+
+        # Then overwrite the original dirstack file with the tempfile content
+        mv -f "${tmp}" "${DIRSTACK_FILE}"
+        _unlock_dirstack
+    fi
+
+    IFS="$IFS_ORIGINAL"
+}
+
 # Save a directory to the dirstack file, and check if its unique
 _add_dir_to_stack()
 {
@@ -1542,36 +1601,6 @@ _remove_dir_from_stack()
     IFS="$IFS_ORIGINAL"
 }
 
-# Check dirstack file if all directories it contains still exist
-_check_dirstack()
-{
-    if [ -e "${DIRSTACK_FILE}" ]
-    then
-        local -r tmp=$(mktemp)
-        local dir dirline
-
-        # Read current dirstack
-        _lock_dirstack
-
-        IFS=$'\n'
-            local -ar stack=($(cat "${DIRSTACK_FILE}"))
-        IFS="$IFS_ORIGINAL"
-
-        # Loop through all dirs one by one. If they exist, print
-        # them into a tempfile
-        for dirline in "${stack[@]}"; do
-            dir="${dirline:((DIRSTACK_COUNTLENGTH+1))}"
-            if [ -e "${dir}" ]; then
-                echo "${dirline}" >> "${tmp}"; fi
-        done
-
-        # Then overwrite the original dirstack file with the tempfile content
-        mv -f "${tmp}" "${DIRSTACK_FILE}"
-        _unlock_dirstack
-    fi
-
-    IFS="$IFS_ORIGINAL"
-}
 
 # Navigate to directory. Check if directory is in a repo
 _rbp_cd()
@@ -2102,21 +2131,21 @@ _rbp_cp()
     local -i cmd_ok=0
     if [[ ! -z $REPO_MODE && $REPO_MODE == 1 ]]; then
 
-        #  - source IN  repo, target IN repo   ‚Üê git add "target/source"
-        #  - source OUT repo, target OUT repo  ‚Üê do nothing
-        #  - source IN  repo, target OUT repo  ‚Üê do nothing
-        #  - source OUT repo, target IN  repo  ‚Üê git add "target/source"
+        #  - source IN  repo, target IN repo   ‚Ü? git add "target/source"
+        #  - source OUT repo, target OUT repo  ‚Ü? do nothing
+        #  - source IN  repo, target OUT repo  ‚Ü? do nothing
+        #  - source OUT repo, target IN  repo  ‚Ü? git add "target/source"
         #
-        #  - source is DIR, target is DIR    ‚Üê OK; "source" will be subdir of "target"
-        #  - source is FILE, target is DIR   ‚Üê OK; "source" will be subdir of "target"
-        #  - source is DIR, target is FILE   ‚Üê error, with sidenote:
-        #  - source is FILE, target is FILE  ‚Üê OK, with sidenote:
-        #    - there is 1 source             ‚Üê simple rename operation
-        #    - there are multiple sources    ‚Üê ask to make tarball
+        #  - source is DIR, target is DIR    ‚Ü? OK; "source" will be subdir of "target"
+        #  - source is FILE, target is DIR   ‚Ü? OK; "source" will be subdir of "target"
+        #  - source is DIR, target is FILE   ‚Ü? error, with sidenote:
+        #  - source is FILE, target is FILE  ‚Ü? OK, with sidenote:
+        #    - there is 1 source             ‚Ü? simple rename operation
+        #    - there are multiple sources    ‚Ü? ask to make tarball
         #
-        #  - source EXISTS, target DOESN'T EXIST         ‚Üê OK
-        #  - source DOESN'T EXIST, target DOESN'T EXIST  ‚Üê error (handled by rsync)
-        #  - source DOESN'T EXIST, target EXISTS         ‚Üê error (handled by rsync)
+        #  - source EXISTS, target DOESN'T EXIST         ‚Ü? OK
+        #  - source DOESN'T EXIST, target DOESN'T EXIST  ‚Ü? error (handled by rsync)
+        #  - source DOESN'T EXIST, target EXISTS         ‚Ü? error (handled by rsync)
 
         # First, carry out the copy
         if eval "$cpcmd";
@@ -2160,10 +2189,10 @@ _rbp_cp()
                 if (eval "$istracked" "$src" "$dump_except_error");
                     then src_in_repo=1; fi
 
-                #  - source IN  repo, target IN repo   ‚Üê git add "target/source"
-                #  - source OUT repo, target OUT repo  ‚Üê do nothing
-                #  - source IN  repo, target OUT repo  ‚Üê do nothing
-                #  - source OUT repo, target IN  repo  ‚Üê git add "target/source"
+                #  - source IN  repo, target IN repo   ‚Ü? git add "target/source"
+                #  - source OUT repo, target OUT repo  ‚Ü? do nothing
+                #  - source IN  repo, target OUT repo  ‚Ü? do nothing
+                #  - source OUT repo, target IN  repo  ‚Ü? git add "target/source"
 
                 # TODO: implement the logic as commented above
                 if [[ $target_in_repo == 0 ]]; then
