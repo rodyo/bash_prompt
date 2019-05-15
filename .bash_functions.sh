@@ -287,8 +287,8 @@ function make-completion-wrapper ()
       return 0
     }"
   eval "$function"
-  echo $function_name
-  echo "$function"
+  #echo $function_name
+  #echo "$function"
 }
 
 # Abreviations/descriptive names (use in eval)
@@ -1185,7 +1185,7 @@ _enter_GIT()
     alias gP="_git_pull_all"                ;  REPO_CMD_pull="gP"
     alias gu="git pull && git push"         ;  REPO_CMD_update="gu"
     alias gc="git commit -am"               ;  REPO_CMD_commit="gc"
-    alias gs="git status"                   ;  REPO_CMD_status="gs"
+    alias gs="clear && git status"          ;  REPO_CMD_status="gs"
     alias gl="git log --oneline"            ;  REPO_CMD_log="gl"
     alias glg="git log --graph --pretty=oneline --abbrev-commit"    ;  REPO_CMD_loggraph="glg"
     alias ga="git add"                      ;  REPO_CMD_add="ga"
@@ -1194,8 +1194,15 @@ _enter_GIT()
     alias gmt="git mergetool"               ;  REPO_CMD_mergetool="gmt"
     alias grb="git rebase"                  ;  REPO_CMD_rebase="grb"
 
-    # Autocompletion
-    make-completion-wrapper __git_wrap__git_main _gco git checkout
+    alias gbp="git show-branch -a \
+              | grep '\*' \
+              | grep -v `git rev-parse --abbrev-ref HEAD` \
+              | head -n1 \
+              | sed 's/.*\[\(.*\)\].*/\1/' \
+              | sed 's/[\^~].*//'"          ; REPO_CMD_branchparent="gbp"
+
+    # Fix-up autocompletion
+    make-completion-wrapper __git_wrap__git_main _gco "git checkout"
     complete -F _gco gco
 
     # remove from repository, but keep local

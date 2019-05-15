@@ -31,6 +31,7 @@ alias not=_gedit
 
 # one-letter shorts
 alias c="clear"
+alias cls='clear'
 alias clc='printf "\033c"'
 alias C='printf "\033c"'
 alias x=exit
