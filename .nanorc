@@ -229,6 +229,10 @@ set softwrap
 # bind M-A casesens search
 # bind ^S research main
 
+# TODO: (Rody Oldenhuis) doesn't quite work...
+#bind ^h   cutwordleft   main
+#bind ^\?  cutwordright  main
+
 ## Set this if your backspace key sends delete most of the time (2.1.3+)
 # bind kdel backspace all
 
