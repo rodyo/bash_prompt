@@ -1141,12 +1141,9 @@ _gp_with_err()
 }
 update_all_git()
 {
-<<<<<<< HEAD
-=======
     # NOTE: git outputs everything to stderr, so 2> >(error) won't work as expected...
     #find . -type d -iname .git -exec git -C {}/.. pull -v 2> >(error) \;
 
->>>>>>> 9da55976298efaf474748411d1d61346406b5ad4
     infomessage "Pulling all repositories under current path..."
     echo ""
 
