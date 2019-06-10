@@ -1132,7 +1132,7 @@ update_all()
 # Update all git repositories found recursively under the current dir
 _gp_with_err()
 {
-    if (git -C "$*" pull -v); then
+    if (git -C "$@" pull -v); then
         infomessage "Pulling '$*' completed successfully."
     else
         error "Pull failed on '$*'"
@@ -1148,7 +1148,7 @@ update_all_git()
     echo ""
 
     for gitdir in $(find . -type d -iname .git); do
-        _gp_with_err "$gitdir/.."; done
+        _gp_with_err "${PWD}/${gitdir//.git/}"; done
 }
 
 list_all_dirty_git()
