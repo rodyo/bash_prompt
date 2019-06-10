@@ -20,17 +20,11 @@ fi
 IFS="
 "
 # autoremove trailing whitespace
-for line in `git diff --check --cached | sed '/^[+-]/d'`
+for file in `git diff --check --cached | sed '/: trailing whitespace.$/!d' | sed -E 's/:[0-9]+: .*//' | uniq`
 do
-    # get file name
-    if [ "$platform" = "mac" ]; then
-        file="`echo $line | sed -E 's/:[0-9]+: .*//'`"
-    else
-        file="`echo $line | sed -r 's/:[0-9]+: .*//'`"
-    fi
-
     # display tips
     echo -e "auto remove trailing whitespace in \033[31m$file\033[0m!"
+
     # since $file in working directory isn't always equal to $file in index, so we backup it
     mv -f "$file" "${file}.save"
     # discard changes in working directory
@@ -53,13 +47,3 @@ do
     rm "${file}.save"
 
 done
-
-if [ "x`git status -s | grep '^[A|D|M]'`" = "x" ]; then
-    # empty commit
-    echo
-    echo -e "\033[31mNO CHANGES ADDED, ABORT COMMIT!\033[0m"
-    exit 1
-fi
-
-# Now we can commit
-exit
