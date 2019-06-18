@@ -110,23 +110,9 @@ if [[ -z "$SSH_AUTH_SOCK" ]]; then
     trap "kill $SSH_AGENT_PID" 0
 fi
 
-# Enable git-specific completions and prompt options
-# (clone from https://github.com/git/git/tree/master/contrib/completion
-# and rename the softlink)
-if [ -f ~/.git-completion ]; then
-    source ~/.git-completion; fi
-
-if [ -f ~/.git-prompt ]; then
-    source ~/.git-prompt
-    export GIT_PS1_SHOWDIRTYSTATE="yes"
-    export GIT_PS1_SHOWSTASHSTATE="yes"
-    export GIT_PS1_SHOWUPSTREAM="auto"
-fi
-
-# Added as submodule from https://github.com/bobthecow/git-flow-completion
-# NOTE: rename the softlink
-if [ -f ~/.git-flow-completion ]; then
-    source ~/.git-flow-completion ]; fi
+# Enable git-specific completions
+if [ -f /usr/share/bash-completion/completions/git ]; then
+    source /usr/share/bash-completion/completions/git; fi
 
 # Enable svn-specific completions and prompt options
 # TODO
@@ -145,6 +131,7 @@ if which nano 2>&1 > /dev/null; then
 # Include all Rody's bash stuff
 if [[ -f ~/.bash_globals.sh ]];
 then
+
     source ~/.bash_globals.sh
 
     # Keyboard shortcut definitions
@@ -194,9 +181,3 @@ else
     echo "ERROR: can't find ~/.bash_globals.sh; skipping the rest" >&2
     # TODO: (Rody Oldenhuis) create a basic PS1 here (Ubuntu's original)
 fi
-
-
-
-
-
-

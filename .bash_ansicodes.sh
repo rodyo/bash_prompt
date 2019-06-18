@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 
-# ------------------------------------------------------------------------------
+# -------------------------------------------------------------------------
 # General
-# ------------------------------------------------------------------------------
+# -------------------------------------------------------------------------
 
 readonly START_ESCAPE_GROUP='\e['
 
 
-# ------------------------------------------------------------------------------
+# -------------------------------------------------------------------------
 # Colors
-# ------------------------------------------------------------------------------
+# -------------------------------------------------------------------------
 
 # ...are a mess in bash.
 
@@ -122,9 +122,9 @@ reset_PS1_color()
 }
 
 
-# ------------------------------------------------------------------------------
+# -------------------------------------------------------------------------
 # Cursor movement
-# ------------------------------------------------------------------------------
+# -------------------------------------------------------------------------
 
 readonly POSITION_CURSOR="H"
 
@@ -180,24 +180,33 @@ move_cursor_right() { _move_cursor "${MOVE_CURSOR_RIGHT}" "$@"; }
 
 erase_to_end_of_line()
 {
-    if [[ $# != 0 ]]; then
-        error "erase_to_end_of_line() takes no input arguments."; return; fi
+    if [[ $# != 0 ]];
+    then
+        error "erase_to_end_of_line() takes no input arguments.";
+        return;
+    fi
 
     _cursor_mover "${ERASE_TO_END_OF_LINE}"
 }
 
 save_cursor_position()
 {
-    if [[ $# != 0 ]]; then
-        error "save_cursor_position() takes no input arguments."; return; fi
+    if [[ $# != 0 ]];
+    then
+        error "save_cursor_position() takes no input arguments.";
+        return;
+    fi
 
     _cursor_mover "${SAVE_CURSOR_POSITION}"
 }
 
 restore_cursor_position()
 {
-    if [[ $# != 0 ]]; then
-        error "restore_cursor_position() takes no input arguments."; return; fi
+    if [[ $# != 0 ]];
+    then
+        error "restore_cursor_position() takes no input arguments.";
+        return;
+    fi
 
     _cursor_mover "${RESTORE_CURSOR_POSITION}"
 }

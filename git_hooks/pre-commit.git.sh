@@ -25,10 +25,13 @@ do
     # display tips
     echo -e "auto remove trailing whitespace in \033[31m$file\033[0m!"
 
-    # since $file in working directory isn't always equal to $file in index, so we backup it
+    # since $file in working directory isn't always equal to $file in
+    # index, so we back it up
     mv -f "$file" "${file}.save"
+
     # discard changes in working directory
     git checkout -- "$file"
+
     # remove trailing whitespace
     if [ "$platform" = "win" ]; then
         # in windows, `sed -i` adds ready-only attribute to $file
@@ -40,6 +43,7 @@ do
     else
         sed -i 's/[[:space:]]*$//' "$file"
     fi
+
     git add "$file"
 
     # restore the $file

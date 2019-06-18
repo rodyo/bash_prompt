@@ -273,22 +273,27 @@ infomessage()
 
 # Autocompletion generator for aliases
 # https://unix.stackexchange.com/questions/4219/how-do-i-get-bash-completion-for-command-aliases
-function make-completion-wrapper ()
+function make_completion_wrapper ()
 {
-  local function_name="$2"
-  local arg_count=$(($#-3))
-  local comp_function_name="$1"
-  shift 2
-  local function="
+    local comp_function_name="$1"
+    local function_name="$2"
+    local arg_count=$(($#-3))
+    shift 2
+
+    # NOTE: (Rody) COMP_LINE and COMP_POINT needed to be modified for
+    # the git aliases to work:
+    local function="
     function $function_name {
-      ((COMP_CWORD+=$arg_count))
-      COMP_WORDS=( "$@" \${COMP_WORDS[@]:1} )
-      "$comp_function_name"
-      return 0
+        local cmdlen=\${#1}
+        local arglen=\"$@\"
+        ((COMP_CWORD+=$arg_count))
+        COMP_WORDS=($@ \${COMP_WORDS[@]:1})
+        COMP_LINE=\"$@ \${COMP_LINE:\$cmdlen}\"
+        ((COMP_POINT+=\${#arglen}-cmdlen+1))
+        $comp_function_name
+        return $?
     }"
-  eval "$function"
-  #echo $function_name
-  #echo "$function"
+    eval "$function"
 }
 
 # Abreviations/descriptive names (use in eval)
@@ -1180,11 +1185,13 @@ _enter_GIT()
     REPO_PATH="$*"
 
     # Basics
+    alias gk="gitk"
+    alias gg="git gui"
     alias gf="git fetch --prune"            ;  REPO_CMD_fetch="gf"
     alias gp="git push"                     ;  REPO_CMD_push="gp"
     alias gP="_git_pull_all"                ;  REPO_CMD_pull="gP"
     alias gu="git pull && git push"         ;  REPO_CMD_update="gu"
-    alias gc="git commit -am"               ;  REPO_CMD_commit="gc"
+    alias gc="git commit -m"                ;  REPO_CMD_commit="gc"
     alias gs="clear && git status"          ;  REPO_CMD_status="gs"
     alias gl="git log --oneline"            ;  REPO_CMD_log="gl"
     alias glg="git log --graph --pretty=oneline --abbrev-commit"    ;  REPO_CMD_loggraph="glg"
@@ -1202,7 +1209,8 @@ _enter_GIT()
               | sed 's/[\^~].*//'"          ; REPO_CMD_branchparent="gbp"
 
     # Fix-up autocompletion
-    make-completion-wrapper __git_wrap__git_main _gco "git checkout"
+    make_completion_wrapper __git_wrap__git_main _gco git checkout
+    #make_completion_wrapper _git_checkout _gco
     complete -F _gco gco
 
     # remove from repository, but keep local
