@@ -30,10 +30,10 @@ alias ged=_gedit
 alias not=_gedit
 
 # one-letter shorts
-alias c="clear"
-alias cls='clear'
+alias c='printf "\033c"'
+alias cls='printf "\033c"'
 alias clc='printf "\033c"'
-alias C='printf "\033c"'
+alias C='clear'
 alias x=exit
 alias q=exit
 alias n="nano -w"

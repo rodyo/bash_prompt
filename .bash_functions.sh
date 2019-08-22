@@ -867,9 +867,10 @@ delete_reorder()
 # Clear
 _rbp_clear()
 {
-    for (( i=0; i<LINES; i++)); do
-        printf '\n'"${START_ESCAPE_GROUP}K"; done;
-    printf "${START_ESCAPE_GROUP}0;0H"
+    #for (( i=0; i<LINES; i++)); do
+    #    printf '\n'"${START_ESCAPE_GROUP}K"; done;
+    #printf "${START_ESCAPE_GROUP}0;0H"
+    printf "\033c"
 }
 
 # print dirlist if command exited with code 0
