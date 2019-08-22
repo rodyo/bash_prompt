@@ -877,7 +877,7 @@ _rbp_clear()
 print_list_if_OK()
 {
     if [ "$1" == 0 ]; then
-        clear
+        _rbp_clear
         # shellcheck disable=SC2119
         multicolumn_ls
     fi
@@ -1193,7 +1193,7 @@ _enter_GIT()
     alias gP="_git_pull_all"                ;  REPO_CMD_pull="gP"
     alias gu="git pull && git push"         ;  REPO_CMD_update="gu"
     alias gc="git commit -m"                ;  REPO_CMD_commit="gc"
-    alias gs="clear && git status"          ;  REPO_CMD_status="gs"
+    alias gs="_rbp_clear && git status"     ;  REPO_CMD_status="gs"
     alias gl="git log --oneline"            ;  REPO_CMD_log="gl"
     alias glg="git log --graph --pretty=oneline --abbrev-commit"    ;  REPO_CMD_loggraph="glg"
     alias ga="git add"                      ;  REPO_CMD_add="ga"
@@ -1326,7 +1326,7 @@ lds()
     local f
     local dirs
 
-    clear
+    _rbp_clear
     IFS=$'\n'
 
     # When no argument is given, process all dirs. Otherwise: process only given dirs
@@ -1663,7 +1663,7 @@ _rbp_cd()
             esac
         fi
 
-        clear
+        _rbp_clear
         multicolumn_ls
 
     fi
@@ -2334,7 +2334,7 @@ changext()
     for f in *$before; do
         mv "$f" "${f%$before}$after" 2> >(error); done
 
-    clear
+    _rbp_clear
     multicolumn_ls
 }
 
