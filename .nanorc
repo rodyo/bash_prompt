@@ -21,6 +21,16 @@ include /usr/share/nano/*
 ## Use auto-indentation.
 set autoindent
 
+## When justifying, removes trailing whitespace
+set justifytrim
+
+## Constantly show cursor position in the status bar
+set constantshow
+
+## Show line numbers
+set linenumbers
+set numbercolor black,white
+
 ## Backup files to filename~.
 # set backup
 
@@ -176,9 +186,10 @@ set wordbounds
 ## Enable the new (EXPERIMENTAL) generic undo code, not just for line cuts
 # set undo
 
-## Enable soft line wrapping (AKA full line display)
+## Enable soft line wrapping (AKA full line display), but break the line
+## at a space/tab instead of in the middle of a word
 set softwrap
-
+set atblanks
 
 ## Color setup
 ##
