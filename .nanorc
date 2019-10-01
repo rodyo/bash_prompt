@@ -22,7 +22,7 @@ include /usr/share/nano/*
 set autoindent
 
 ## When justifying, removes trailing whitespace
-set justifytrim
+# set justifytrim # <- doesn't work in Cygwin; nano is too old (4.3 at the time of writing this)
 
 ## Constantly show cursor position in the status bar
 set constantshow
