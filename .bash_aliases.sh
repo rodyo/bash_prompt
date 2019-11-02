@@ -66,6 +66,7 @@ alias dropbox="cd ~/Dropbox/"
 alias work="cd ~/e/Work/"
 
 # various
+alias fuck="sudo !!"
 alias clear="_rbp_clear"
 alias forget="history -c; clear"
 alias findbig=_findbig
