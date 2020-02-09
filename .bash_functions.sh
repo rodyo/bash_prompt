@@ -1147,14 +1147,19 @@ _gp_with_err()
 }
 update_all_git()
 {
+    local IFS_
+
     # NOTE: git outputs everything to stderr, so 2> >(error) won't work as expected...
     #find . -type d -iname .git -exec git -C {}/.. pull -v 2> >(error) \;
 
     infomessage "Pulling all repositories under current path..."
     echo ""
 
+    IFS_="$IFS"
+    IFS=$'\n'    
     for gitdir in $(find . -type d -iname .git); do
         _gp_with_err "${PWD}/${gitdir//.git/}"; done
+    IFS="$IFS_"
 }
 
 list_all_dirty_git()
