@@ -867,10 +867,10 @@ delete_reorder()
 # Clear
 _rbp_clear()
 {
-    #for (( i=0; i<LINES; i++)); do
-    #    printf '\n'"${START_ESCAPE_GROUP}K"; done;
-    #printf "${START_ESCAPE_GROUP}0;0H"
-    printf "\033c"
+    for (( i=0; i<LINES; i++)); do
+        printf '\n'"${START_ESCAPE_GROUP}K"; done;
+    printf "${START_ESCAPE_GROUP}0;0H"
+    #printf "\033c"
 }
 
 # print dirlist if command exited with code 0
@@ -1209,10 +1209,6 @@ _enter_GIT()
               | sed 's/.*\[\(.*\)\].*/\1/' \
               | sed 's/[\^~].*//'"          ; REPO_CMD_branchparent="gbp"
 
-    # Fix-up autocompletion
-    make_completion_wrapper __git_wrap__git_main _gco git checkout
-    #make_completion_wrapper _git_checkout _gco
-    complete -F _gco gco
 
     # remove from repository, but keep local
     alias unlink="git rm --cached"
@@ -1224,8 +1220,6 @@ _enter_GIT()
     REPO_CMD_trackcheck="istracked"
 
     alias gco="git checkout"                ;  REPO_CMD_checkout="gco"
-    # TODO: (Rody Oldenhuis) missing...
-    #complete -o default -o nospace -F _git_checkout gco
 
     # Tagging
     alias gt="git tag"                      ;  REPO_CMD_tag="gt"
@@ -1241,7 +1235,18 @@ _enter_GIT()
     alias gam="git submodule add"           ;  REPO_CMD_add_external="gam"
     alias gim="_git_update_submodules"      ;  REPO_CMD_init_external="gim"
 
+    # Fix-up autocompletion
+    make_completion_wrapper __git_wrap__git_main _gb git branch
+    complete -F _gb gb
+
+    make_completion_wrapper __git_wrap__git_main _gco git checkout
+    complete -F _gco gco
+
+    make_completion_wrapper __git_wrap__git_main _gm git merge
+    complete -F _gm gm
+
 }
+
 _git_pull_all_masters()
 {
     git submodule foreach --recursive git pull origin master
