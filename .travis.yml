@@ -1,0 +1,26 @@
+os: linux
+dist: bionic
+language: shell
+
+git:
+  autocrlf: true
+
+stages:
+- name: Test
+- name: GitHub Release
+  if: branch = master
+
+jobs:
+  include:
+    - stage: Test
+      script: echo "Running unit tests (1)"
+      script: echo "Running unit tests (2)"
+    - stage: GitHub Release
+      script: echo "Deploying to GitHub releases ..."
+      deploy:
+        provider: releases
+        token: $GITHUB_OAUTH_TOKEN
+        cleanup: false
+        on:
+          tags: true
+
