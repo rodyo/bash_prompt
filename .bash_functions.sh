@@ -1156,7 +1156,7 @@ update_all_git()
     echo ""
 
     IFS_="$IFS"
-    IFS=$'\n'    
+    IFS=$'\n'
     for gitdir in $(find . -type d -iname .git); do
         _gp_with_err "${PWD}/${gitdir//.git/}"; done
     IFS="$IFS_"
@@ -1250,6 +1250,12 @@ _enter_GIT()
     make_completion_wrapper __git_wrap__git_main _gm git merge
     complete -F _gm gm
 
+    make_completion_wrapper __git_wrap__git_main _gd git diff
+    complete -F _gd gd
+
+    make_completion_wrapper __git_wrap__git_main _grb git rebase
+    complete -F _grb grb
+
 }
 
 _git_pull_all_masters()
@@ -1258,8 +1264,9 @@ _git_pull_all_masters()
 }
 _git_pull_all()
 {
-    git pull # --recurse-submodules # TODO: doesn't always work???
-    _git_pull_all_masters
+    git fetch
+    git pull #--recurse-submodules # TODO: doesn't always work???
+    git submodule update --init --recursive
 }
 _git_update_submodules()
 {
