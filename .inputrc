@@ -17,9 +17,6 @@ $if Bash
     Space: magic-space
 $endif
 
-# Shift+Ins to Paste on WSL 
-"\e[2;2~": yank
-
 # Some more emacs-style commands
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 

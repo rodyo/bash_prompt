@@ -727,7 +727,7 @@ promptcmd()
     # Append system time
     ES="$ES"'[\t] '
 
-    # Set new prompt (taking into account repositories)
+    # Set new prompt (taking into account repositories and python virtual envs)
     case "${REPO_TYPE}" in
 
         # GIT also lists branch
@@ -780,6 +780,10 @@ promptcmd()
             fi
             ;;
     esac
+
+    if [ ! -z "$VIRTUAL_ENV" ]; then
+        PS1="($(basename "$VIRTUAL_ENV")) $PS1"
+    fi
 
     # put pretty-printed full path in the upper right corner
     local -r pth="$(prettyprint_dir "$PWD")"
