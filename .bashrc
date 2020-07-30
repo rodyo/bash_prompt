@@ -181,3 +181,7 @@ else
     echo "ERROR: can't find ~/.bash_globals.sh; skipping the rest" >&2
     # TODO: (Rody Oldenhuis) create a basic PS1 here (Ubuntu's original)
 fi
+
+# Run any local definitions
+if [[ -f ~/.bashrc_local ]]; then
+    source ~/.bashrc_local; fi
