@@ -727,7 +727,7 @@ promptcmd()
     # Append system time
     ES="$ES"'[\t] '
 
-    # Set new prompt (taking into account repositories)
+    # Set new prompt (taking into account repositories and python virtual envs)
     case "${REPO_TYPE}" in
 
         # GIT also lists branch
@@ -780,6 +780,10 @@ promptcmd()
             fi
             ;;
     esac
+
+    if [ ! -z "$VIRTUAL_ENV" ]; then
+        PS1="($(basename "$VIRTUAL_ENV")) $PS1"
+    fi
 
     # put pretty-printed full path in the upper right corner
     local -r pth="$(prettyprint_dir "$PWD")"
@@ -1156,7 +1160,7 @@ update_all_git()
     echo ""
 
     IFS_="$IFS"
-    IFS=$'\n'    
+    IFS=$'\n'
     for gitdir in $(find . -type d -iname .git); do
         _gp_with_err "${PWD}/${gitdir//.git/}"; done
     IFS="$IFS_"
@@ -1241,15 +1245,15 @@ _enter_GIT()
     alias gim="_git_update_submodules"      ;  REPO_CMD_init_external="gim"
 
     # Fix-up autocompletion
-    make_completion_wrapper __git_wrap__git_main _gb git branch
-    complete -F _gb gb
-
-    make_completion_wrapper __git_wrap__git_main _gco git checkout
-    complete -F _gco gco
-
-    make_completion_wrapper __git_wrap__git_main _gm git merge
-    complete -F _gm gm
-
+    # See  https://stackoverflow.com/a/24665529/1085062
+    __git_complete gco _git_checkout
+    __git_complete gb  _git_branch
+    __git_complete gp  _git_push
+    __git_complete gP  _git_pull
+    __git_complete ga  _git_add
+    __git_complete gm  _git_merge
+    __git_complete gd  _git_diff
+    __git_complete grb _git_rebase
 }
 
 _git_pull_all_masters()
@@ -1258,8 +1262,9 @@ _git_pull_all_masters()
 }
 _git_pull_all()
 {
-    git pull # --recurse-submodules # TODO: doesn't always work???
-    _git_pull_all_masters
+    git fetch
+    git pull #--recurse-submodules # TODO: doesn't always work???
+    git submodule update --init --recursive
 }
 _git_update_submodules()
 {
