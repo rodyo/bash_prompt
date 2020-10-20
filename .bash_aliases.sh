@@ -71,6 +71,7 @@ alias clear="_rbp_clear"
 alias forget="history -c; clear"
 alias findbig=_findbig
 alias findfile="find . -type f -iname "
+alias finddir="find . -type d -iname "
 alias newpaper=". newpaper.sh"
 alias sysupdate="sudo apt-get update; sudo apt-get -y dist-upgrade"
 alias remove_old_kernels="dpkg -l 'linux-*' | sed '/^ii/!d;/'"$(uname -r | sed "s/\(.*\)-\([^0-9]\+\)/\1/")"'/d;s/^[^ ]* [^ ]* \([^ ]*\).*/\1/;/[0-9]/!d' | xargs sudo apt-get -y purge"
@@ -87,7 +88,8 @@ alias df="df -ThH"
 alias top10="ps -eo pcpu,pid,user,args | sort -k 1 -r | head -10"
 alias locate="locate -i"
 alias grep="egrep -iIT --color=auto --exclude-dir=.svn --exclude-dir=.git"
-alias bgrep="egrep -iITR --color=auto --exclude-dir=.svn --exclude-dir=.git --exclude-dir=build"
+alias bgrep="egrep -iITR --color=auto --exclude-dir=.svn --exclude-dir=.git --exclude-dir=build "
+alias cgrep="egrep -iITR --color=auto --exclude-dir=.svn --exclude-dir=.git --exclude-dir=build --include=*.cmake --include=CMakeLists.txt "
 alias egrep=grep
 alias catbare='/bin/egrep -v "^#\|^[[:space:]]*$"'
 alias rebash=". ~/.bashrc"
