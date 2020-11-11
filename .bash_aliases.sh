@@ -29,7 +29,7 @@ alias rmrf="rm -rf"
 alias ged=_gedit
 alias not=_gedit
 
-# one-letter shorts
+# one-or-two-letter shorts
 alias c='printf "\033c"'
 alias cls='printf "\033c"'
 alias clc='printf "\033c"'
@@ -37,15 +37,14 @@ alias C='_rbp_clear'
 alias x=exit
 alias q=exit
 alias n="nano -w"
-alias m="make -j$NUM_PROCESSORS"
+alias m="make -j$(nproc)"
+alias cm="mkdir -p build && cd build && cmake .. && make -j$(nproc)"
 alias r=xdg-open
 alias t="top -d 1"
 alias p=_pcmanfm
-alias g=_geany
-alias npp=_geany
-alias n++=_geany
+alias g=_gedit
+alias v=_vscode
 alias d="cd ~/Desktop/"
-alias s="cd ~/Desktop/sandbox/"
 alias h="history"
 
 # cd aliases
@@ -71,6 +70,7 @@ alias clear="_rbp_clear"
 alias forget="history -c; clear"
 alias findbig=_findbig
 alias findfile="find . -type f -iname "
+alias finddir="find . -type d -iname "
 alias newpaper=". newpaper.sh"
 alias sysupdate="sudo apt-get update; sudo apt-get -y dist-upgrade"
 alias remove_old_kernels="dpkg -l 'linux-*' | sed '/^ii/!d;/'"$(uname -r | sed "s/\(.*\)-\([^0-9]\+\)/\1/")"'/d;s/^[^ ]* [^ ]* \([^ ]*\).*/\1/;/[0-9]/!d' | xargs sudo apt-get -y purge"
@@ -92,26 +92,17 @@ alias cgrep="egrep -iITR --color=auto --exclude-dir=.svn --exclude-dir=.git --ex
 alias egrep=grep
 alias catbare='/bin/egrep -v "^#\|^[[:space:]]*$"'
 alias rebash=". ~/.bashrc"
-
-if [[ $on_windows == 1 ]]; then
-    alias run=cygstart
-else
-    alias run=xdgopen
-fi
+alias run=xdgopen
 
 # python
 alias ipython="ipython -pylab"
 
 
-
 # So much for the generic part.
 # Machine-specific part:
-if [[ -f ~/.bash_aliases_local.sh ]];
-then
+if [[ -f ~/.bash_aliases_local.sh ]]; then
     source ~/.bash_aliases_local.sh
 fi
-
-
 
 
 # TODO: put this in machine-specific files:

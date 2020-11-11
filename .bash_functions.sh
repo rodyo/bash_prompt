@@ -15,7 +15,7 @@ if false; then
 
 	shopt -s extdebug
 
-    local -r fname="~/BASH_DEBUG.LOG"
+    fname="~/BASH_DEBUG.LOG"
 
     # The ultimate debugging prompt
     # see https://stackoverflow.com/questions/17804007/how-to-show-line-number-when-executing-bash-script
@@ -140,11 +140,6 @@ command -v bzr &>/dev/null && \
 haveAllRepoBinaries=1 || haveAllRepoBinaries=0
 #TODO: bash native method is virtually always faster...
 haveAllRepoBinaries=0
-
-# (Cygwin)
-declare -i on_windows=0
-[ "$(uname -o)" == "Cygwin" ] && on_windows=1 || on_windows=0
-
 
 # Create global associative arrays
 # --------------------------------
@@ -1211,6 +1206,7 @@ _enter_GIT()
     alias gmt="git mergetool"               ;  REPO_CMD_mergetool="gmt"
     alias grb="git rebase"                  ;  REPO_CMD_rebase="grb"
 
+    # Show parent branch for the current child branch
     alias gbp="git show-branch -a \
               | grep '\*' \
               | grep -v `git rev-parse --abbrev-ref HEAD` \
@@ -1237,6 +1233,7 @@ _enter_GIT()
     # Branches
     alias gcb="git diff --name-status"      ;  REPO_CMD_diffnamestatus="gcb"
     alias gbr="git branch -r"               ;  REPO_CMD_branchremote="gbr"
+    alias gba="git branch -a"               ;  REPO_CMD_branchall="gba"
     alias gb="git branch"                   ;  REPO_CMD_branch="gb"
     alias gd="git diff"                     ;  REPO_CMD_diff="gd"
 
@@ -1262,8 +1259,9 @@ _git_pull_all_masters()
 }
 _git_pull_all()
 {
-    git fetch
-    git pull #--recurse-submodules # TODO: doesn't always work???
+    git fetch --prune
+    git submodule sync
+    git pull --all --prune --tags --recurse-submodules
     git submodule update --init --recursive
 }
 _git_update_submodules()
@@ -1313,7 +1311,7 @@ _enter_BZR()
 # leave repository
 _leave_repo()
 {
-    if [[ ! -z $REPO_MODE && $REPO_MODE == 0 ]]; then
+    if [[ -n $REPO_MODE && $REPO_MODE == 0 ]]; then
         return; fi
 
     # unalias everything
@@ -1882,28 +1880,14 @@ _cdn_completer()
 complete -F _cdn_completer -o nospace cdn
 
 
-# create dir(s), taking into account current repo mode
+# create dir(s)
 _rbp_mkdir()
 {
-    mkdir -p -- "$@" 2> >(error)
-    if [[ $? == 0 ]];
-    then
-        if [[ ! -z $REPO_MODE && $REPO_MODE == 1 ]];
-        then
-            print_list_if_OK 0
-
-            addcmd=$(get_repo_cmd $REPO_CMD_add)
-            if (eval "$addcmd" "$@" "$dump_except_error"); then
-                repo_cmd_exit_message "Added \"$*\" to the repository."
-            else
-                warning "Could not add \"$*\" to the repository."
-            fi
-        fi
-    fi
+    mkdir -p -- "$@" 2> >(error)    
+    print_list_if_OK $?
+    (_check_dirstack &)
 }
 
-# remove dir(s), taking into account current repo mode
-# TODO: not done yet
 _rbp_rmdir()
 {
     rmdir "$@" 2> >(error)
@@ -1915,7 +1899,7 @@ _rbp_rmdir()
 _rbp_rm()
 {
     # we are in REPO mode
-    if [[ ! -z $REPO_MODE && $REPO_MODE -eq 1 ]]; then
+    if [[ -n $REPO_MODE && $REPO_MODE == 1 ]]; then
 
         # perform repo-specific delete
         local -r err=$(eval ${REPO_CMD_remove} "$@" 2>&1)
@@ -2091,7 +2075,7 @@ _rbp_ln()
 
         print_list_if_OK 0
 
-        if [[ ! -z $REPO_MODE && $REMO_MODE == 1 ]];
+        if [[ -n $REPO_MODE && $REPO_MODE == 1 ]];
         then
             addcmd=$(get_repo_cmd "$REPO_CMD_add")
             if (eval "$addcmd" "$@" "$dump_except_error"); then
@@ -2162,21 +2146,21 @@ _rbp_cp()
     local -i cmd_ok=0
     if [[ ! -z $REPO_MODE && $REPO_MODE == 1 ]]; then
 
-        #  - source IN  repo, target IN repo   â†? git add "target/source"
-        #  - source OUT repo, target OUT repo  â†? do nothing
-        #  - source IN  repo, target OUT repo  â†? do nothing
-        #  - source OUT repo, target IN  repo  â†? git add "target/source"
+        #  - source IN  repo, target IN repo   ï¿½? git add "target/source"
+        #  - source OUT repo, target OUT repo  ï¿½? do nothing
+        #  - source IN  repo, target OUT repo  ï¿½? do nothing
+        #  - source OUT repo, target IN  repo  ï¿½? git add "target/source"
         #
-        #  - source is DIR, target is DIR    â†? OK; "source" will be subdir of "target"
-        #  - source is FILE, target is DIR   â†? OK; "source" will be subdir of "target"
-        #  - source is DIR, target is FILE   â†? error, with sidenote:
-        #  - source is FILE, target is FILE  â†? OK, with sidenote:
-        #    - there is 1 source             â†? simple rename operation
-        #    - there are multiple sources    â†? ask to make tarball
+        #  - source is DIR, target is DIR    ï¿½? OK; "source" will be subdir of "target"
+        #  - source is FILE, target is DIR   ï¿½? OK; "source" will be subdir of "target"
+        #  - source is DIR, target is FILE   ï¿½? error, with sidenote:
+        #  - source is FILE, target is FILE  ï¿½? OK, with sidenote:
+        #    - there is 1 source             ï¿½? simple rename operation
+        #    - there are multiple sources    ï¿½? ask to make tarball
         #
-        #  - source EXISTS, target DOESN'T EXIST         â†? OK
-        #  - source DOESN'T EXIST, target DOESN'T EXIST  â†? error (handled by rsync)
-        #  - source DOESN'T EXIST, target EXISTS         â†? error (handled by rsync)
+        #  - source EXISTS, target DOESN'T EXIST         ï¿½? OK
+        #  - source DOESN'T EXIST, target DOESN'T EXIST  ï¿½? error (handled by rsync)
+        #  - source DOESN'T EXIST, target EXISTS         ï¿½? error (handled by rsync)
 
         # First, carry out the copy
         if eval "$cpcmd";
@@ -2220,10 +2204,10 @@ _rbp_cp()
                 if (eval "$istracked" "$src" "$dump_except_error");
                     then src_in_repo=1; fi
 
-                #  - source IN  repo, target IN repo   â†? git add "target/source"
-                #  - source OUT repo, target OUT repo  â†? do nothing
-                #  - source IN  repo, target OUT repo  â†? do nothing
-                #  - source OUT repo, target IN  repo  â†? git add "target/source"
+                #  - source IN  repo, target IN repo   ï¿½? git add "target/source"
+                #  - source OUT repo, target OUT repo  ï¿½? do nothing
+                #  - source IN  repo, target OUT repo  ï¿½? do nothing
+                #  - source OUT repo, target IN  repo  ï¿½? git add "target/source"
 
                 # TODO: implement the logic as commented above
                 if [[ $target_in_repo == 0 ]]; then
@@ -2277,25 +2261,6 @@ _rbp_touch()
 # --------------------------------------------------------------------------------------------------
 # Frequently needed functionality
 # --------------------------------------------------------------------------------------------------
-
-# copy all relevant bash config files to a different (bash > 4.0) system
-spread_the_madness()
-{
-    scp ~/.bash_aliases "$@" 2> >(error)
-    if [ $? -eq 0 ];
-    then
-        scp ~/.bash_functions "$@" 2> >(error) && \
-        scp ~/.bashrc "$@"         2> >(error) && \
-        scp ~/.dircolors "$@"      2> >(error) && \
-        scp ~/.inputrc "$@"        2> >(error) && \
-        scp ~/.awk_functions "$@"  2> >(error) && \
-        scp ~/.git_prompt "$@"     2> >(error) && \
-        scp ~/.git_completion "$@" 2> >(error)
-    else
-        error "failed to proliferate Rody's bash madness to remote system."
-        return 1
-    fi
-}
 
 # Extract some arbitrary archive
 extract()
@@ -2514,41 +2479,32 @@ chroot_dir()
 # ALWAYS in background and immune to terminal closing!
 _gedit()
 {
-    if [[ "$on_windows" == 0 ]]; then
-        (gedit "$@" &) | nohup &> /dev/null;
-    else
-        (notepad "$@" &) | nohup &> /dev/null;
-    fi
+    (gedit "$@" &) | nohup &> /dev/null;   
 }
 
 _geany()
 {
-    if [[ "$on_windows" == 0 ]]; then
-        if which geany; then
-            (geany "$@" &) | nohup &> /dev/null;
-        else
-            _gedit
-        fi
+    if which geany; then
+        (geany "$@" &) | nohup &> /dev/null;
     else
-        if which "notepad++"; then
-            (notepad++ "$@" &) | nohup &> /dev/null;
-        else
-            (notepad "$@" &) | nohup &> /dev/null;
-        fi
+        _gedit "$@"
     fi
+
+}
+
+_vscode()
+{
+    if which code; then
+        (code "$@") | nohup &> /dev/null;
+    else
+        _gedit "$@"
+    fi
+
 }
 
 _pcmanfm()
-{
-    if [[ "$on_windows" == 0 ]]; then
-        (pcmanfm . &) | nohup &> /dev/null;
-    else
-        if which "TOTALCMD"; then
-            (TOTALCMD . &) | nohup &> /dev/null;
-        else
-            (explorer . &) | nohup &> /dev/null;
-        fi
-    fi
+{   
+    (pcmanfm . &) | nohup &> /dev/null;    
 }
 
 # Queued move
@@ -2652,13 +2608,12 @@ _spread()
             return 1; fi
     done
 }
-
-# Multi-source, multi-destination copy
+# alias for the 'copy' variant
 proliferate()
 {
     _spread -c "$@"
 }
-# Multi-source, multi-destination move
+# alias for the 'move' variant
 spread()
 {
     _spread -m "$@"
@@ -2668,8 +2623,8 @@ spread()
 # export hi-res PNG from svg file
 svg2png()
 {
-    if (which inkscape 2>&1 > /dev/null);
-    then
+    if (which inkscape > /dev/null 2>&1); then
+
         local svgname
         local pngname
 
@@ -2744,7 +2699,7 @@ slgrep()
 
         if [ "$extension" = "slx" ]; then
             local result=$(unzip -c "$file" | grep -EiIT --color=always --exclude-dir .svn --exclude-dir .git "$@")
-            if [[ ! -z "$result" ]]; then
+            if [[ -n "$result" ]]; then
                 printf -- "${START_COLORSCHEME}${FG_MAGENTA}${END_COLORSCHEME}%s${RESET_COLORS}: %s"'\n' "$file" "$result"; fi
         else
             grep -EiIT --color=auto --exclude-dir .svn --exclude-dir .git "$@" "$file" /dev/null
