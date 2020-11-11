@@ -88,6 +88,7 @@ alias top10="ps -eo pcpu,pid,user,args | sort -k 1 -r | head -10"
 alias locate="locate -i"
 alias grep="egrep -iIT --color=auto --exclude-dir=.svn --exclude-dir=.git"
 alias bgrep="egrep -iITR --color=auto --exclude-dir=.svn --exclude-dir=.git --exclude-dir=build"
+alias cgrep="egrep -iITR --color=auto --exclude-dir=.svn --exclude-dir=.git --exclude-dir=build --include=CMakeLists.txt --include=*.cmake"
 alias egrep=grep
 alias catbare='/bin/egrep -v "^#\|^[[:space:]]*$"'
 alias rebash=". ~/.bashrc"
