@@ -1224,7 +1224,7 @@ _enter_GIT()
     alias istracked="git ls-files --error-unmatch"
     REPO_CMD_trackcheck="istracked"
 
-    alias gco="git checkout"                ;  REPO_CMD_checkout="gco"
+    alias gco="_git_checkout_wrapper"       ;  REPO_CMD_checkout="gco"
 
     # Tagging
     alias gt="git tag"                      ;  REPO_CMD_tag="gt"
@@ -1257,17 +1257,26 @@ _git_pull_all_masters()
 {
     git submodule foreach --recursive git pull origin master
 }
-_git_pull_all()
+_git_checkout_wrapper()
 {
-    git fetch --prune
-    git submodule sync
-    git pull --all --prune --tags --recurse-submodules
-    git submodule update --init --recursive
+    git checkout
+    _git_update_submodules
 }
 _git_update_submodules()
 {
-    git submodule update --init --recursive
-    _git_pull_all_masters
+    git submodule update --init --recursive --jobs=8
+}
+_git_pull_all()
+{
+    echo "Fetching/pruning..."
+    git fetch --prune
+
+    echo "\nPulling..."
+    git submodule sync
+    git pull --all --prune --tags --recurse-submodules --jobs=8
+
+    echo "\nDouble-checking submodules..."
+    _git_update_submodules
 }
 
 # Enter SVN mode
@@ -1883,7 +1892,7 @@ complete -F _cdn_completer -o nospace cdn
 # create dir(s)
 _rbp_mkdir()
 {
-    mkdir -p -- "$@" 2> >(error)    
+    mkdir -p -- "$@" 2> >(error)
     print_list_if_OK $?
     (_check_dirstack &)
 }
@@ -2479,7 +2488,7 @@ chroot_dir()
 # ALWAYS in background and immune to terminal closing!
 _gedit()
 {
-    (gedit "$@" &) | nohup &> /dev/null;   
+    (gedit "$@" &) | nohup &> /dev/null;
 }
 
 _geany()
@@ -2503,8 +2512,8 @@ _vscode()
 }
 
 _pcmanfm()
-{   
-    (pcmanfm . &) | nohup &> /dev/null;    
+{
+    (pcmanfm . &) | nohup &> /dev/null;
 }
 
 # Queued move
