@@ -1192,19 +1192,18 @@ _enter_GIT()
     # Basics
     alias gk="gitk"
     alias gg="git gui"
-    alias gf="git fetch --prune"            ;  REPO_CMD_fetch="gf"
-    alias gp="git push"                     ;  REPO_CMD_push="gp"
-    alias gP="_git_pull_all"                ;  REPO_CMD_pull="gP"
-    alias gu="git pull && git push"         ;  REPO_CMD_update="gu"
-    alias gc="git commit -m"                ;  REPO_CMD_commit="gc"
-    alias gs="_rbp_clear && git status"     ;  REPO_CMD_status="gs"
-    alias gl="git log --oneline"            ;  REPO_CMD_log="gl"
+    alias gf="git fetch --prune"              ;  REPO_CMD_fetch="gf"
+    alias gp="git push"                       ;  REPO_CMD_push="gp"
+    alias gP="_git_pull_and_update_submodules";  REPO_CMD_pull="gP"
+    alias gu="git pull && git push"           ;  REPO_CMD_update="gu"
+    alias gc="git commit -m"                  ;  REPO_CMD_commit="gc"
+    alias gs="_rbp_clear && git status"       ;  REPO_CMD_status="gs"
+    alias gl="git log --oneline"              ;  REPO_CMD_log="gl"
     alias glg="git log --graph --pretty=oneline --abbrev-commit"    ;  REPO_CMD_loggraph="glg"
-    alias ga="git add"                      ;  REPO_CMD_add="ga"
-    alias grm="git rm"                      ;  REPO_CMD_remove="grm"
-    alias gm="git merge"                    ;  REPO_CMD_merge="gm"
-    alias gmt="git mergetool"               ;  REPO_CMD_mergetool="gmt"
-    alias grb="git rebase"                  ;  REPO_CMD_rebase="grb"
+    alias ga="git add"                        ;  REPO_CMD_add="ga"
+    alias grm="git rm"                        ;  REPO_CMD_remove="grm"
+    alias gm="git merge"                      ;  REPO_CMD_merge="gm"
+    alias gmt="git mergetool"                 ;  REPO_CMD_mergetool="gmt"
 
     # Show parent branch for the current child branch
     alias gbp="git show-branch -a \
@@ -1224,7 +1223,8 @@ _enter_GIT()
     alias istracked="git ls-files --error-unmatch"
     REPO_CMD_trackcheck="istracked"
 
-    alias gco="_git_checkout_wrapper"       ;  REPO_CMD_checkout="gco"
+    alias gco="git checkout"                ;  REPO_CMD_checkout="gco"
+    alias gcob="_git_checkout_wrapper"      ;  REPO_CMD_checkout="gcob"
 
     # Tagging
     alias gt="git tag"                      ;  REPO_CMD_tag="gt"
@@ -1243,14 +1243,19 @@ _enter_GIT()
 
     # Fix-up autocompletion
     # See  https://stackoverflow.com/a/24665529/1085062
-    __git_complete gco _git_checkout
-    __git_complete gb  _git_branch
-    __git_complete gp  _git_push
-    __git_complete gP  _git_pull
-    __git_complete ga  _git_add
-    __git_complete gm  _git_merge
-    __git_complete gd  _git_diff
-    __git_complete grb _git_rebase
+    __git_complete gco  _git_checkout
+    __git_complete gcob _git_checkout
+    __git_complete gb   _git_branch
+    __git_complete gp   _git_push
+    __git_complete gP   _git_pull
+    __git_complete ga   _git_add
+    __git_complete gm   _git_merge
+    __git_complete gd   _git_diff
+}
+
+_git_pull_all()
+{
+    git pull --all --prune --tags --recurse-submodules --jobs=8
 }
 
 _git_pull_all_masters()
@@ -1266,17 +1271,16 @@ _git_update_submodules()
 {
     git submodule update --init --recursive --jobs=8
 }
-_git_pull_all()
+_git_pull_and_update_submodules()
 {
-    echo "Fetching/pruning..."
-    git fetch --prune
+    echo "Pulling..."
+    git pull --all --prune --tags --jobs=8
 
-    echo "\nPulling..."
-    git submodule sync
-    git pull --all --prune --tags --recurse-submodules --jobs=8
-
-    echo "\nDouble-checking submodules..."
+    echo "\nUpdating submodules..."
+    git submodule sync --quiet --recursive
     _git_update_submodules
+
+    echo "All done."
 }
 
 # Enter SVN mode
