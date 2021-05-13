@@ -736,7 +736,7 @@ promptcmd()
                 PS1="$ES${usrName}"'\u'"${RESET_COLORS_PS1}"
                 PS1="${PS1}@${hstName}"'\h'"${RESET_COLORS_PS1} : "
                 PS1="${PS1}"'\['"${REPO_COLOR[git]}"'\]'" [git: ${branch}] : "'\W'"/${RESET_COLORS_PS1} "
-                PS1="${PS1}"'\$'" "
+                PS1="${PS1}\n"'\$'" "
             else
                 PS1="$ES"'\u@\h : [git: '"${branch}] : "'\W/ \$ ';
             fi
@@ -745,9 +745,9 @@ promptcmd()
         # SVN, Mercurial, Bazhaar
         "svn"|"hg"|"bzr")
             if [[ $USE_COLORS == 1 ]]; then
-                PS1="$ES${usrName}"'\u'"${RESET_COLORS_PS1}@${hstName}"'\h'"${RESET_COLORS_PS1} : "'\['"${REPO_COLOR[${REPO_TYPE}]} [${REPO_TYPE}] : "'\W'"/${RESET_COLORS_PS1} "'\$'" "
+                PS1="$ES${usrName}"'\u'"${RESET_COLORS_PS1}@${hstName}"'\h'"${RESET_COLORS_PS1} : "'\['"${REPO_COLOR[${REPO_TYPE}]} [${REPO_TYPE}] : "'\W'"/${RESET_COLORS_PS1} \n"'\$'" "
             else
-                PS1="$ES"'\u@\h : ['"${REPO_TYPE}] : "'\W/ \$ ';
+                PS1="$ES"'\u@\h : ['"${REPO_TYPE}] : "'\W/ \n\$ ';
             fi
             ;;
 
@@ -768,7 +768,7 @@ promptcmd()
                 fi
 
                 # Build the prompt
-                PS1="$ES${usrName}"'\u'"${RESET_COLORS_PS1}@${hstName}"'\h'"${RESET_COLORS_PS1} : ${dircolor}${working_dir}/${RESET_COLORS_PS1} "'\$'" "
+                PS1="$ES${usrName}"'\u'"${RESET_COLORS_PS1}@${hstName}"'\h'"${RESET_COLORS_PS1} : ${dircolor}${working_dir}/${RESET_COLORS_PS1} \n"'\$'" "
 
             else
                 PS1="$ES"'\u@\h : \w/ \$ '
@@ -1236,6 +1236,7 @@ _enter_GIT()
     alias gba="git branch -a"               ;  REPO_CMD_branchall="gba"
     alias gb="git branch"                   ;  REPO_CMD_branch="gb"
     alias gd="git diff"                     ;  REPO_CMD_diff="gd"
+    alias gb_cleanup="_git_branch_cleanup"  ;  REPO_CMD_cleanbranches="gb_cleanup"
 
     # Submodules
     alias gam="git submodule add"           ;  REPO_CMD_add_external="gam"
@@ -1276,12 +1277,25 @@ _git_pull_and_update_submodules()
     echo "Pulling..."
     git pull --all --prune --tags --jobs=8
 
-    echo "\nUpdating submodules..."
-    git submodule sync --quiet --recursive
-    _git_update_submodules
+    if [ -f .gitmodules ]; then
+        echo "\nUpdating submodules..."
+        git submodule sync --quiet --recursive
+        _git_update_submodules
+    else 
+        echo -n "No submodules found; "
+    fi
 
     echo "All done."
 }
+
+git_branch_cleanup()
+{
+    git fetch -p
+    for branch in $(git branch -vv | grep ': gone]' | awk '{print $1}'); do 
+        git branch -D $branch
+    done
+}
+
 
 # Enter SVN mode
 _enter_SVN()
