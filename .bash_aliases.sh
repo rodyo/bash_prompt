@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+# Classics
+alias please="sudo"
+alias fucking="sudo"
+alias fuck="sudo !!"
+
 # list-aliases
 alias ls="clear; ls --color=auto --si"
 alias ld="ls -odgh --time-style=+ */"
