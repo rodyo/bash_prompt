@@ -1237,6 +1237,7 @@ _enter_GIT()
     alias gb="git branch"                   ;  REPO_CMD_branch="gb"
     alias gd="git diff"                     ;  REPO_CMD_diff="gd"
     alias gb_cleanup="_git_branch_cleanup"  ;  REPO_CMD_cleanbranches="gb_cleanup"
+    alias gclean="_git_clean_recursive"     ;  REPO_CMD_cleanall="gclean"
 
     # Submodules
     alias gam="git submodule add"           ;  REPO_CMD_add_external="gam"
@@ -1272,16 +1273,22 @@ _git_update_submodules()
 {
     git submodule update --init --recursive --jobs=8
 }
+
+_git_have_submodules()
+{
+    [ -f "$(git rev-parse --show-toplevel)/.gitmodules" ]
+}
+
 _git_pull_and_update_submodules()
 {
     echo "Pulling..."
     git pull --all --prune --tags --jobs=8
 
-    if [ -f .gitmodules ]; then
+    if _git_have_submodules; then
         echo "\nUpdating submodules..."
         git submodule sync --quiet --recursive
         _git_update_submodules
-    else 
+    else
         echo -n "No submodules found; "
     fi
 
@@ -1291,11 +1298,17 @@ _git_pull_and_update_submodules()
 git_branch_cleanup()
 {
     git fetch -p
-    for branch in $(git branch -vv | grep ': gone]' | awk '{print $1}'); do 
+    for branch in $(git branch -vv | grep ': gone]' | awk '{print $1}'); do
         git branch -D $branch
     done
 }
 
+_git_clean_recursive()
+{
+    git clean -xfd
+    if _git_have_submodules; then
+        git submodule foreach git clean -xfd; fi
+}
 
 # Enter SVN mode
 _enter_SVN()
@@ -2288,6 +2301,28 @@ _rbp_touch()
 # --------------------------------------------------------------------------------------------------
 # Frequently needed functionality
 # --------------------------------------------------------------------------------------------------
+
+_rbp_grep()
+{
+    egrep -iIT --color=auto --exclude-dir=.svn --exclude-dir=.git "$@"
+}
+
+_rbp_rgrep()
+{
+    _rbp_grep -R "$@"
+}
+
+# bgrep = grep excluding build/
+bgrep()
+{
+    _rbp_rgrep() --exclude-dir=build --exclude-dir=doc "$*"
+}
+
+# cgrep = grep excluding build/ looking inly in cmake files
+cgrep()
+{
+    _rbp_rgrep() --exclude-dir=build --include=CMakeLists.txt --include="*.cmake" "$*"
+}
 
 # Extract some arbitrary archive
 extract()
