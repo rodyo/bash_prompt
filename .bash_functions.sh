@@ -2315,13 +2315,13 @@ _rbp_rgrep()
 # bgrep = grep excluding build/
 bgrep()
 {
-    _rbp_rgrep() --exclude-dir=build --exclude-dir=doc "$*"
+    _rbp_rgrep --exclude-dir=build --exclude-dir=doc "$*"
 }
 
 # cgrep = grep excluding build/ looking inly in cmake files
 cgrep()
 {
-    _rbp_rgrep() --exclude-dir=build --include=CMakeLists.txt --include="*.cmake" "$*"
+    _rbp_rgrep --exclude-dir=build --include=CMakeLists.txt --include="*.cmake" "$*"
 }
 
 # Extract some arbitrary archive
