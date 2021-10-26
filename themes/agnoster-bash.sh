@@ -444,7 +444,9 @@ set_bash_prompt() {
 
     # Tilix VTE fix (https://github.com/gnunn1/tilix/wiki/VTE-Configuration-Issue)
     if [[ $TILIX_ID ]]; then
-        PS1="$PS1$(__vte_osc7)"; fi
+        VTE_PWD_THING="\[$(__vte_osc7)\\\]"
+        PS1="$PS1$VTE_PWD_THING"
+    fi
 }
 
 PROMPT_COMMAND=set_bash_prompt
