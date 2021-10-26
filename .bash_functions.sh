@@ -2302,6 +2302,14 @@ _rbp_touch()
 # Frequently needed functionality
 # --------------------------------------------------------------------------------------------------
 
+# Tilix theme switching for SSH sessions requires the terminal title to change
+_ssh_wrapper() {
+	SSHAPP=`which ssh`;
+	ARGS=$@;
+	printf "\033]7;file://%s/\007" "$ARGS";
+	$SSHAPP $ARGS;
+}
+
 _rbp_grep()
 {
     egrep -iIT --color=auto --exclude-dir=.svn --exclude-dir=.git "$@"

@@ -441,6 +441,10 @@ set_bash_prompt() {
     # uncomment below to use right prompt
     #     PS1='\[$(tput sc; printf "%*s" $COLUMNS "$PRIGHT"; tput rc)\]'$PR
     PS1=$PR
+
+    # Tilix VTE fix (https://github.com/gnunn1/tilix/wiki/VTE-Configuration-Issue)
+    if [[ $TILIX_ID ]]; then
+        PS1="$PS1$(__vte_osc7)"; fi
 }
 
 PROMPT_COMMAND=set_bash_prompt

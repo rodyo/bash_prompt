@@ -100,22 +100,16 @@ alias run=xdgopen
 # python
 alias ipython="ipython -pylab"
 
+# Using Tilix? Need SSH fix
+if [[ $TILIX_ID ]]; then
+    alias ssh=_ssh_wrapper; fi
 
 # So much for the generic part.
 # Machine-specific part:
 if [[ -f ~/.bash_aliases_local.sh ]]; then
-    source ~/.bash_aliases_local.sh
-fi
+    source ~/.bash_aliases_local.sh; fi
 
-
-# TODO: put this in machine-specific files:
-
-# Home
-alias ssh_mediabox="ssh -p 2021 media@rastawern.no-ip.org"
-alias ssh_heaven="ssh -p 2022 rody@rastawern.no-ip.org"
-alias ssh_hell="ssh -p 2022 rody@rastawern.no-ip.org"
-alias ssh_rivka="ssh -p 2023 rivka@rastawern.no-ip.org"
-
+# TODO - put this in machine-specific file
 
 # MATLAB
 MATLAB_BASE="/usr/local/MATLAB/"
@@ -124,6 +118,3 @@ MATLAB="/usr/local/bin/matlab"
 alias matlab="$MATLAB -desktop &"
 alias matlabinline="$MATLAB -nodesktop -nojvm -nosplash"
 alias matlabrun="$MATLAB -r"
-
-
-

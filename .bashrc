@@ -129,8 +129,7 @@ if which nano 2>&1 > /dev/null; then
     export EDITOR=nano; fi
 
 # Include all Rody's bash stuff
-if [[ -f ~/.bash_globals.sh ]];
-then
+if [[ -f ~/.bash_globals.sh ]]; then
 
     source ~/.bash_globals.sh
 
@@ -143,10 +142,8 @@ then
 
     # Custom functions
     declare -i _have_fcn=0
-    if [[ -f ~/.bash_functions.sh ]];
-    then
-        if [[ -f ~/.bash_ansicodes.sh ]];
-        then
+    if [[ -f ~/.bash_functions.sh ]]; then
+        if [[ -f ~/.bash_ansicodes.sh ]]; then
             source ~/.bash_ansicodes.sh
             source ~/.bash_functions.sh
             _check_dirstack
@@ -157,16 +154,14 @@ then
     fi
 
     # Alias definitions
-    if [[ -f ~/.bash_aliases.sh ]];
-    then
+    if [[ -f ~/.bash_aliases.sh ]]; then
         source ~/.bash_aliases.sh;
     else
         echo "ERROR: can't find .bash_aliases.sh" >&2
     fi
 
     # bash ido
-    if [[ -f ~/.bash_ido.sh ]];
-    then
+    if [[ -f ~/.bash_ido.sh ]]; then
         source ~/.bash_ido.sh;
     else
         echo "ERROR: can't find .bash_ido" >&2
@@ -181,6 +176,10 @@ else
     echo "ERROR: can't find ~/.bash_globals.sh; skipping the rest" >&2
     # TODO: (Rody Oldenhuis) create a basic PS1 here (Ubuntu's original)
 fi
+
+# Tilix VTE fix (https://github.com/gnunn1/tilix/wiki/VTE-Configuration-Issue)
+if [[ $TILIX_ID ]]; then
+    source /etc/profile.d/vte-*.sh; fi
 
 # Run any local definitions
 if [[ -f ~/.bashrc_local ]]; then
