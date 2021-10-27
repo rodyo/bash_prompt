@@ -1137,7 +1137,7 @@ update_all()
 # Update all git repositories found recursively under the current dir
 _gp_with_err()
 {
-    if (git -C "$@" pull -v); then
+    if (git -C "$@" pull --prune --verbose --rebase); then
         infomessage "Pulling '$*' completed successfully."
     else
         error "Pull failed on '$*'"
@@ -1195,7 +1195,6 @@ _enter_GIT()
     alias gf="git fetch --prune"              ;  REPO_CMD_fetch="gf"
     alias gp="git push"                       ;  REPO_CMD_push="gp"
     alias gP="_git_pull_and_update_submodules";  REPO_CMD_pull="gP"
-    alias gu="git pull && git push"           ;  REPO_CMD_update="gu"
     alias gc="git commit -m"                  ;  REPO_CMD_commit="gc"
     alias gs="_rbp_clear && git status"       ;  REPO_CMD_status="gs"
     alias gl="git log --oneline"              ;  REPO_CMD_log="gl"
@@ -1203,7 +1202,10 @@ _enter_GIT()
     alias ga="git add"                        ;  REPO_CMD_add="ga"
     alias grm="git rm"                        ;  REPO_CMD_remove="grm"
     alias gm="git merge"                      ;  REPO_CMD_merge="gm"
-    alias gmt="git mergetool"                 ;  REPO_CMD_mergetool="gmt"
+
+    alias gpdev="_git_push_to_dev"            ; REPO_CMD_push_to_dev="gpdev"
+    alias gpcanary="_git_push_to_canary"      ; REPO_CMD_push_to_canary="gpcanary"
+    alias gpprod="_git_push_to_prod"          ; REPO_CMD_push_to_canary="gpprod"
 
     # Show parent branch for the current child branch
     alias gbp="git show-branch -a \
@@ -1282,7 +1284,7 @@ _git_have_submodules()
 _git_pull_and_update_submodules()
 {
     echo "Pulling..."
-    git pull --all --prune --tags --jobs=8
+    git pull --all --prune --tags --jobs=8 --rebase
 
     if _git_have_submodules; then
         echo "\nUpdating submodules..."
@@ -1309,6 +1311,117 @@ _git_clean_recursive()
     if _git_have_submodules; then
         git submodule foreach git clean -xfd; fi
 }
+
+###>>> BEGIN: new Xerra functionality
+
+_git_get_feature_branch()
+{
+    local branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+
+    if [[ $branch == feature/* ]]; then
+        echo $branch
+    else
+        error "Not on feature branch."
+        return 1
+    fi
+}
+
+_git_check_prod_remote()
+{
+    local -a remotes=($(git remote -v | cut -f1 | uniq))
+    if [[ " ${remotes[*]} " =~ " google-prod " ]]; then
+        return 0
+    else
+        error "Repository has no remote for 'prod'."
+        return 1
+    fi
+}
+
+_git_check_dev_remote()
+{
+    local -a remotes=($(git remote -v | cut -f1 | uniq))
+    if [[ " ${remotes[*]} " =~ " google-dev " ]]; then
+        return 0
+    else
+        error "Repository has no remote for 'dev'."
+        return 1
+    fi
+}
+
+_git_push_to_dev()
+{
+    local branch
+
+    _git_check_dev_remote || return 1
+
+    if branch=$(_git_get_feature_branch); then
+        git push --force google-dev $branch:deploy/rainbowwarrior
+    else
+        return 1
+    fi
+}
+
+_git_push_to_canary()
+{
+    _git_check_prod_remote || return 1
+
+    git checkout master
+    git fetch && git pull --rebase
+    git fetch google-prod
+
+    git diff master google-prod/deploy/canary
+    read -p "Happy with these changes [y|N]? " ok
+    if [[ $ok == 'y' ]]; then
+        git push google-prod master:deploy/canary; fi
+}
+
+_git_push_to_prod()
+{
+    _git_check_prod_remote || return 1
+
+    git checkout master
+    git fetch && git pull --rebase
+    git fetch google-prod
+
+    git diff master google-prod/deploy/prod
+    read -p "Happy with these changes [y|N]? " ok
+    if [[ $ok == 'y' ]]; then
+        git push google-prod master:deploy/prod; fi
+}
+
+git_prepare_mr()
+{
+    local branch
+
+    if branch=$(_git_get_feature_branch); then
+
+        git checkout master
+        git fetch --prune && git pull --rebase
+
+        git checkout $branch
+        git rebase master
+
+        git push --force
+
+    else
+        return 1
+    fi
+}
+
+monitor_dev_deployment()
+{
+    gcloud config set project xerra-prime
+    watch -n10 'gcloud builds list --limit=5'
+}
+
+monitor_prod_deployment()
+{
+    gcloud config set project starboard-prod
+    watch -n10 'gcloud builds list --limit=5'
+}
+
+###<<< END: new Xerra functionality
+
 
 # Enter SVN mode
 _enter_SVN()
