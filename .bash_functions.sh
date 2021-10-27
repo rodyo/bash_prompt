@@ -1451,6 +1451,11 @@ monitor_prod_deployment()
     watch -n10 'gcloud builds list --limit=5'
 }
 
+spinup_dev()
+{
+    ssh spot -t '/usr/local/bin/scale_up_starboard_dev_instance.sh loveboat-deploy-rainbowwarrior'
+}
+
 ###<<< END: new Xerra functionality
 
 
