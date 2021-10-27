@@ -1195,6 +1195,7 @@ _enter_GIT()
     alias gf="git fetch --prune"              ;  REPO_CMD_fetch="gf"
     alias gp="git push"                       ;  REPO_CMD_push="gp"
     alias gP="_git_pull_and_update_submodules";  REPO_CMD_pull="gP"
+    alias gR="_git_pull_with_rebase"          ;  REPO_CMD_pull_rebase="gR"
     alias gc="git commit -m"                  ;  REPO_CMD_commit="gc"
     alias gs="_rbp_clear && git status"       ;  REPO_CMD_status="gs"
     alias gl="git log --oneline"              ;  REPO_CMD_log="gl"
@@ -1284,7 +1285,7 @@ _git_have_submodules()
 _git_pull_and_update_submodules()
 {
     echo "Pulling..."
-    git pull --all --prune --tags --jobs=8 --rebase
+    git pull --all --prune --tags --jobs=8
 
     if _git_have_submodules; then
         echo "\nUpdating submodules..."
@@ -1295,6 +1296,11 @@ _git_pull_and_update_submodules()
     fi
 
     echo "All done."
+}
+
+_git_pull_with_rebase()
+{
+    git pull --prune --tags --jobs=8 --rebase
 }
 
 git_branch_cleanup()
