@@ -2461,7 +2461,14 @@ _ssh_wrapper() {
 
 _rbp_grep()
 {
-    egrep -iIT --color=auto --exclude-dir=.svn --exclude-dir=.git "$@"
+    # NOTE: see https://www.inmotionhosting.com/support/website/speed-up-grep-searches-with-lc-all/
+    LC_ALL=C egrep -iIT --color=auto --exclude-dir=.svn --exclude-dir=.git "$@"
+}
+
+_rbp_frep()
+{
+    # NOTE: see https://www.inmotionhosting.com/support/website/speed-up-grep-searches-with-lc-all/
+    LC_ALL=C fgrep -iIT --color=auto --exclude-dir=.svn --exclude-dir=.git "$@"
 }
 
 _rbp_rgrep()
@@ -2472,13 +2479,13 @@ _rbp_rgrep()
 # bgrep = grep excluding build/
 bgrep()
 {
-    _rbp_rgrep --exclude-dir=build --exclude-dir=doc "$*"
+    _rbp_rgrep --exclude-dir=build --exclude-dir=doc "$@"
 }
 
 # cgrep = grep excluding build/ looking inly in cmake files
 cgrep()
 {
-    _rbp_rgrep --exclude-dir=build --include=CMakeLists.txt --include="*.cmake" "$*"
+    _rbp_rgrep --exclude-dir=build --include=CMakeLists.txt --include="*.cmake" "$@"
 }
 
 # Extract some arbitrary archive
