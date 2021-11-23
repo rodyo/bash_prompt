@@ -1408,6 +1408,10 @@ _git_push_to_canary()
 
 _git_push_to_prod()
 {
+    read -p $'\e[31mYOU ARE ABOUT TO PUSH TO PRODUCTION; ARE YOU SURE? [y|N]\e[0m: ' response
+    if [ "$response" -ne "y" ]; then 
+        return 0; fi
+
     _git_check_prod_remote || return 1
 
     git checkout master
