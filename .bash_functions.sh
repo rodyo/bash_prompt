@@ -1452,6 +1452,21 @@ _reformat_gloud_build_output()
     local -a lengths
     local -a words
 
+    # NOTE: for STUPID reasons, this functions will be read in a non-login,
+    # non-interactive shell. Therefore, we don't have access to the ANSI color
+    # codes defined in ~/.bash_ansicodes, and sourcing it here doesn't seem to
+    # work, either. So, here's the DUMB version:
+    readonly START_ESCAPE_GROUP='\e['
+
+    readonly START_COLORSCHEME="$START_ESCAPE_GROUP"
+    readonly END_COLORSCHEME="m"
+    readonly RESET_COLORS='\e[0m'
+    readonly TXT_BOLD="01"
+    readonly FG_RED="31"
+    readonly FG_GREEN="32"
+    readonly FG_YELLOW="33"
+    readonly FG_BLUE="34"
+
     # Gobble up the pipe
     while read -r line; do
         txt+="$line"$'\n'; done
@@ -1489,11 +1504,11 @@ _reformat_gloud_build_output()
                 2|5) ;;
 
                 # CREATE_TIME: strip year, ms
-                1) words[i]=$(echo ${words[$i]} | sed 's/2021-//g' | sed 's/+00:00//g' | sed 's/-/\//g' | sed 's/\([0-9]\)T/\1-/g')
+                1) words[i]=$(echo "${words[$i]}" | sed 's/2021-//g' | sed 's/+00:00//g' | sed 's/-/\//g' | sed 's/\([0-9]\)T/\1-/g')
                 ;;
 
                 # IMAGES: abbreviate
-                4) words[i]=$(echo ${words[$i]} | sed 's/gcr.io\/xerra-prime/:xp:/g' | sed 's/gcr.io\/starboard-prod/:sp:/g')
+                4) words[i]=$(echo "${words[$i]}" | sed 's/gcr.io\/xerra-prime/:xp:/g' | sed 's/gcr.io\/starboard-prod/:sp:/g')
                 ;;
 
             esac
@@ -1526,7 +1541,7 @@ _reformat_gloud_build_output()
         done
 
         # Re-insert re-formatted words into array of lines
-        txt[j]="${words[@]}"
+        txt[j]="${words[*]}"
 
     done
 
@@ -1544,12 +1559,12 @@ _reformat_gloud_build_output()
             len=${lengths[i]}
             if [[ "${words[i]}" == *"${START_COLORSCHEME}"* ]]; then
                 len1=${#words[i]}
-                len2=$(expr length + "$(echo -e ${words[i]} | sed -r "s/\x1B\[([0-9]{1,3}(;[0-9]{1,2})?)?[mGK]//g")")
-                if [ $len1 != $len2 ]; then
-                    let "len += $(($len1-$len2-2))"; fi
+                len2=$(expr length + "$(echo -e "${words[i]}" | sed -r "s/\x1B\[([0-9]{1,3}(;[0-9]{1,2})?)?[mGK]//g")")
+                if [ "$len1" != "$len2" ]; then
+                    let "len += $((len1-len2-2))"; fi
             fi
 
-            printf "%-"$(($len+1))"b" "${words[$i]}"
+            printf "%-"$((len+1))"b" "${words[$i]}"
 
 
         done
@@ -1563,14 +1578,16 @@ _reformat_gloud_build_output()
 monitor_dev_deployment()
 {
     gcloud config set project xerra-prime --no-user-output-enabled
-    watch -xctd -n5 bash -ci '
+    export -f _reformat_gloud_build_output
+    watch -xctd -n3 bash -c '
         gcloud builds list --limit=5 | _reformat_gloud_build_output'
 }
 
 monitor_prod_deployment()
 {
     gcloud config set project starboard-prod --no-user-output-enabled
-    watch -xctd -n5 bash -ci '
+    export -f _reformat_gloud_build_output
+    watch -xctd -n3 bash -c '
         printf "PRODUCTION  %.0s" {1..6} &&
         echo " " && echo " " &&
         gcloud builds list --limit=5 | _reformat_gloud_build_output'
