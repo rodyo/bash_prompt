@@ -1409,7 +1409,7 @@ _git_push_to_canary()
 _git_push_to_prod()
 {
     read -p $'\e[31mYOU ARE ABOUT TO PUSH TO PRODUCTION; ARE YOU SURE? [y|N]\e[0m: ' response
-    if [ "$response" -ne "y" ]; then 
+    if [ "$response" -ne "y" ]; then
         return 0; fi
 
     _git_check_prod_remote || return 1
@@ -1443,16 +1443,137 @@ git_prepare_mr()
     fi
 }
 
+_reformat_gloud_build_output()
+{
+    local j i
+    local txt col
+
+    local -i len len1 len2
+    local -a lengths
+    local -a words
+
+    # Gobble up the pipe
+    while read -r line; do
+        txt+="$line"$'\n'; done
+
+    # Split it into an array based on newline
+    local IFS0="$IFS"
+    IFS=$'\n'
+    txt=($txt)
+
+    # Looptyloop over the rows/cols to reformat & collect size info
+    IFS=' '
+
+    for i in $(seq -s' ' 0 5); do
+        lengths[i]=0; done
+
+    for j in $(seq -s' ' 0 $((${#txt[@]}-1)) ); do
+
+        # Strip out the "(+2 more)" stuff
+        txt[j]=$(echo "${txt[j]}" | sed 's/(+[0-9]\+ more)//g' )
+
+        # Split line up into 5 "words"
+        words=(${txt[j]})
+
+        # Re-format the fields, keeping track of field size
+        for i in $(seq -s' ' 0 5); do
+
+            case $i in
+
+                # ID/SOURCE: strip out completely
+                0|3) #words[i]=''
+                continue
+                ;;
+
+                # DURATION / STATUS: leave as-is
+                2|5) ;;
+
+                # CREATE_TIME: strip year, ms
+                1) words[i]=$(echo ${words[$i]} | sed 's/2021-//g' | sed 's/+00:00//g' | sed 's/-/\//g' | sed 's/\([0-9]\)T/\1-/g')
+                ;;
+
+                # IMAGES: abbreviate
+                4) words[i]=$(echo ${words[$i]} | sed 's/gcr.io\/xerra-prime/:xp:/g' | sed 's/gcr.io\/starboard-prod/:sp:/g')
+                ;;
+
+            esac
+
+            # Keep track of max. wordlength per column for correct formatting
+            if ((${#words[i]} > ${lengths[i]})); then
+                lengths[i]=${#words[i]}; fi
+
+            # Colorize!
+            case $i in
+
+                # IMAGES: colorize 'rainbowwarrior'
+                4) col="${START_COLORSCHEME}${TXT_BOLD};${FG_BLUE}${END_COLORSCHEME}rainbowwarrior${RESET_COLORS}"
+                words[i]="$(echo "${words[i]}" | sed "s/rainbowwarrior/${col//\\/\\\\}/g")"
+                ;;
+
+                # STATUS:
+                5) col=
+                case "${words[i]}" in
+                    WORKING) col="$FG_YELLOW" ;;
+                    SUCCESS) col="$FG_GREEN" ;;
+                    FAILED)  col="$TXT_BOLD;$FG_RED" ;;
+                esac
+                if [ -n "$col" ]; then
+                    words[i]="${START_COLORSCHEME}${col}${END_COLORSCHEME}${words[i]}$RESET_COLORS"; fi
+                ;;
+
+            esac
+
+        done
+
+        # Re-insert re-formatted words into array of lines
+        txt[j]="${words[@]}"
+
+    done
+
+    # Now display it all
+    for j in $(seq -s' ' 0 $((${#txt[@]}-1)) ); do
+
+        words=(${txt[j]})
+
+        for i in $(seq -s' ' 0 5); do
+
+            case $i in
+                0|3) continue;; esac
+
+            # Length correction for colorization
+            len=${lengths[i]}
+            if [[ "${words[i]}" == *"${START_COLORSCHEME}"* ]]; then
+                len1=${#words[i]}
+                len2=$(expr length + "$(echo -e ${words[i]} | sed -r "s/\x1B\[([0-9]{1,3}(;[0-9]{1,2})?)?[mGK]//g")")
+                if [ $len1 != $len2 ]; then
+                    let "len += $(($len1-$len2-2))"; fi
+            fi
+
+            printf "%-"$(($len+1))"b" "${words[$i]}"
+
+
+        done
+        printf "\n"
+    done
+
+    IFS="$IFS0"
+
+}
+
 monitor_dev_deployment()
 {
-    gcloud config set project xerra-prime
-    watch -n10 'gcloud builds list --limit=5'
+    gcloud config set project xerra-prime --no-user-output-enabled
+    watch -xctd -n5 bash -ci '
+        gcloud builds list --limit=5 | _reformat_gloud_build_output'
 }
 
 monitor_prod_deployment()
 {
-    gcloud config set project starboard-prod
-    watch -n10 'gcloud builds list --limit=5'
+    gcloud config set project starboard-prod --no-user-output-enabled
+    watch -xctd -n5 bash -ci '
+        printf "PRODUCTION  %.0s" {1..6} &&
+        echo " " && echo " " &&
+        gcloud builds list --limit=5 | _reformat_gloud_build_output'
 }
 
 spinup_dev()
@@ -1460,7 +1581,7 @@ spinup_dev()
     ssh spot -t '/usr/local/bin/scale_up_starboard_dev_instance.sh loveboat-deploy-rainbowwarrior'
 }
 
-###<<< END: new Xerra functionality
+###<<< END: Xerra functionality
 
 
 # Enter SVN mode
