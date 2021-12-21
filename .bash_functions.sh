@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# shellcheck disable=SC2207,SC2206
+
 # --------------------------------------------------------------------------------------------------
 # Debugging
 # --------------------------------------------------------------------------------------------------
@@ -15,7 +17,7 @@ if false; then
 
 	shopt -s extdebug
 
-    fname="~/BASH_DEBUG.LOG"
+    fname="$HOME/BASH_DEBUG.LOG"
 
     # The ultimate debugging prompt
     # see https://stackoverflow.com/questions/17804007/how-to-show-line-number-when-executing-bash-script
@@ -152,8 +154,7 @@ if [ "$SHELL_COLORS" == "yes" ]; then
     USE_COLORS=1
 
     IFS=": "
-        # shellcheck disable=SC2206
-        tmp=($LS_COLORS)
+    tmp=($LS_COLORS)
     IFS="$IFS_ORIGINAL"
 
     keys=("${tmp[@]%%=*}")
@@ -292,9 +293,9 @@ function make_completion_wrapper ()
 }
 
 # Abreviations/descriptive names (use in eval)
-readonly to_error="2> >(error)"
+#readonly to_error="2> >(error)"
 readonly dump_except_error="1> /dev/null 2> >(error)"
-readonly warning_and_error="1> >(warning) 2> >(error)"
+#readonly warning_and_error="1> >(warning) 2> >(error)"
 
 
 # --------------------------------------------------------------------------------------------------
@@ -1126,8 +1127,8 @@ update_all()
         rp=($(check_repo "$PWD/$d"))
 
         (
-        cd "${rp[@]:1}"
-        updatecmd=$(get_repo_cmd $REPO_CMD_pull)
+        cd "${rp[@]:1}" || { echo "Could not cd to '$rp'."; exit; }
+        updatecmd=$(get_repo_cmd "$REPO_CMD_pull")
         eval "$updatecmd" "$dump_except_error"
         )
 
@@ -1157,14 +1158,12 @@ update_all_git()
 {
     local IFS_
 
-    # NOTE: git outputs everything to stderr, so 2> >(error) won't work as expected...
-    #find . -type d -iname .git -exec git -C {}/.. pull -v 2> >(error) \;
-
     infomessage "Pulling all repositories under current path..."
     echo ""
 
     IFS_="$IFS"
     IFS=$'\n'
+    # shellcheck disable=SC2044
     for gitdir in $(find . -type d -iname .git); do
         _gp_with_err "${PWD}/${gitdir//.git/}"; done
     IFS="$IFS_"
@@ -1173,14 +1172,12 @@ rebase_all_git()
 {
     local IFS_
 
-    # NOTE: git outputs everything to stderr, so 2> >(error) won't work as expected...
-    #find . -type d -iname .git -exec git -C {}/.. pull -v 2> >(error) \;
-
     infomessage "Pulling all repositories under current path..."
     echo ""
 
     IFS_="$IFS"
     IFS=$'\n'
+    # shellcheck disable=SC2044
     for gitdir in $(find . -type d -iname .git); do
         _gR_with_err "${PWD}/${gitdir//.git/}"; done
     IFS="$IFS_"
@@ -1190,7 +1187,8 @@ list_all_dirty_git()
 {
     while IFS= read -r -d '' file;
     do
-        local dir="$(dirname "$file")"
+        local dir
+        dir="$(dirname "$file")"
 
         if [[ $(git -C "$dir" diff --stat) != '' ]]; then
             if [[ $USE_COLORS == 1 ]]; then
@@ -1233,10 +1231,12 @@ _enter_GIT()
     alias gpcanary="_git_push_to_canary"      ; REPO_CMD_push_to_canary="gpcanary"
     alias gpprod="_git_push_to_prod"          ; REPO_CMD_push_to_canary="gpprod"
 
+    alias gsquash="_git_squash_commits"       ; REPO_CMD_squash_commits="gsquash"
+
     # Show parent branch for the current child branch
     alias gbp="git show-branch -a \
               | grep '\*' \
-              | grep -v `git rev-parse --abbrev-ref HEAD` \
+              | grep -v \$\(git rev-parse --abbrev-ref HEAD\) \
               | head -n1 \
               | sed 's/.*\[\(.*\)\].*/\1/' \
               | sed 's/[\^~].*//'"          ; REPO_CMD_branchparent="gbp"
@@ -1313,7 +1313,7 @@ _git_pull_and_update_submodules()
     git pull --all --prune --tags --jobs=8
 
     if _git_have_submodules; then
-        echo "\nUpdating submodules..."
+        printf "\nUpdating submodules..."
         git submodule sync --quiet --recursive
         _git_update_submodules
     else
@@ -1332,7 +1332,7 @@ git_branch_cleanup()
 {
     git fetch -p
     for branch in $(git branch -vv | grep ': gone]' | awk '{print $1}'); do
-        git branch -D $branch
+        git branch -D "$branch"
     done
 }
 
@@ -1347,10 +1347,11 @@ _git_clean_recursive()
 
 _git_get_feature_branch()
 {
-    local branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+    local branch
+    branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
 
     if [[ $branch == feature/* ]]; then
-        echo $branch
+        echo "$branch"
     else
         error "Not on feature branch."
         return 1
@@ -1383,10 +1384,8 @@ _git_push_to_dev()
 {
     local branch
 
-    _git_check_dev_remote || return 1
-
-    if branch=$(_git_get_feature_branch); then
-        git push --force google-dev $branch:deploy/rainbowwarrior
+    if branch=$(git rev-parse --abbrev-ref HEAD); then
+        git push --force google-dev "$branch":deploy/rainbowwarrior
     else
         return 1
     fi
@@ -1401,15 +1400,15 @@ _git_push_to_canary()
     git fetch google-prod
 
     git diff master google-prod/deploy/canary
-    read -p "Happy with these changes [y|N]? " ok
+    read -rp "Happy with these changes [y|N]? " ok
     if [[ $ok == 'y' ]]; then
         git push google-prod master:deploy/canary; fi
 }
 
 _git_push_to_prod()
 {
-    read -p $'\e[31mYOU ARE ABOUT TO PUSH TO PRODUCTION; ARE YOU SURE? [y|N]\e[0m: ' response
-    if [ "$response" -ne "y" ]; then
+    read -rp $'\e[31mYOU ARE ABOUT TO PUSH TO PRODUCTION; ARE YOU SURE? [y|N]\e[0m: ' response
+    if [ "$response" != "y" ]; then
         return 0; fi
 
     _git_check_prod_remote || return 1
@@ -1419,28 +1418,20 @@ _git_push_to_prod()
     git fetch google-prod
 
     git diff master google-prod/deploy/prod
-    read -p "Happy with these changes [y|N]? " ok
+    read -rp "Happy with these changes [y|N]? " ok
     if [[ $ok == 'y' ]]; then
         git push google-prod master:deploy/prod; fi
 }
 
-git_prepare_mr()
+_git_squash_commits()
 {
-    local branch
+    # From https://stackoverflow.com/a/25357146/1085062
+    if [ $# -eq 0 ]; then
+        >&2 echo "No commit message supplied."; exit 1; fi
 
-    if branch=$(_git_get_feature_branch); then
-
-        git checkout master
-        git fetch --prune && git pull --rebase
-
-        git checkout $branch
-        git rebase master
-
-        git push --force
-
-    else
-        return 1
-    fi
+    git reset "$(git merge-base master "$(git rev-parse --abbrev-ref HEAD)")"
+    git add -A
+    git commit -m "$1"
 }
 
 _reformat_gloud_build_output()
@@ -1647,7 +1638,7 @@ _leave_repo()
 
     # unalias everything
     for cmd in ${!REPO_CMD_*}; do
-        eval unalias ${!cmd}; done
+        eval unalias "${!cmd}"; done
 
     # reset everything to normal
     PS1=$PS1_
@@ -1655,7 +1646,7 @@ _leave_repo()
     REPO_TYPE=
     REPO_MODE=0;
 
-    unset ${!REPO_CMD_*}
+    unset "${!REPO_CMD_*}"
 }
 
 
@@ -1677,7 +1668,7 @@ lds()
     if [ $# -eq 0 ]; then
        dirs=$(ls -Adh1 --time-style=+ -- */ 2> >(error))
     else
-       dirs=$(ls -Adh1 --time-style=+ -- ${@/%//} 2> >(error))
+       dirs=$(ls -Adh1 --time-style=+ -- "${@/%//}" 2> >(error))
     fi
 
     # find proper color used for directories
@@ -2015,6 +2006,7 @@ _rbp_cd()
 
 # jump dirs via dir-numbers. Inspired by tp_command(), by
 # Alvin Alexander (DevDaily.com)
+# shellcheck disable=SC2120
 _cdn()
 {
     # Remove non-existent dirs from dirstack
@@ -2069,8 +2061,8 @@ _cdn()
     done
 
     # Integer argument provided: go to dir number
-    if [ $intarg -ne -1 ]; then
-        if [ $intarg -le ${#stack[@]} ]; then
+    if [ "$intarg" -ne -1 ]; then
+        if [ "$intarg" -le ${#stack[@]} ]; then
            _rbp_cd "${stack[$intarg]:((DIRSTACK_COUNTLENGTH+1))}"
             return 0
         else
