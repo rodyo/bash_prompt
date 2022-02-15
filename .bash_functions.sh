@@ -1426,10 +1426,14 @@ _git_push_to_prod()
 _git_squash_commits()
 {
     # From https://stackoverflow.com/a/25357146/1085062
+    read -rp "This will squash all commits on \'$(git branch --show-current)\' into a single commit off 'master'; are you sure? [y|N]: " response
+    if [ "$response" != "y" ]; then
+        return 0; fi
+
     if [ $# -eq 0 ]; then
         >&2 echo "No commit message supplied."; exit 1; fi
 
-    git reset "$(git merge-base master "$(git rev-parse --abbrev-ref HEAD)")"
+    git reset "$(git merge-base master "$(git branch --show-current)")"
     git add -A
     git commit -m "$1"
 }
@@ -1588,6 +1592,40 @@ spinup_dev()
 {
     ssh spot -t '/usr/local/bin/scale_up_starboard_dev_instance.sh loveboat-deploy-rainbowwarrior'
 }
+
+psql_test() {
+    PGPASSWORD=testpwd psql \
+        --host=localhost \
+        --username=testuser \
+        --dbname=test-db \
+        --echo-errors \
+        -v
+}
+
+psql_dev() {
+    read -srp 'Enter PGPASSWORD for global-2wk: ' PGPASS
+    PGPASSWORD=${PGPASS} psql \
+        --host=35.244.114.47 \
+        --username=postgres \
+        --dbname=global-2wk \
+        --echo-errors \
+        -v
+}
+
+psql_prod() {
+    for i in 1 2 3; do
+        echo $'\e[31mYOU ARE CONNECTING TO THE PRODUCTION DB!\e[0m'; done
+    echo
+    read -srp 'Enter PGPASSWORD for global-ais: ' PGPASS
+    PGPASSWORD=${PGPASS} psql \
+        --host=35.197.168.167 \
+        --username=postgres \
+        --dbname=global-ais \
+        --echo-errors \
+        -v \
+        ON_ERROR_STOP=1
+}
+
 
 ###<<< END: Xerra functionality
 
