@@ -1383,9 +1383,16 @@ _git_check_dev_remote()
 _git_push_to_dev()
 {
     local branch
+    local -l instance
+
+    instance='rainbowwarrior'
+    if [ $# == 1 ]; then
+        instance="${1}"; fi
+
+    echo "Pushing to 'deploy/${instance}'..."
 
     if branch=$(git rev-parse --abbrev-ref HEAD); then
-        git push --force google-dev "$branch":deploy/rainbowwarrior
+        git push --force google-dev "${branch}:deploy/${instance}"
     else
         return 1
     fi
@@ -1395,32 +1402,63 @@ _git_push_to_canary()
 {
     _git_check_prod_remote || return 1
 
-    git checkout master
-    git fetch && git pull --rebase
-    git fetch google-prod
+    local branch
+    if ! branch=$(git rev-parse --abbrev-ref HEAD); then
+        return 1; fi
+    if [ "${branch}" != 'master' ]; then
+        read -rp "Not on 'master'; are you sure [y|N]? " ok
+        if [[ $ok != 'y' ]]; then
+            echo "Aborting."
+            return 0
+        fi
+    fi
 
-    git diff master google-prod/deploy/canary
-    read -rp "Happy with these changes [y|N]? " ok
-    if [[ $ok == 'y' ]]; then
-        git push google-prod master:deploy/canary; fi
+    local yn
+    git fetch google-prod
+    read -rp "View diff master <-> google-prod/deploy/canary [y|N]? " yn
+    if [ "$yn" = 'y' ]; then
+        local ok
+        git diff master google-prod/deploy/canary
+        read -rp "Happy with these changes [y|N]? " ok
+        if [ "$ok" != 'y' ]; then
+            return 1; fi
+    fi
+
+    echo "Puhing to canary..."
+    git push google-prod master:deploy/canary;
 }
 
 _git_push_to_prod()
 {
-    read -rp $'\e[31mYOU ARE ABOUT TO PUSH TO PRODUCTION; ARE YOU SURE? [y|N]\e[0m: ' response
+    _git_check_prod_remote || return 1
+
+    local branch
+    if ! branch=$(git rev-parse --abbrev-ref HEAD); then
+        return 1; fi
+    if [ "${branch}" != 'master' ]; then
+        >&2 echo "Refusing to push to prod from non-master branch."
+        return 1
+    fi
+
+    local
+    git fetch google-prod
+    read -rp "View diff master <-> google-prod/deploy/prod [y|N]? " yn
+    if [ "$yn" = 'y' ]; then
+        local ok
+        git diff master google-prod/deploy/prod
+        read -rp "Happy with these changes [y|N]? " ok
+        if [ "$ok" != 'y' ]; then
+            echo "Aborting."
+            return 0;
+        fi
+    fi
+
+    local ok yn response
+    read -rp $'\e[31mYOU ARE ABOUT TO PUSH TO PRODUCTION; ARE YOU REALLY, POSITIVELY SURE? [y|N]\e[0m: ' response
     if [ "$response" != "y" ]; then
         return 0; fi
 
-    _git_check_prod_remote || return 1
-
-    git checkout master
-    git fetch && git pull --rebase
-    git fetch google-prod
-
-    git diff master google-prod/deploy/prod
-    read -rp "Happy with these changes [y|N]? " ok
-    if [[ $ok == 'y' ]]; then
-        git push google-prod master:deploy/prod; fi
+    git push google-prod master:deploy/prod;
 }
 
 _git_squash_commits()
@@ -1431,7 +1469,7 @@ _git_squash_commits()
         return 0; fi
 
     if [ $# -eq 0 ]; then
-        >&2 echo "No commit message supplied."; exit 1; fi
+        >&2 echo "No commit message supplied."; return 1; fi
 
     git reset "$(git merge-base master "$(git branch --show-current)")"
     git add -A
