@@ -1232,7 +1232,7 @@ _enter_GIT()
     alias gpprod="_git_push_to_prod"          ; REPO_CMD_push_to_canary="gpprod"
 
     alias gsquash="_git_squash_commits"       ; REPO_CMD_squash_commits="gsquash"
-    alias gpmr="git push -o merge_request.create -o merge_request.target=master -o merge_request.assign='rodyoldenhuis'"; ; REPO_CMD_push_mr="gpmr"
+    alias gpmr="git push -o merge_request.create -o merge_request.target=master -o merge_request.assign='rodyoldenhuis'"; REPO_CMD_push_mr="gpmr"
 
     # Show parent branch for the current child branch
     alias gbp="git show-branch -a \
