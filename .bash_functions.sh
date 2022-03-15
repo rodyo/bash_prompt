@@ -1232,6 +1232,7 @@ _enter_GIT()
     alias gpprod="_git_push_to_prod"          ; REPO_CMD_push_to_canary="gpprod"
 
     alias gsquash="_git_squash_commits"       ; REPO_CMD_squash_commits="gsquash"
+    alias gpmr="git push -o merge_request.create -o merge_request.target=master -o merge_request.assign='rodyoldenhuis'"; ; REPO_CMD_push_mr="gpmr"
 
     # Show parent branch for the current child branch
     alias gbp="git show-branch -a \
@@ -1628,7 +1629,10 @@ monitor_prod_deployment()
 
 spinup_dev()
 {
-    ssh spot -t '/usr/local/bin/scale_up_starboard_dev_instance.sh loveboat-deploy-rainbowwarrior'
+    instance="rainbowwarrior"
+    if [ $# == 1 ]; then
+        instance="${1}"; fi
+    ssh spot -t "/usr/local/bin/scale_up_starboard_dev_instance.sh loveboat-deploy-${instance}"
 }
 
 psql_test() {
