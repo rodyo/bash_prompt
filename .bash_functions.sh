@@ -1416,17 +1416,17 @@ _git_push_to_canary()
 
     local yn
     git fetch google-prod
-    read -rp "View diff master <-> google-prod/deploy/canary [y|N]? " yn
+    read -rp "View diff ${branch} <-> google-prod/deploy/canary [y|N]? " yn
     if [ "$yn" = 'y' ]; then
         local ok
-        git diff master google-prod/deploy/canary
+        git diff "${branch}" google-prod/deploy/canary
         read -rp "Happy with these changes [y|N]? " ok
         if [ "$ok" != 'y' ]; then
             return 1; fi
     fi
 
-    echo "Puhing to canary..."
-    git push google-prod master:deploy/canary;
+    echo "Pushing to canary..."
+    git push --force google-prod "${branch}":deploy/canary;
 }
 
 _git_push_to_prod()
@@ -2040,48 +2040,44 @@ _rbp_cd()
 
     # Home
     if [[ $# == 0 ]]; then
-        cd -- "$HOME" 2> >(error)
+        cd -- "$HOME" 2> >(error) || return
 
     # Previous
     elif [[ $# == 1 && "-" == "$1" ]]; then
-        cd - 2> >(error)
+        cd - 2> >(error) || return
 
     # Help call
     elif [[ $# -ge 1 && "-h" = "$1" || "--help" = "$1" ]]; then
-        cd --help
+        cd --help || return
         return 0
 
     # All others
     else
-		cd -- "$@" 2> >(error)
+		cd -- "$@" 2> >(error) || return
     fi
 
     # if successful, save to dirstack, display abbreviated dirlist and
     # check if it is a GIT repository
-    if [[ $? == 0 ]]; then
 
-        # Save to dirstack file and check if unique
-        (_add_dir_to_stack "$PWD" &)
+    # Save to dirstack file and check if unique
+    (_add_dir_to_stack "$PWD" &)
 
-        # Assume we're not going to use any of the repository modes
-        _leave_repo
-
-        # Check if we're in a repo. If so, enter a repo mode
-        repo=($(check_repo))
-        if [[ $? == 0 ]]; then
-            case "${repo[0]}" in
-                "git") _enter_GIT "${repo[@]:1}" ;;
-                "svn") _enter_SVN "${repo[@]:1}" ;;
-                "hg")  _enter_HG  "${repo[@]:1}" ;;
-                "bzr") _enter_BZR "${repo[@]:1}" ;;
-                *) ;;
-            esac
-        fi
-
-        _rbp_clear
-        multicolumn_ls
-
+    # Check whether we're in a repo. If so, enter a repo mode
+    _leave_repo
+    local repo
+    if repo=($(check_repo)); then
+        case "${repo[0]}" in
+            "git") _enter_GIT "${repo[@]:1}" ;;
+            "svn") _enter_SVN "${repo[@]:1}" ;;
+            "hg")  _enter_HG  "${repo[@]:1}" ;;
+            "bzr") _enter_BZR "${repo[@]:1}" ;;
+            *) ;;
+        esac
     fi
+
+    _rbp_clear
+    multicolumn_ls
+
 }
 
 # jump dirs via dir-numbers. Inspired by tp_command(), by
