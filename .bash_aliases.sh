@@ -119,3 +119,5 @@ MATLAB="/usr/local/bin/matlab"
 alias matlab="$MATLAB -desktop &"
 alias matlabinline="$MATLAB -nodesktop -nojvm -nosplash"
 alias matlabrun="$MATLAB -r"
+
+alias bfg="java -jar "$HOME/.bin/bfg*.jar""

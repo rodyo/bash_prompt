@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# shellcheck disable=SC2207,SC2206
+# shellcheck disable=SC2207,SC2206,SC2034
 
 # --------------------------------------------------------------------------------------------------
 # Debugging
@@ -333,8 +333,7 @@ multicolumn_ls()
         if [ $USE_COLORS -eq 1 ]; then
             colorflag="--color"; fi
 
-        # shellcheck disable=SC2016
-        # shellcheck disable=SC2028
+        # shellcheck disable=SC2016,SC2028
         command ls -opg --si --group-directories-first --time-style=+ ${colorflag} "$@" | awk -f "$HOME/.awk_functions" -f <( echo -E '
 
             BEGIN {
@@ -824,7 +823,7 @@ quoted_list()
         0) ;;
         1) echo "\"$1\"" ;;
         2) echo "\"$1\" and \"$2\"" ;;
-        *) first="$(strjoin "\", \"" ${@:1:(($#-1))})"
+        *) first="$(strjoin "\", \"" "${@:1:(($#-1))}")"
            echo "\"${first}\", and \"${@: -1}\""
            ;;
     esac
@@ -1726,7 +1725,8 @@ _leave_repo()
     REPO_TYPE=
     REPO_MODE=0;
 
-    unset "${!REPO_CMD_*}"
+    #shellcheck disable=SC2086
+    unset ${!REPO_CMD_*}
 }
 
 
@@ -2662,23 +2662,24 @@ _rbp_touch()
 # --------------------------------------------------------------------------------------------------
 
 # Tilix theme switching for SSH sessions requires the terminal title to change
+# See https://deeb.me/20190116/change-profiles-automatically-in-tilix-when-connecting-to-ssh-hosts
 _ssh_wrapper() {
-	SSHAPP=`which ssh`;
-	ARGS=$@;
+	SSHAPP="$(which ssh)";
+	ARGS=$*;
 	printf "\033]7;file://%s/\007" "$ARGS";
-	$SSHAPP $ARGS;
+	$SSHAPP "$ARGS";
 }
 
 _rbp_grep()
 {
     # NOTE: see https://www.inmotionhosting.com/support/website/speed-up-grep-searches-with-lc-all/
-    LC_ALL=C egrep -iIT --color=auto --exclude-dir=.svn --exclude-dir=.git "$@"
+    LC_ALL=C grep -EiIT --color=auto --exclude-dir=.svn --exclude-dir=.git "$@"
 }
 
 _rbp_frep()
 {
     # NOTE: see https://www.inmotionhosting.com/support/website/speed-up-grep-searches-with-lc-all/
-    LC_ALL=C fgrep -iIT --color=auto --exclude-dir=.svn --exclude-dir=.git "$@"
+    LC_ALL=C grep -FiIT --color=auto --exclude-dir=.svn --exclude-dir=.git "$@"
 }
 
 _rbp_rgrep()
