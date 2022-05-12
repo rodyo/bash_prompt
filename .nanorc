@@ -17,7 +17,7 @@
 
 # Include all of these, which enables syntax higlighting for many languages
 include /usr/share/nano/*.nanorc
-include /usr/share/nano/extra/*.nanorc
+#include /usr/share/nano/extra/*.nanorc
 
 ## Use auto-indentation.
 set autoindent

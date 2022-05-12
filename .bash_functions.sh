@@ -2661,15 +2661,6 @@ _rbp_touch()
 # Frequently needed functionality
 # --------------------------------------------------------------------------------------------------
 
-# Tilix theme switching for SSH sessions requires the terminal title to change
-# See https://deeb.me/20190116/change-profiles-automatically-in-tilix-when-connecting-to-ssh-hosts
-_ssh_wrapper() {
-	SSHAPP="$(which ssh)";
-	ARGS=$*;
-	printf "\033]7;file://%s/\007" "$ARGS";
-	$SSHAPP "$ARGS";
-}
-
 _rbp_grep()
 {
     # NOTE: see https://www.inmotionhosting.com/support/website/speed-up-grep-searches-with-lc-all/

@@ -461,6 +461,10 @@ set_bash_prompt() {
         PS1="$PS1$VTE_PWD_THING"
     fi
 
+    # See https://deeb.me/20190116/change-profiles-automatically-in-tilix-when-connecting-to-ssh-hosts
+    # (but then without the SSH alias)
+    printf "\033]7;file://%s/\007" "$(hostname)"
+
 }
 
 PROMPT_COMMAND=set_bash_prompt

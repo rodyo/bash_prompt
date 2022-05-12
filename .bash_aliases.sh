@@ -20,7 +20,7 @@ alias tree='find . | sed -e "s/[^-][^\/]*\//  │/g; s/│\([^ ]\)/├─\1/"'
 
 # FS manipulation & navigation
 alias cdn=_cdn
-alias cd=_rbp_cd  # TODO: breaks autocomplete???
+alias cd=_rbp_cd # TODO: breaks autocomplete???
 alias dc=_rbp_cd
 #alias mv=_rbp_mv  # TODO: off, until it's finished
 #alias cp=_rbp_cp  #
@@ -101,14 +101,11 @@ alias run=xdgopen
 # python
 alias ipython="ipython -pylab"
 
-# Using Tilix? Need SSH fix
-if [[ $TILIX_ID ]]; then
-    alias ssh=_ssh_wrapper; fi
-
 # So much for the generic part.
 # Machine-specific part:
 if [[ -f ~/.bash_aliases_local.sh ]]; then
-    source ~/.bash_aliases_local.sh; fi
+    source ~/.bash_aliases_local.sh
+fi
 
 # TODO - put this in machine-specific file
 
