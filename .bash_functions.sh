@@ -1,4 +1,3 @@
-
 #!/usr/bin/env bash
 
 # shellcheck disable=SC2207,SC2206,SC2034
@@ -12,11 +11,11 @@
 
 if false; then
 
-	# NOTE: (Rody Oldenhuis) get location of function definition:
-	# $ declare -F <function name>
-	# see https://unix.stackexchange.com/a/322887/20712
+    # NOTE: (Rody Oldenhuis) get location of function definition:
+    # $ declare -F <function name>
+    # see https://unix.stackexchange.com/a/322887/20712
 
-	shopt -s extdebug
+    shopt -s extdebug
 
     fname="$HOME/BASH_DEBUG.LOG"
 
@@ -24,15 +23,14 @@ if false; then
     # see https://stackoverflow.com/questions/17804007/how-to-show-line-number-when-executing-bash-script
     export PS4='+(${BASH_SOURCE}:${LINENO}): ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
 
-    exec   > >(tee -ia "$fname")
-    exec  2> >(tee -ia "$fname" >& 2)
-    exec 19> "$fname"
+    exec > >(tee -ia "$fname")
+    exec 2> >(tee -ia "$fname" >&2)
+    exec 19>"$fname"
 
     export BASH_XTRACEFD=19
     set -x
 
 fi
-
 
 # --------------------------------------------------------------------------------------------------
 # Profiling
@@ -42,13 +40,11 @@ fi
 
 declare -i DO_PROFILING=0
 
-_START_PROFILING()
-{
-    if ! command -v tee   &>/dev/null || \
-       ! command -v date  &>/dev/null || \
-       ! command -v sed   &>/dev/null || \
-       ! command -v paste &>/dev/null
-    then
+_START_PROFILING() {
+    if ! command -v tee &>/dev/null ||
+        ! command -v date &>/dev/null ||
+        ! command -v sed &>/dev/null ||
+        ! command -v paste &>/dev/null; then
         error "cannot profile: unmet depenencies"
         return 1
     fi
@@ -56,8 +52,8 @@ _START_PROFILING()
     if [ $DO_PROFILING -eq 1 ]; then
         PS4='+ $(date "+%s.%N")\011 '
         exec 3>&2 2> >(tee /tmp/sample-time.$$.log |
-                       sed  -u 's/^.*$/now/' |
-                       date -f - "+%s.%N" > /tmp/sample-time.$$.tim)
+            sed -u 's/^.*$/now/' |
+            date -f - "+%s.%N" >/tmp/sample-time.$$.tim)
         set -x
     else
         error "stray _START_PROFILING found"
@@ -65,24 +61,23 @@ _START_PROFILING()
     fi
 }
 
-_STOP_PROFILING()
-{
+_STOP_PROFILING() {
     if [ $DO_PROFILING -eq 1 ]; then
         set +x
         exec 2>&3 3>&-
 
-        printf -- ' %-11s  %-11s   %s\n' "duration" "cumulative" "command" > ~/profile_report.$$.log
+        printf -- ' %-11s  %-11s   %s\n' "duration" "cumulative" "command" >~/profile_report.$$.log
         paste <(
             while read -r tim; do
-                [ -z "$last" ] && last=${tim//.} && first=${tim//.}
-                crt=000000000$((${tim//.}-10#0$last))
-                ctot=000000000$((${tim//.}-10#0$first))
+                [ -z "$last" ] && last=${tim//./} && first=${tim//./}
+                crt=000000000$((${tim//./} - 10#0$last))
+                ctot=000000000$((${tim//./} - 10#0$first))
                 printf -- '%12.9f %12.9f\n' ${crt:0:${#crt}-9}.${crt:${#crt}-9} \
-                                         ${ctot:0:${#ctot}-9}.${ctot:${#ctot}-9}
-                last=${tim//.}
-              done < /tmp/sample-time.$$.tim
-            ) /tmp/sample-time.$$.log >> ~/profile_report.$$.log && \
-        echo "Profiling report available in '~/profile_report.$$.log'"
+                    ${ctot:0:${#ctot}-9}.${ctot:${#ctot}-9}
+                last=${tim//./}
+            done </tmp/sample-time.$$.tim
+        ) /tmp/sample-time.$$.log >>~/profile_report.$$.log &&
+            echo "Profiling report available in '~/profile_report.$$.log'"
 
     else
         error "stray _STOP_PROFILING found"
@@ -90,40 +85,37 @@ _STOP_PROFILING()
     fi
 }
 
-
 # --------------------------------------------------------------------------------------------------
 # Initialize
 # --------------------------------------------------------------------------------------------------
 
 # Original separators
-declare -r IFS_ORIGINAL=$IFS
-
+declare -r IFS_ORIGINAL="$IFS"
 
 # Location of files
 # --------------------------------------------------------------------------------------------------
 
-declare -r  DIRSTACK_FILE="${HOME}/.dirstack"
+declare -r DIRSTACK_FILE="${HOME}/.dirstack"
 declare -ir DIRSTACK_COUNTLENGTH=5
 declare -ir DIRSTACK_MAXLENGTH=50
-declare -r  DIRSTACK_LOCKFILE="${HOME}/.locks/.dirstack"
+declare -r DIRSTACK_LOCKFILE="${HOME}/.locks/.dirstack"
 declare -ir DIRSTACK_LOCKFD=9
 
 # Set up locking; see
 # http://stackoverflow.com/a/1985512/1085062
 
-{ mkdir -p "$(dirname "${DIRSTACK_LOCKFILE}")" > /dev/null; } 2>&1
-{ rm -f "${DIRSTACK_LOCKFILE}" > /dev/null; } 2>&1
+{ mkdir -p "$(dirname "${DIRSTACK_LOCKFILE}")" >/dev/null; } 2>&1
+{ rm -f "${DIRSTACK_LOCKFILE}" >/dev/null; } 2>&1
 touch "${DIRSTACK_LOCKFILE}"
 
-_dirstack_locker(){ flock "-$1" $DIRSTACK_LOCKFD; }
+_dirstack_locker() { flock "-$1" $DIRSTACK_LOCKFD; }
 
-_lock_dirstack()  { _dirstack_locker e; }
-_unlock_dirstack(){ _dirstack_locker u; }
+_lock_dirstack() { _dirstack_locker e; }
+_unlock_dirstack() { _dirstack_locker u; }
 
-_prepare_locking(){ eval "exec ${DIRSTACK_LOCKFD}>\"${DIRSTACK_LOCKFILE}\""; }
+_prepare_locking() { eval "exec ${DIRSTACK_LOCKFD}>\"${DIRSTACK_LOCKFILE}\""; }
 
 _prepare_locking
-
 
 # Check for external tools and shell specifics
 # --------------------------------------------------------------------------------------------------
@@ -131,16 +123,16 @@ _prepare_locking
 declare -i processAcls=0
 declare -i haveAwk=0
 
-command -v lsattr &> /dev/null && processAcls=1 || processAcls=0
-command -v awk &> /dev/null && haveAwk=1 || haveAwk=0
+command -v lsattr &>/dev/null && processAcls=1 || processAcls=0
+command -v awk &>/dev/null && haveAwk=1 || haveAwk=0
 
 declare -i haveAllRepoBinaries=0
 
-command -v git &>/dev/null && \
-command -v svn &>/dev/null && \
-command -v hg &>/dev/null  && \
-command -v bzr &>/dev/null && \
-haveAllRepoBinaries=1 || haveAllRepoBinaries=0
+command -v git &>/dev/null &&
+    command -v svn &>/dev/null &&
+    command -v hg &>/dev/null &&
+    command -v bzr &>/dev/null &&
+    haveAllRepoBinaries=1 || haveAllRepoBinaries=0
 #TODO: bash native method is virtually always faster...
 haveAllRepoBinaries=0
 
@@ -151,37 +143,44 @@ declare -A REPO_COLOR
 declare -A ALL_COLORS
 
 declare -i USE_COLORS=0
-if [ "$SHELL_COLORS" == "yes" ]; then
-    USE_COLORS=1
+_color_config() {
+    local tmp
+    local keys
+    local values
 
-    IFS=": "
-    tmp=($LS_COLORS)
-    IFS="$IFS_ORIGINAL"
+    if [ "$SHELL_COLORS" == "yes" ]; then
 
-    keys=("${tmp[@]%%=*}")
-    keys=("${keys[@]/\*\./}")
-    values=("${tmp[@]##*=}")
+        USE_COLORS=1
 
-    for ((i=0; i<${#keys[@]}; ++i)); do
-        ALL_COLORS["${keys[$i]}"]="${values[$i]}"; done
+        IFS=": "
+        tmp=($LS_COLORS)
+        IFS="$IFS_ORIGINAL"
 
-    unset tmp keys values
-fi
+        keys=("${tmp[@]%%=*}")
+        keys=("${keys[@]/\*\./}")
+        values=("${tmp[@]##*=}")
+
+        for ((i = 0; i < ${#keys[@]}; ++i)); do
+            ALL_COLORS["${keys[$i]}"]="${values[$i]}"
+        done
+    fi
+}
+_color_config
 
 # Repository info and generic commands
-declare -i REPO_MODE=0;
+declare -i REPO_MODE=0
 REPO_TYPE=""
 REPO_PATH=""
 
 # colors used for different repositories in prompt/prettyprint
-REPO_COLOR[svn]=${START_COLORSCHEME}${TXT_BOLD}';'${FG_MAGENTA}${END_COLORSCHEME};    REPO_COLOR[bzr]=${START_COLORSCHEME}${TXT_BOLD}';'${FG_YELLOW}${END_COLORSCHEME}
-REPO_COLOR[git]=${START_COLORSCHEME}${TXT_BOLD}';'${FG_RED}${END_COLORSCHEME};        REPO_COLOR[hg]=${START_COLORSCHEME}${TXT_BOLD}';'${FG_CYAN}${END_COLORSCHEME}
-REPO_COLOR[---]=${START_COLORSCHEME}${ALL_COLORS[di]}${END_COLORSCHEME}
-
+REPO_COLOR[svn]=${START_COLORSCHEME}${TXT_BOLD}';'${FG_MAGENTA}${END_COLORSCHEME}
+REPO_COLOR[bzr]=${START_COLORSCHEME}${TXT_BOLD}';'${FG_YELLOW}${END_COLORSCHEME}
+REPO_COLOR[git]=${START_COLORSCHEME}${TXT_BOLD}';'${FG_RED}${END_COLORSCHEME}
+REPO_COLOR[hg]=${START_COLORSCHEME}${TXT_BOLD}';'${FG_CYAN}${END_COLORSCHEME}
+REPO_COLOR[nil]=${START_COLORSCHEME}${ALL_COLORS[di]}${END_COLORSCHEME}
 
 # error/warning/assert functions
-error()
-{
+error() {
     local msg
 
     # argument
@@ -192,7 +191,8 @@ error()
     # stdin (pipe)
     else
         while read -r msg; do
-            error "${msg}"; done
+            error "${msg}"
+        done
         return 1
     fi
 
@@ -206,8 +206,7 @@ error()
     return 1
 }
 
-warning()
-{
+warning() {
     local msg
 
     # argument
@@ -218,7 +217,8 @@ warning()
     # stdin
     else
         while read -r msg; do
-            warning "${msg}"; done
+            warning "${msg}"
+        done
         return 0
     fi
 
@@ -232,18 +232,16 @@ warning()
     return 0
 }
 
-assert()
-{
+assert() {
     if [ "$1" ]; then
-        return 0;
+        return 0
     else
         error "${@:2}"
         return 1
     fi
 }
 
-infomessage()
-{
+infomessage() {
     local msg
 
     # argument
@@ -254,7 +252,8 @@ infomessage()
     # stdin
     else
         while read -r msg; do
-            infomessage "${msg}"; done
+            infomessage "${msg}"
+        done
         return 0
     fi
 
@@ -270,13 +269,13 @@ infomessage()
 
 # Autocompletion generator for aliases
 # https://unix.stackexchange.com/questions/4219/how-do-i-get-bash-completion-for-command-aliases
-function make_completion_wrapper ()
-{
+function make_completion_wrapper() {
     local comp_function_name="$1"
     local function_name="$2"
-    local arg_count=$(($#-3))
+    local arg_count=$(($# - 3))
     shift 2
 
+    #shellcheck disable=SC2124
     # NOTE: (Rody) COMP_LINE and COMP_POINT needed to be modified for
     # the git aliases to work:
     local function="
@@ -298,23 +297,20 @@ function make_completion_wrapper ()
 readonly dump_except_error="1> /dev/null 2> >(error)"
 #readonly warning_and_error="1> >(warning) 2> >(error)"
 
-
 # --------------------------------------------------------------------------------------------------
 # Execute things in current dir when command is not found
 # --------------------------------------------------------------------------------------------------
-command_not_found_handle()
-{
+command_not_found_handle() {
     # shell scripts
     ([[ -f "${1}.sh" && -x "${1}.sh" ]] && "./${1}.sh") ||
 
-    # other things
-    ([[ -f "${1}" && -x "${1}" ]] && "./${1}") ||
+        # other things
+        ([[ -f "${1}" && -x "${1}" ]] && "./${1}") ||
 
-    # not found
-    error 'Command not found: "%s".' "$1"
+        # not found
+        error 'Command not found: "%s".' "$1"
     return 1
 }
-
 
 # --------------------------------------------------------------------------------------------------
 # Multicolumn colored filelist
@@ -326,16 +322,16 @@ command_not_found_handle()
 
 # FIXME: seems that passing an argument does not work properly
 # shellcheck disable=SC2120
-multicolumn_ls()
-{
+multicolumn_ls() {
     if [[ $haveAwk == 1 ]]; then
 
         local colorflag=
         if [ $USE_COLORS -eq 1 ]; then
-            colorflag="--color"; fi
+            colorflag="--color"
+        fi
 
         # shellcheck disable=SC2016,SC2028
-        command ls -opg --si --group-directories-first --time-style=+ ${colorflag} "$@" | awk -f "$HOME/.awk_functions" -f <( echo -E '
+        command ls -opg --si --group-directories-first --time-style=+ ${colorflag} "$@" | awk -f "$HOME/.awk_functions" -f <(echo -E '
 
             BEGIN {
 
@@ -434,7 +430,7 @@ multicolumn_ls()
                     printf("\b\b.\n");
                 }
             }
-        ' ) --
+        ') --
 
     # Pure bash solution (Slow as CRAP!)
     else
@@ -444,8 +440,8 @@ multicolumn_ls()
         local -ri minLines=15
 
         # derived quantities & declarations
-        local -r numColumns=$((COLUMNS/maxColumnWidth))
-        local -r maxNameWidth=$((maxColumnWidth-10))
+        local -r numColumns=$((COLUMNS / maxColumnWidth))
+        local -r maxNameWidth=$((maxColumnWidth - 10))
 
         # get initial file, as stripped down as possible, but including the file sizes.
         # NOTE: arguments to multicolumn_ls() get appended behind the base ls command
@@ -458,11 +454,11 @@ multicolumn_ls()
         # the elements in the attributes array will therefore not correspond to the elements in the ls array...
         local haveAttrlist=0
         case $(find . -maxdepth 0 -printf %F) in
-            ext2|ext3|ext4) haveAttrlist=1 ;;
+        ext2 | ext3 | ext4) haveAttrlist=1 ;;
             # TODO: also cifs and fuse.sshfs etc. --might-- support it, but how to check for this...
         esac
 
-        ( ((${BASH_VERSION:0:1}>=4)) && [ $processAcls -eq 1 ] && if [[ $haveAttrlist == 1 ]]; then
+        ( ((${BASH_VERSION:0:1} >= 4)) && [ $processAcls -eq 1 ] && if [[ $haveAttrlist == 1 ]]; then
             local -A attrlist
             # shellcheck disable=2207
             local attlist=($(lsattr 2>&1))
@@ -470,19 +466,20 @@ multicolumn_ls()
             local attribs=($(echo "${attlist[*]%% *}"))
             # shellcheck disable=2207
             local attnames=($(echo "${attlist[*]##*\.\/}"))
-            for ((i=0; i<${#attnames[@]}; i++)); do
+            for ((i = 0; i < ${#attnames[@]}; i++)); do
                 if [[ ${attribs[$i]%%lsattr:*} ]]; then
-                    attrlist[${attnames[$i]}]="${attribs[$i]}"; fi
+                    attrlist[${attnames[$i]}]="${attribs[$i]}"
+                fi
             done
             unset attnames attribs attlist
-        fi ) || haveAttrlist=
+        fi) || haveAttrlist=
 
         # check if any of the arguments was a "file" (and not just an option)
         local haveFiles=false
-        while (( "$#" )); do
+        while (("$#")); do
             if [ -e "$1" ]; then
                 haveFiles=true
-                break;
+                break
             fi
             shift
         done
@@ -495,9 +492,10 @@ multicolumn_ls()
         fi
 
         # Compute number of rows to use (equivalent to ceil)
-        local numRows=$(( (${#dirlist[@]}+numColumns-1)/numColumns ))
+        local numRows=$(((${#dirlist[@]} + numColumns - 1) / numColumns))
         if [[ $numRows < $minLines ]]; then
-            numRows=$minLines; fi
+            numRows=$minLines
+        fi
 
         # Split dirlist up in permissions, filesizes, names, and extentions
         # shellcheck disable=2207
@@ -508,33 +506,37 @@ multicolumn_ls()
         # shellcheck disable=2207
         local names=($(printf -- '%s\n' "${dirlist[@]}" | awk '{for(i=4;i<=NF;i++) $(i-3)=$i; if (NF>0)NF=NF-3; print $0}'))
         local extensions
-        for ((i=0; i<${#names[@]}; i++)); do
+        for ((i = 0; i < ${#names[@]}; i++)); do
             extensions[$i]=${names[$i]##*\.}
             if [[ ${extensions[$i]} == "${names[$i]}" ]]; then
-                extensions[$i]="."; fi
+                extensions[$i]="."
+            fi
         done
 
         # Now print the list
         if [[ $USE_COLORS == 1 ]]; then
             # shellcheck disable=2059
-            printf -- "$RESET_COLORS"; fi
+            printf -- "$RESET_COLORS"
+        fi
 
         local lastColumnWidth ind paint device=0 lastColumn=0 lastsymbol=" "
         local n numDirs=0 numFiles=0 numLinks=0 numDevs=0 numPipes=0 numSockets=0
 
-        for ((i=0; i<numRows; i++)); do
+        for ((i = 0; i < numRows; i++)); do
             if [[ ! $i < ${#names[@]} ]]; then break; fi
-            for ((j=0; j<numColumns; j++)); do
+            for ((j = 0; j < numColumns; j++)); do
 
                 device=0
                 lastColumn=0
                 lastsymbol=" "
 
-                ind=$((i+numRows*j));
+                ind=$((i + numRows * j))
                 if [[ ! $ind < ${#names[@]} ]]; then
-                    break; fi
-                if [[ ! $((i+numRows*((j+1)))) < ${#names[@]} ]]; then
-                    lastColumn=1; fi
+                    break
+                fi
+                if [[ ! $((i + numRows * ((j + 1)))) < ${#names[@]} ]]; then
+                    lastColumn=1
+                fi
 
                 # we ARE using colors:
                 if [[ $USE_COLORS == 1 ]]; then
@@ -542,67 +544,81 @@ multicolumn_ls()
                     # get type (dir, link, file)
                     case ${perms[$ind]:0:1} in
 
-                        # dir, link, port, socket
-                        d)  paint="${ALL_COLORS[di]}"; ((numDirs++));;
-                        p)  paint="${ALL_COLORS[pi]}"; ((numPipes++));;
-                        s)  paint="${ALL_COLORS[so]}"; ((numSockets++));;
-                        l)  # check validity of link
-                            if [ -L "${names[$ind]%% ->*}" ] && [ ! -e "${names[$ind]%% ->*}" ]; then
-                                paint=09\;"${ALL_COLORS[or]}"
-                            else
-                                paint="${ALL_COLORS[ln]}"
-                            fi
-                            ((numLinks++))
-                            ;;
+                    # dir, link, port, socket
+                    d)
+                        paint="${ALL_COLORS[di]}"
+                        ((numDirs++))
+                        ;;
+                    p)
+                        paint="${ALL_COLORS[pi]}"
+                        ((numPipes++))
+                        ;;
+                    s)
+                        paint="${ALL_COLORS[so]}"
+                        ((numSockets++))
+                        ;;
+                    l) # check validity of link
+                        if [ -L "${names[$ind]%% ->*}" ] && [ ! -e "${names[$ind]%% ->*}" ]; then
+                            paint=09\;"${ALL_COLORS[or]}"
+                        else
+                            paint="${ALL_COLORS[ln]}"
+                        fi
+                        ((numLinks++))
+                        ;;
 
-                        # block/character devices
-                        b)  device=1
-                            ((numDevs++))
-                            paint="${ALL_COLORS[bd]}"
-                            ;;
-                        c)  device=1;
-                            ((numDevs++))
-                            paint="${ALL_COLORS[cd]}"
-                            ;;
+                    # block/character devices
+                    b)
+                        device=1
+                        ((numDevs++))
+                        paint="${ALL_COLORS[bd]}"
+                        ;;
+                    c)
+                        device=1
+                        ((numDevs++))
+                        paint="${ALL_COLORS[cd]}"
+                        ;;
 
-                        *) # regular files
-                            ((numFiles++))
-                            if [[ ${extensions[$ind]} != "." ]]; then
-                                paint="ALL_COLORS[${extensions[$ind]}]"
-                                paint=${!paint};
-                                if [[ ${#paint} = 0 ]]; then
-                                    paint="${ALL_COLORS[no]}"; fi
-                            else
-                                paint="${ALL_COLORS[no]}";
+                    *) # regular files
+                        ((numFiles++))
+                        if [[ ${extensions[$ind]} != "." ]]; then
+                            paint="ALL_COLORS[${extensions[$ind]}]"
+                            paint=${!paint}
+                            if [[ ${#paint} = 0 ]]; then
+                                paint="${ALL_COLORS[no]}"
                             fi
-                            ;;
+                        else
+                            paint="${ALL_COLORS[no]}"
+                        fi
+                        ;;
                     esac
 
                     # check for specials (acl, group permissions, ...)
-                    case ${perms[$ind]:((${#perms[$ind]}-1)):1} in
-                        +)   paint=04\;"$paint";;      # underline files/dirs with acls
-                        t|T) paint="${ALL_COLORS[ow]}";; # other-writable
-                        *);;
+                    case ${perms[$ind]:((${#perms[$ind]} - 1)):1} in
+                    +) paint=04\;"$paint" ;;            # underline files/dirs with acls
+                    t | T) paint="${ALL_COLORS[ow]}" ;; # other-writable
+                    *) ;;
                     esac
 
                     # attribute lists
                     if [ $haveAttrlist ]; then
 
                         # immutables
-                        n=attrlist[${names[$ind]}]; n=${!n}
-                        if [[ ${n//[^i]} ]]; then
+                        n=attrlist[${names[$ind]}]
+                        n=${!n}
+                        if [[ ${n//[^i]/} ]]; then
                             paint=44\;"$paint"
-                            lastsymbol="i";
+                            lastsymbol="i"
                         fi
                     fi
 
                     # truncate name if it is longer than maximum displayable length
                     if [ ${#names[$ind]} -gt $maxNameWidth ] && [ $lastColumn -eq 0 ]; then
-                        names[$ind]=${names[$ind]:0:$(($maxNameWidth-3))}"...";
+                        names[$ind]=${names[$ind]:0:$(($maxNameWidth - 3))}"..."
                     elif [[ $lastColumn == 1 ]]; then
-                        lastColumnWidth=$((COLUMNS-j*maxColumnWidth-10-3))
+                        lastColumnWidth=$((COLUMNS - j * maxColumnWidth - 10 - 3))
                         if [[ ! ${#names[$ind]} < $lastColumnWidth ]]; then
-                            names[$ind]=${names[$ind]:0:$lastColumnWidth}"..."; fi
+                            names[$ind]=${names[$ind]:0:$lastColumnWidth}"..."
+                        fi
                     fi
 
                     # and finally, print it:
@@ -618,7 +634,7 @@ multicolumn_ls()
                 else
                     # block/character devices need different treatment
                     case ${perms[$ind]:0:1} in
-                        b|c) device=1;;
+                    b | c) device=1 ;;
                     esac
                     if [[ $device == 1 ]]; then
                         printf -- "%7s  %-*s " "${sizes[$ind]}${names[$ind]%% *}" "$maxNameWidth" "${names[$ind]#* }"
@@ -634,7 +650,7 @@ multicolumn_ls()
 
         # finish up
         if [[ $numDirs == 0 ]] && [[ $numFiles == 0 ]] && [[ $numLinks == 0 ]] &&
-           [[ $numDevs == 0 ]] && [[ $numPipes == 0 ]] && [[ $numSockets == 0 ]]; then
+            [[ $numDevs == 0 ]] && [[ $numPipes == 0 ]] && [[ $numSockets == 0 ]]; then
             echo "Empty dir."
 
         else
@@ -645,17 +661,23 @@ multicolumn_ls()
             fi
 
             if [[ $numDirs != 0 ]]; then
-                printf -- "%d dirs, " $numDirs; fi
+                printf -- "%d dirs, " $numDirs
+            fi
             if [[ $numFiles != 0 ]]; then
-                printf -- "%d files, " $numFiles; fi
+                printf -- "%d files, " $numFiles
+            fi
             if [[ $numLinks != 0 ]]; then
-                printf -- "%d links, " $numLinks; fi
+                printf -- "%d links, " $numLinks
+            fi
             if [[ $numDevs != 0 ]]; then
-                printf -- "%d devices, " $numDevs; fi
+                printf -- "%d devices, " $numDevs
+            fi
             if [[ $numPipes != 0 ]]; then
-                printf -- "%d pipes, " $numPipes; fi
+                printf -- "%d pipes, " $numPipes
+            fi
             if [[ $numSockets != 0 ]]; then
-                printf -- "%d sockets, " $numSockets; fi
+                printf -- "%d sockets, " $numSockets
+            fi
 
             printf '\b\b.\n'
         fi
@@ -666,14 +688,12 @@ multicolumn_ls()
 
 }
 
-
 # --------------------------------------------------------------------------------------------------
 # Prompt function
 # --------------------------------------------------------------------------------------------------
 
 # command executed just PRIOR to showing the prompt
-promptcmd()
-{
+promptcmd() {
     # NOTE: it is imperative that ALL non-printing characters in PS1 must be enclosed by \[ \].
     # See http://askubuntu.com/questions/24358/
 
@@ -696,29 +716,33 @@ promptcmd()
     #fi
 
     # initialize
-    local -ri exitstatus=$?    # exitstatus of previous command
+    local -ri exitstatus=$? # exitstatus of previous command
     local ES
 
     # Username color scheme
     local usrName=""
     if [[ $USE_COLORS == 1 ]]; then
-        usrName="$(set_PS1_color "${TXT_BOLD}" "${FG_GREEN}")"; fi
+        usrName="$(set_PS1_color "${TXT_BOLD}" "${FG_GREEN}")"
+    fi
 
     # hostname color scheme
     local hstName=""
     if [[ $USE_COLORS == 1 ]]; then
-        hstName="$(set_PS1_color "${FG_MAGENTA}")"; fi
+        hstName="$(set_PS1_color "${FG_MAGENTA}")"
+    fi
 
     # Write previous command to disk
-    (history -a &) &> /dev/null
+    (history -a &) &>/dev/null
 
     # Smiley representing previous command exit status
     ES='o_O '
     if [[ $exitstatus == 0 ]]; then
-        ES='^_^ '; fi
+        ES='^_^ '
+    fi
 
     if [[ $USE_COLORS == 1 ]]; then
-        ES="$(set_PS1_color "${TXT_DIM}" "${FG_GREEN}")""${ES}""$(reset_PS1_color)"; fi
+        ES="$(set_PS1_color "${TXT_DIM}" "${FG_GREEN}")""${ES}""$(reset_PS1_color)"
+    fi
 
     # Append system time
     ES="$ES"'[\t] '
@@ -726,55 +750,57 @@ promptcmd()
     # Set new prompt (taking into account repositories and python virtual envs)
     case "${REPO_TYPE}" in
 
-        # GIT also lists branch
-        "git")
-            branch=$(git branch | command grep "*")
-            branch="${branch#\* }"
-            if [[ $? != 0 ]]; then
-                branch="*unknown branch*"; fi
+    # GIT also lists branch
+    "git")
+        branch=$(git branch | command grep "*")
+        branch="${branch#\* }"
+        if [[ $? != 0 ]]; then
+            branch="*unknown branch*"
+        fi
 
-            if [[ $USE_COLORS == 1 ]]; then
-                PS1="$ES${usrName}"'\u'"${RESET_COLORS_PS1}"
-                PS1="${PS1}@${hstName}"'\h'"${RESET_COLORS_PS1} : "
-                PS1="${PS1}"'\['"${REPO_COLOR[git]}"'\]'" [git: ${branch}] : "'\W'"/${RESET_COLORS_PS1} "
-                PS1="${PS1}\n"'\$'" "
-            else
-                PS1="$ES"'\u@\h : [git: '"${branch}] : "'\W/ \$ ';
-            fi
-            ;;
+        if [[ $USE_COLORS == 1 ]]; then
+            PS1="$ES${usrName}"'\u'"${RESET_COLORS_PS1}"
+            PS1="${PS1}@${hstName}"'\h'"${RESET_COLORS_PS1} : "
+            PS1="${PS1}"'\['"${REPO_COLOR[git]}"'\]'" [git: ${branch}] : "'\W'"/${RESET_COLORS_PS1} "
+            PS1="${PS1}\n"'\$'" "
+        else
+            PS1="$ES"'\u@\h : [git: '"${branch}] : "'\W/ \$ '
+        fi
+        ;;
 
         # SVN, Mercurial, Bazhaar
-        "svn"|"hg"|"bzr")
-            if [[ $USE_COLORS == 1 ]]; then
-                PS1="$ES${usrName}"'\u'"${RESET_COLORS_PS1}@${hstName}"'\h'"${RESET_COLORS_PS1} : "'\['"${REPO_COLOR[${REPO_TYPE}]} [${REPO_TYPE}] : "'\W'"/${RESET_COLORS_PS1} \n"'\$'" "
-            else
-                PS1="$ES"'\u@\h : ['"${REPO_TYPE}] : "'\W/ \n\$ ';
+    "svn" | "hg" | "bzr")
+        if [[ $USE_COLORS == 1 ]]; then
+            PS1="$ES${usrName}"'\u'"${RESET_COLORS_PS1}@${hstName}"'\h'"${RESET_COLORS_PS1} : "'\['"${REPO_COLOR[${REPO_TYPE}]} [${REPO_TYPE}] : "'\W'"/${RESET_COLORS_PS1} \n"'\$'" "
+        else
+            PS1="$ES"'\u@\h : ['"${REPO_TYPE}] : "'\W/ \n\$ '
+        fi
+        ;;
+
+    # Normal prompt
+    *)
+        if [[ $USE_COLORS = 1 ]]; then
+
+            local -r dircolor="${START_COLORSCHEME_PS1}${TXT_BOLD};${FG_BLUE}${END_COLORSCHEME_PS1}"
+
+            # non-root user: basename of current dir
+            local working_dir='\W'
+
+            # Root
+            if [ "$(id -u)" = 0 ]; then
+                # Different color for the username
+                usrName="${START_COLORSCHEME_PS1}${TXT_BOLD};${FG_RED}${END_COLORSCHEME_PS1}"
+                # Show FULL path
+                working_dir='\w'
             fi
-            ;;
 
-        # Normal prompt
-        *)  if [[ $USE_COLORS = 1 ]]; then
+            # Build the prompt
+            PS1="$ES${usrName}"'\u'"${RESET_COLORS_PS1}@${hstName}"'\h'"${RESET_COLORS_PS1} : ${dircolor}${working_dir}/${RESET_COLORS_PS1} \n"'\$'" "
 
-                local -r dircolor="${START_COLORSCHEME_PS1}${TXT_BOLD};${FG_BLUE}${END_COLORSCHEME_PS1}"
-
-                # non-root user: basename of current dir
-                local working_dir='\W'
-
-                # Root
-                if [ "$(id -u)" = 0 ]; then
-                    # Different color for the username
-                    usrName="${START_COLORSCHEME_PS1}${TXT_BOLD};${FG_RED}${END_COLORSCHEME_PS1}"
-                    # Show FULL path
-                    working_dir='\w'
-                fi
-
-                # Build the prompt
-                PS1="$ES${usrName}"'\u'"${RESET_COLORS_PS1}@${hstName}"'\h'"${RESET_COLORS_PS1} : ${dircolor}${working_dir}/${RESET_COLORS_PS1} \n"'\$'" "
-
-            else
-                PS1="$ES"'\u@\h : \w/ \$ '
-            fi
-            ;;
+        else
+            PS1="$ES"'\u@\h : \w/ \$ '
+        fi
+        ;;
     esac
 
     if [ ! -z "$VIRTUAL_ENV" ]; then
@@ -783,7 +809,7 @@ promptcmd()
 
     # put pretty-printed full path in the upper right corner
     local -r pth="$(prettyprint_dir "$PWD")"
-    local -r move_cursor='\E7\E[001;'"$((COLUMNS-${#PWD}-2))H${START_ESCAPE_GROUP}1${END_COLORESCAPE}"
+    local -r move_cursor='\E7\E[001;'"$((COLUMNS - ${#PWD} - 2))H${START_ESCAPE_GROUP}1${END_COLORESCAPE}"
     local -r reset_cursor='\E8'
     if [ $USE_COLORS -eq 1 ]; then
         local -r bracket_open="${START_COLORSCHEME}${FG_GREEN}${END_COLORSCHEME}[${RESET_COLORS}"
@@ -801,14 +827,12 @@ promptcmd()
 # Make this function the function called at each prompt display
 export PROMPT_COMMAND=promptcmd
 
-
 # --------------------------------------------------------------------------------------------------
 # Helper functions
 # --------------------------------------------------------------------------------------------------
 
 # Join input arguments into a single string
-strjoin()
-{
+strjoin() {
     local -r d="$1"
     shift
 
@@ -818,64 +842,61 @@ strjoin()
 }
 
 # Produce a quoted list, taking into account proper comma placement
-quoted_list()
-{
+quoted_list() {
     case "$#" in
-        0) ;;
-        1) echo "\"$1\"" ;;
-        2) echo "\"$1\" and \"$2\"" ;;
-        *) first="$(strjoin "\", \"" "${@:1:(($#-1))}")"
-           echo "\"${first}\", and \"${@: -1}\""
-           ;;
+    0) ;;
+    1) echo "\"$1\"" ;;
+    2) echo "\"$1\" and \"$2\"" ;;
+    *)
+        first="$(strjoin "\", \"" "${@:1:(($# - 1))}")"
+        echo "\"${first}\", and \"${@: -1}\""
+        ;;
     esac
 }
 
 # trim bash string
-trim()
-{
+trim() {
     local var="$*"
-    var="${var#"${var%%[![:space:]]*}"}"   # remove leading whitespace characters
-    var="${var%"${var##*[![:space:]]}"}"   # remove trailing whitespace characters
+    var="${var#"${var%%[![:space:]]*}"}" # remove leading whitespace characters
+    var="${var%"${var##*[![:space:]]}"}" # remove trailing whitespace characters
     echo -n "$var"
 }
 
-
 # Normalize directory string
 # e.g.,  /foo/bar/../baz  ->  /foo/baz
-normalize_dir()
-{
+normalize_dir() {
     readlink -m "$1"
 }
 
 # delete single element and re-order array
 # usage:  array=($(delete_reorder array[@] 10))
-delete_reorder()
-{
+delete_reorder() {
     if [[ $# != 2 ]]; then
-        echo "Usage:  array=($(delete_reorder array[@] [index]))"; fi
+        echo "Usage:  array=($(delete_reorder array[@] [index]))"
+    fi
 
     local -ra array=("${!1}")
     local -ri rmindex="$2"
 
-    for ((i=0; i<${#array[@]}; i++)); do
+    for ((i = 0; i < ${#array[@]}; i++)); do
         if [ $i -eq "$rmindex" ]; then
-            continue; fi
+            continue
+        fi
         echo "${array[$i]}"
     done
 }
 
 # Clear
-_rbp_clear()
-{
-    for (( i=0; i<LINES; i++)); do
-        printf '\n'"${START_ESCAPE_GROUP}K"; done;
+_rbp_clear() {
+    for ((i = 0; i < LINES; i++)); do
+        printf '\n'"${START_ESCAPE_GROUP}K"
+    done
     printf "${START_ESCAPE_GROUP}0;0H"
     #printf "\033c"
 }
 
 # print dirlist if command exited with code 0
-print_list_if_OK()
-{
+print_list_if_OK() {
     if [ "$1" == 0 ]; then
         _rbp_clear
         # shellcheck disable=SC2119
@@ -886,14 +907,14 @@ print_list_if_OK()
 # pretty print directory:
 # - truncate (leading "...") if name is too long
 # - colorized according to dircolors and repository info
-prettyprint_dir()
-{
+prettyprint_dir() {
     # No arguments, no function
     if [[ $# == 0 ]]; then
-        return; fi
+        return
+    fi
 
     local -a repoinfo
-    local -ri pwdmaxlen=$((COLUMNS/3))
+    local -ri pwdmaxlen=$((COLUMNS / 3))
     local original_pth
 
     if [[ $USE_COLORS == 1 ]]; then
@@ -902,14 +923,14 @@ prettyprint_dir()
         original_pth="$(command ls -d "${1/\~/${HOME}}")"
     fi
 
-    local pth="${original_pth/${HOME}/~}";
+    local pth="${original_pth/${HOME}/~}"
 
-
-    if [[ $# < 3 ]]; then
+    if [[ $# -lt 3 ]]; then
         # shellcheck disable=2207
         repoinfo=($(check_repo "$@"))
         if [ ${#repoinfo[@]} -gt 2 ]; then
-            repoinfo[1]=$(strjoin "${IFS[0]}" "${repoinfo[@]:1}"); fi
+            repoinfo[1]=$(strjoin "${IFS[0]}" "${repoinfo[@]:1}")
+        fi
     else
         repoinfo=("$2" "$3")
     fi
@@ -921,13 +942,13 @@ prettyprint_dir()
         if [ $haveAwk ]; then
 
             if [ "${repoinfo[0]}" != "---" ]; then
-                local -r repoCol=${REPO_COLOR[${repoinfo[0]}]};
-                local -r repopath="$(dirname "${repoinfo[1]}" 2> /dev/null)"
+                local -r repoCol=${REPO_COLOR[${repoinfo[0]}]}
+                local -r repopath="$(dirname "${repoinfo[1]}" 2>/dev/null)"
                 pth="${pth/${repopath}/${repopath}$'\033'[0m$repoCol}"
             fi
 
             # shellcheck disable=SC2016
-            echo "${pth}" | awk -f "$HOME/.awk_functions" -f <( echo -E '
+            echo "${pth}" | awk -f "$HOME/.awk_functions" -f <(echo -E '
 
                 {
                     str    = $0;
@@ -966,7 +987,7 @@ prettyprint_dir()
                     printf str;
 
                 }
-            ' ) --
+            ') --
 
         else
             echo "$pth"
@@ -982,27 +1003,24 @@ prettyprint_dir()
         local -i pthoffset
 
         if [ ${#pth} -gt $pwdmaxlen ]; then
-            pthoffset=$((${#pth}-pwdmaxlen))
+            pthoffset=$((${#pth} - pwdmaxlen))
             pth="...${pth:$pthoffset:$pwdmaxlen}"
         fi
         printf -- "%s/" "$pth"
     fi
 }
 
-
 # --------------------------------------------------------------------------------------------------
 # Repository-specific functions
 # --------------------------------------------------------------------------------------------------
 
 # Get repository command
-get_repo_cmd()
-{
+get_repo_cmd() {
     alias | grep "alias\s*$@=" | cut -d= -f2 | tr -d \'
 }
 
 # Check if given dir(s) is (are) (a) repository(ies)
-check_repo()
-{
+check_repo() {
     # TODO: instead of "all or nothing", find out which *specific* repository systems have been installed
 
     # Usage:
@@ -1021,7 +1039,7 @@ check_repo()
     #    git: directory is a git repository
     #    hg : directory is a mercurial repository
     #    bzr: directory is a bazaar repository
-    #    ---: the given dir is not a repository
+    #    nil: the given dir is not a repository
 
     local -a dirs
     local dir
@@ -1040,23 +1058,35 @@ check_repo()
 
         for dir in "${dirs[@]}"; do
 
-            check=$(printf -- "%s " git && command cd "${dir}" && git rev-parse --show-toplevel 2> /dev/null)
+            check=$(printf -- "%s " git && command cd "${dir}" && git rev-parse --show-toplevel 2>/dev/null)
             # shellcheck disable=SC2181
-            if [ $? -eq 0 ]; then echo "$check"; continue; fi
+            if [ $? -eq 0 ]; then
+                echo "$check"
+                continue
+            fi
 
-            check=$(printf -- "%s " svn && svn info "$dir" 2> /dev/null | awk '/^Working Copy Root Path:/ {print $NF}' && [ "${PIPESTATUS[0]}" -ne 1 ])
+            check=$(printf -- "%s " svn && svn info "$dir" 2>/dev/null | awk '/^Working Copy Root Path:/ {print $NF}' && [ "${PIPESTATUS[0]}" -ne 1 ])
             # shellcheck disable=SC2181
-            if [ $? -eq 0 ]; then echo "$check"; continue; fi
+            if [ $? -eq 0 ]; then
+                echo "$check"
+                continue
+            fi
 
-            check=$(printf -- "%s  " hg && hg root --cwd "$dir" 2> /dev/null)
+            check=$(printf -- "%s  " hg && hg root --cwd "$dir" 2>/dev/null)
             # shellcheck disable=SC2181
-            if [ $? -eq 0 ]; then echo "$check"; continue; fi
+            if [ $? -eq 0 ]; then
+                echo "$check"
+                continue
+            fi
 
-            check=$(printf -- "%s " bzr && bzr root "$dir" 2> /dev/null)
+            check=$(printf -- "%s " bzr && bzr root "$dir" 2>/dev/null)
             # shellcheck disable=SC2181
-            if [ $? -eq 0 ]; then echo "$check"; continue; fi
+            if [ $? -eq 0 ]; then
+                echo "$check"
+                continue
+            fi
 
-            echo "--- [no_repository_found]"
+            echo "nil [no_repository_found]"
 
         done
 
@@ -1075,16 +1105,16 @@ check_repo()
 
         # Using repeated cd() is slow; It's faster to append ".." in a loop, and
         # only do 2 calls to cd() to cleanup the dir format
-        for (( i=0; i<${#dirs[@]}; ++i )); do
+        for ((i = 0; i < ${#dirs[@]}; ++i)); do
 
             dir="${dirs[$i]}"
 
             if [ ! -d "$dir" ]; then
-                repotype[$i]="---"
+                repotype[$i]="nil"
                 reporoot[$i]="[dir_removed]"
-                continue;
+                continue
             else
-                repotype[$i]="---"
+                repotype[$i]="nil"
                 reporoot[$i]="[no_repository_found]"
             fi
 
@@ -1092,34 +1122,31 @@ check_repo()
             # NOTE: commands without capture "$(...)" outperform commands with capture
             # NOTE: this is also faster than SED'ing the "../" away
 
-            for (( j=${#slashes[$i]}; j>0; --j )); do
-                [ -d "$dir/.git" ] && repotype[$i]="git" && cd "$dir" && reporoot[$i]="$PWD" && cd "$curdir" && break;
-                [ -d "$dir/.svn" ] && repotype[$i]="svn" && cd "$dir" && reporoot[$i]="$PWD" && cd "$curdir" && break;
-                [ -d "$dir/.bzr" ] && repotype[$i]="bzr" && cd "$dir" && reporoot[$i]="$PWD" && cd "$curdir" && break;
-                [ -d "$dir/.hg"  ] && repotype[$i]="hg " && cd "$dir" && reporoot[$i]="$PWD" && cd "$curdir" && break;
+            for ((j = ${#slashes[$i]}; j > 0; --j)); do
+                [ -d "$dir/.git" ] && repotype[$i]="git" && cd "$dir" && reporoot[$i]="$PWD" && cd "$curdir" && break
+                [ -d "$dir/.svn" ] && repotype[$i]="svn" && cd "$dir" && reporoot[$i]="$PWD" && cd "$curdir" && break
+                [ -d "$dir/.bzr" ] && repotype[$i]="bzr" && cd "$dir" && reporoot[$i]="$PWD" && cd "$curdir" && break
+                [ -d "$dir/.hg" ] && repotype[$i]="hg " && cd "$dir" && reporoot[$i]="$PWD" && cd "$curdir" && break
                 dir="$dir/.."
             done
 
         done
 
-        for (( i=0;i<${#repotype[@]}; ++i )); do
-            printf -- '%s %s\n' "${repotype[$i]}" "${reporoot[$i]}"; done
+        for ((i = 0; i < ${#repotype[@]}; ++i)); do
+            printf -- '%s %s\n' "${repotype[$i]}" "${reporoot[$i]}"
+        done
     fi
 
 }
 
-
-repo_cmd_exit_message()
-{
+repo_cmd_exit_message() {
     echo
     infomessage "$@"
     echo
 }
 
-
 # Update all repositories under the current dir
-update_all()
-{
+update_all() {
     local -a rp
 
     for d in */; do
@@ -1127,17 +1154,19 @@ update_all()
         rp=($(check_repo "$PWD/$d"))
 
         (
-        cd "${rp[@]:1}" || { echo "Could not cd to '$rp'."; exit; }
-        updatecmd=$(get_repo_cmd "$REPO_CMD_pull")
-        eval "$updatecmd" "$dump_except_error"
+            cd "${rp[@]:1}" || {
+                echo "Could not cd to '$rp'."
+                exit
+            }
+            updatecmd=$(get_repo_cmd "$REPO_CMD_pull")
+            eval "$updatecmd" "$dump_except_error"
         )
 
     done
 }
 
 # Update all git repositories found recursively under the current dir
-_gp_with_err()
-{
+_gp_with_err() {
     if (git -C "$@" pull --tags --jobs-8 --prune --verbose); then
         infomessage "Pulling '$*' completed successfully."
     else
@@ -1145,8 +1174,7 @@ _gp_with_err()
     fi
     echo ""
 }
-_gR_with_err()
-{
+_gR_with_err() {
     if (git -C "$@" pull --tags --jobs-8 --prune --verbose --rebase); then
         infomessage "Pulling '$*' completed successfully."
     else
@@ -1154,8 +1182,7 @@ _gR_with_err()
     fi
     echo ""
 }
-update_all_git()
-{
+update_all_git() {
     local IFS_
 
     infomessage "Pulling all repositories under current path..."
@@ -1165,11 +1192,11 @@ update_all_git()
     IFS=$'\n'
     # shellcheck disable=SC2044
     for gitdir in $(find . -type d -iname .git); do
-        _gp_with_err "${PWD}/${gitdir//.git/}"; done
+        _gp_with_err "${PWD}/${gitdir//.git/}"
+    done
     IFS="$IFS_"
 }
-rebase_all_git()
-{
+rebase_all_git() {
     local IFS_
 
     infomessage "Pulling all repositories under current path..."
@@ -1179,14 +1206,13 @@ rebase_all_git()
     IFS=$'\n'
     # shellcheck disable=SC2044
     for gitdir in $(find . -type d -iname .git); do
-        _gR_with_err "${PWD}/${gitdir//.git/}"; done
+        _gR_with_err "${PWD}/${gitdir//.git/}"
+    done
     IFS="$IFS_"
 }
 
-list_all_dirty_git()
-{
-    while IFS= read -r -d '' file;
-    do
+list_all_dirty_git() {
+    while IFS= read -r -d '' file; do
         local dir
         dir="$(dirname "$file")"
 
@@ -1202,11 +1228,8 @@ list_all_dirty_git()
     done < <(find . -type d -name .git -print0)
 }
 
-
-
 # Enter GIT mode
-_enter_GIT()
-{
+_enter_GIT() {
     # set type
     REPO_TYPE="git"
     REPO_MODE=1
@@ -1215,24 +1238,40 @@ _enter_GIT()
     # Basics
     alias gk="gitk"
     alias gg="git gui"
-    alias gf="git fetch --prune"              ;  REPO_CMD_fetch="gf"
-    alias gp="git push"                       ;  REPO_CMD_push="gp"
-    alias gP="_git_pull_and_update_submodules";  REPO_CMD_pull="gP"
-    alias gR="_git_pull_with_rebase"          ;  REPO_CMD_pull_rebase="gR"
-    alias gc="git commit -m"                  ;  REPO_CMD_commit="gc"
-    alias gs="_rbp_clear && git status"       ;  REPO_CMD_status="gs"
-    alias gl="git log --oneline"              ;  REPO_CMD_log="gl"
-    alias glg="git log --graph --pretty=oneline --abbrev-commit"    ;  REPO_CMD_loggraph="glg"
-    alias ga="git add"                        ;  REPO_CMD_add="ga"
-    alias grm="git rm"                        ;  REPO_CMD_remove="grm"
-    alias gm="git merge"                      ;  REPO_CMD_merge="gm"
+    alias gf="git fetch --prune"
+    REPO_CMD_fetch="gf"
+    alias gp="git push"
+    REPO_CMD_push="gp"
+    alias gP="_git_pull_and_update_submodules"
+    REPO_CMD_pull="gP"
+    alias gR="_git_pull_with_rebase"
+    REPO_CMD_pull_rebase="gR"
+    alias gc="git commit -m"
+    REPO_CMD_commit="gc"
+    alias gs="_rbp_clear && git status"
+    REPO_CMD_status="gs"
+    alias gl="git log --oneline"
+    REPO_CMD_log="gl"
+    alias glg="git log --graph --pretty=oneline --abbrev-commit"
+    REPO_CMD_loggraph="glg"
+    alias ga="git add"
+    REPO_CMD_add="ga"
+    alias grm="git rm"
+    REPO_CMD_remove="grm"
+    alias gm="git merge"
+    REPO_CMD_merge="gm"
 
-    alias gpdev="_git_push_to_dev"            ; REPO_CMD_push_to_dev="gpdev"
-    alias gpcanary="_git_push_to_canary"      ; REPO_CMD_push_to_canary="gpcanary"
-    alias gpprod="_git_push_to_prod"          ; REPO_CMD_push_to_canary="gpprod"
+    alias gpdev="_git_push_to_dev"
+    REPO_CMD_push_to_dev="gpdev"
+    alias gpcanary="_git_push_to_canary"
+    REPO_CMD_push_to_canary="gpcanary"
+    alias gpprod="_git_push_to_prod"
+    REPO_CMD_push_to_canary="gpprod"
 
-    alias gsquash="_git_squash_commits"       ; REPO_CMD_squash_commits="gsquash"
-    alias gpmr="git push -o merge_request.create -o merge_request.target=master -o merge_request.assign='rodyoldenhuis'"; REPO_CMD_push_mr="gpmr"
+    alias gsquash="_git_squash_commits"
+    REPO_CMD_squash_commits="gsquash"
+    alias gpmr="git push -o merge_request.create -o merge_request.target=master -o merge_request.assign='rodyoldenhuis'"
+    REPO_CMD_push_mr="gpmr"
 
     # Show parent branch for the current child branch
     alias gbp="git show-branch -a \
@@ -1240,8 +1279,8 @@ _enter_GIT()
               | grep -v \$\(git rev-parse --abbrev-ref HEAD\) \
               | head -n1 \
               | sed 's/.*\[\(.*\)\].*/\1/' \
-              | sed 's/[\^~].*//'"          ; REPO_CMD_branchparent="gbp"
-
+              | sed 's/[\^~].*//'"
+    REPO_CMD_branchparent="gbp"
 
     # remove from repository, but keep local
     alias unlink="git rm --cached"
@@ -1252,64 +1291,71 @@ _enter_GIT()
     alias istracked="git ls-files --error-unmatch"
     REPO_CMD_trackcheck="istracked"
 
-    alias gco="git checkout"                ;  REPO_CMD_checkout="gco"
-    alias gcob="_git_checkout_wrapper"      ;  REPO_CMD_checkout="gcob"
+    alias gco="git checkout"
+    REPO_CMD_checkout="gco"
+    alias gcob="_git_checkout_wrapper"
+    REPO_CMD_checkout="gcob"
 
     # Tagging
-    alias gt="git tag"                      ;  REPO_CMD_tag="gt"
-    alias gpt="git push --tags"             ;  REPO_CMD_pushtgs="gpt"
+    alias gt="git tag"
+    REPO_CMD_tag="gt"
+    alias gpt="git push --tags"
+    REPO_CMD_pushtgs="gpt"
 
     # Branches
-    alias gcb="git diff --name-status"      ;  REPO_CMD_diffnamestatus="gcb"
-    alias gbr="git branch -r"               ;  REPO_CMD_branchremote="gbr"
-    alias gba="git branch -a"               ;  REPO_CMD_branchall="gba"
-    alias gb="git branch"                   ;  REPO_CMD_branch="gb"
-    alias gd="git diff"                     ;  REPO_CMD_diff="gd"
-    alias gb_cleanup="_git_branch_cleanup"  ;  REPO_CMD_cleanbranches="gb_cleanup"
-    alias gclean="_git_clean_recursive"     ;  REPO_CMD_cleanall="gclean"
+    alias gcb="git diff --name-status"
+    REPO_CMD_diffnamestatus="gcb"
+    alias gbr="git branch -r"
+    REPO_CMD_branchremote="gbr"
+    alias gba="git branch -a"
+    REPO_CMD_branchall="gba"
+    alias gb="git branch"
+    REPO_CMD_branch="gb"
+    alias gd="git diff"
+    REPO_CMD_diff="gd"
+    alias gb_cleanup="_git_branch_cleanup"
+    REPO_CMD_cleanbranches="gb_cleanup"
+    alias gclean="_git_clean_recursive"
+    REPO_CMD_cleanall="gclean"
 
     # Submodules
-    alias gam="git submodule add"           ;  REPO_CMD_add_external="gam"
-    alias gim="_git_update_submodules"      ;  REPO_CMD_init_external="gim"
+    alias gam="git submodule add"
+    REPO_CMD_add_external="gam"
+    alias gim="_git_update_submodules"
+    REPO_CMD_init_external="gim"
 
     # Fix-up autocompletion
     # See  https://stackoverflow.com/a/24665529/1085062
-    __git_complete gco  _git_checkout
+    __git_complete gco _git_checkout
     __git_complete gcob _git_checkout
-    __git_complete gb   _git_branch
-    __git_complete gp   _git_push
-    __git_complete gP   _git_pull
-    __git_complete ga   _git_add
-    __git_complete gm   _git_merge
-    __git_complete gd   _git_diff
+    __git_complete gb _git_branch
+    __git_complete gp _git_push
+    __git_complete gP _git_pull
+    __git_complete ga _git_add
+    __git_complete gm _git_merge
+    __git_complete gd _git_diff
 }
 
-_git_pull_all()
-{
+_git_pull_all() {
     git pull --all --prune --tags --recurse-submodules --jobs=8
 }
 
-_git_pull_all_masters()
-{
+_git_pull_all_masters() {
     git submodule foreach --recursive git pull origin master
 }
-_git_checkout_wrapper()
-{
+_git_checkout_wrapper() {
     git checkout
     _git_update_submodules
 }
-_git_update_submodules()
-{
+_git_update_submodules() {
     git submodule update --init --recursive --jobs=8
 }
 
-_git_have_submodules()
-{
+_git_have_submodules() {
     [ -f "$(git rev-parse --show-toplevel)/.gitmodules" ]
 }
 
-_git_pull_and_update_submodules()
-{
+_git_pull_and_update_submodules() {
     echo "Pulling..."
     git pull --all --prune --tags --jobs=8
 
@@ -1324,24 +1370,22 @@ _git_pull_and_update_submodules()
     echo "All done."
 }
 
-_git_pull_with_rebase()
-{
+_git_pull_with_rebase() {
     git pull --prune --tags --jobs=8 --rebase
 }
 
-git_branch_cleanup()
-{
+git_branch_cleanup() {
     git fetch -p
     for branch in $(git branch -vv | grep ': gone]' | awk '{print $1}'); do
         git branch -D "$branch"
     done
 }
 
-_git_clean_recursive()
-{
+_git_clean_recursive() {
     git clean -xfd
     if _git_have_submodules; then
-        git submodule foreach git clean -xfd; fi
+        git submodule foreach git clean -xfd
+    fi
 }
 
 ###>>> BEGIN: Xerra functionality
@@ -1350,8 +1394,7 @@ _git_clean_recursive()
 readonly STARBOARD_FRONTEND_DIR="/home/rody/Repos/work/frontend/lovedinghy-ii"
 readonly STARBOARD_BACKEND_DIR="/home/rody/Repos/work/backend/api-server"
 
-_git_get_feature_branch()
-{
+_git_get_feature_branch() {
     local branch
     branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
 
@@ -1363,8 +1406,7 @@ _git_get_feature_branch()
     fi
 }
 
-_git_check_prod_remote()
-{
+_git_check_prod_remote() {
     local -a remotes=($(git remote -v | cut -f1 | uniq))
     if [[ " ${remotes[*]} " =~ " google-prod " ]]; then
         return 0
@@ -1374,8 +1416,7 @@ _git_check_prod_remote()
     fi
 }
 
-_git_check_dev_remote()
-{
+_git_check_dev_remote() {
     local -a remotes=($(git remote -v | cut -f1 | uniq))
     if [[ " ${remotes[*]} " =~ " google-dev " ]]; then
         return 0
@@ -1385,14 +1426,14 @@ _git_check_dev_remote()
     fi
 }
 
-_git_push_to_dev()
-{
+_git_push_to_dev() {
     local branch
     local -l instance
 
     instance='rainbowwarrior'
     if [ $# == 1 ]; then
-        instance="${1}"; fi
+        instance="${1}"
+    fi
 
     echo "Pushing to 'deploy/${instance}'..."
 
@@ -1403,13 +1444,13 @@ _git_push_to_dev()
     fi
 }
 
-_git_push_to_canary()
-{
+_git_push_to_canary() {
     _git_check_prod_remote || return 1
 
     local branch
     if ! branch=$(git rev-parse --abbrev-ref HEAD); then
-        return 1; fi
+        return 1
+    fi
     if [ "${branch}" != 'master' ]; then
         read -rp "Not on 'master'; are you sure [y|N]? " ok
         if [[ $ok != 'y' ]]; then
@@ -1426,22 +1467,23 @@ _git_push_to_canary()
         git diff "${branch}" google-prod/deploy/canary
         read -rp "Happy with these changes [y|N]? " ok
         if [ "$ok" != 'y' ]; then
-            return 1; fi
+            return 1
+        fi
     fi
 
     echo "Pushing to canary..."
-    git push --force google-prod "${branch}":deploy/canary;
+    git push --force google-prod "${branch}":deploy/canary
 }
 
-_git_push_to_prod()
-{
+_git_push_to_prod() {
     _git_check_prod_remote || return 1
 
     local branch
     if ! branch=$(git rev-parse --abbrev-ref HEAD); then
-        return 1; fi
+        return 1
+    fi
     if [ "${branch}" != 'master' ]; then
-        >&2 echo "Refusing to push to prod from non-master branch."
+        echo >&2 "Refusing to push to prod from non-master branch."
         return 1
     fi
 
@@ -1454,35 +1496,37 @@ _git_push_to_prod()
         read -rp "Happy with these changes [y|N]? " ok
         if [ "$ok" != 'y' ]; then
             echo "Aborting."
-            return 0;
+            return 0
         fi
     fi
 
     local ok yn response
     read -rp $'\e[31mYOU ARE ABOUT TO PUSH TO PRODUCTION; ARE YOU REALLY, POSITIVELY SURE? [y|N]\e[0m: ' response
     if [ "$response" != "y" ]; then
-        return 0; fi
+        return 0
+    fi
 
-    git push google-prod master:deploy/prod;
+    git push google-prod master:deploy/prod
 }
 
-_git_squash_commits()
-{
+_git_squash_commits() {
     # From https://stackoverflow.com/a/25357146/1085062
     read -rp "This will squash all commits on \'$(git branch --show-current)\' into a single commit off 'master'; are you sure? [y|N]: " response
     if [ "$response" != "y" ]; then
-        return 0; fi
+        return 0
+    fi
 
     if [ $# -eq 0 ]; then
-        >&2 echo "No commit message supplied."; return 1; fi
+        echo >&2 "No commit message supplied."
+        return 1
+    fi
 
     git reset "$(git merge-base master "$(git branch --show-current)")"
     git add -A
     git commit -m "$1"
 }
 
-_reformat_gloud_build_output()
-{
+_reformat_gloud_build_output() {
     local j i
     local txt col
 
@@ -1507,7 +1551,8 @@ _reformat_gloud_build_output()
 
     # Gobble up the pipe
     while read -r line; do
-        txt+="$line"$'\n'; done
+        txt+="$line"$'\n'
+    done
 
     # Split it into an array based on newline
     local IFS0="$IFS"
@@ -1518,12 +1563,13 @@ _reformat_gloud_build_output()
     IFS=' '
 
     for i in $(seq -s' ' 0 5); do
-        lengths[i]=0; done
+        lengths[i]=0
+    done
 
-    for j in $(seq -s' ' 0 $((${#txt[@]}-1)) ); do
+    for j in $(seq -s' ' 0 $((${#txt[@]} - 1))); do
 
         # Strip out the "(+2 more)" stuff
-        txt[j]=$(echo "${txt[j]}" | sed 's/(+[0-9]\+ more)//g' )
+        txt[j]=$(echo "${txt[j]}" | sed 's/(+[0-9]\+ more)//g')
 
         # Split line up into 5 "words"
         words=(${txt[j]})
@@ -1533,45 +1579,51 @@ _reformat_gloud_build_output()
 
             case $i in
 
-                # ID/SOURCE: strip out completely
-                0|3) #words[i]=''
+            # ID/SOURCE: strip out completely
+            0 | 3) #words[i]=''
                 continue
                 ;;
 
-                # DURATION / STATUS: leave as-is
-                2|5) ;;
+            # DURATION / STATUS: leave as-is
+            2 | 5) ;;
 
-                # CREATE_TIME: strip year, ms
-                1) words[i]=$(echo "${words[$i]}" | sed 's/2021-//g' | sed 's/+00:00//g' | sed 's/-/\//g' | sed 's/\([0-9]\)T/\1-/g')
+            # CREATE_TIME: strip year, ms
+            1)
+                words[i]=$(echo "${words[$i]}" | sed 's/2021-//g' | sed 's/+00:00//g' | sed 's/-/\//g' | sed 's/\([0-9]\)T/\1-/g')
                 ;;
 
-                # IMAGES: abbreviate
-                4) words[i]=$(echo "${words[$i]}" | sed 's/gcr.io\/xerra-prime/:xp:/g' | sed 's/gcr.io\/starboard-prod/:sp:/g')
+            # IMAGES: abbreviate
+            4)
+                words[i]=$(echo "${words[$i]}" | sed 's/gcr.io\/xerra-prime/:xp:/g' | sed 's/gcr.io\/starboard-prod/:sp:/g')
                 ;;
 
             esac
 
             # Keep track of max. wordlength per column for correct formatting
             if ((${#words[i]} > ${lengths[i]})); then
-                lengths[i]=${#words[i]}; fi
+                lengths[i]=${#words[i]}
+            fi
 
             # Colorize!
             case $i in
 
-                # IMAGES: colorize 'rainbowwarrior'
-                4) col="${START_COLORSCHEME}${TXT_BOLD};${FG_BLUE}${END_COLORSCHEME}rainbowwarrior${RESET_COLORS}"
+            # IMAGES: colorize 'rainbowwarrior'
+            4)
+                col="${START_COLORSCHEME}${TXT_BOLD};${FG_BLUE}${END_COLORSCHEME}rainbowwarrior${RESET_COLORS}"
                 words[i]="$(echo "${words[i]}" | sed "s/rainbowwarrior/${col//\\/\\\\}/g")"
                 ;;
 
-                # STATUS:
-                5) col=
+            # STATUS:
+            5)
+                col=
                 case "${words[i]}" in
-                    WORKING) col="$FG_YELLOW" ;;
-                    SUCCESS) col="$FG_GREEN" ;;
-                    FAILED)  col="$TXT_BOLD;$FG_RED" ;;
+                WORKING) col="$FG_YELLOW" ;;
+                SUCCESS) col="$FG_GREEN" ;;
+                FAILED) col="$TXT_BOLD;$FG_RED" ;;
                 esac
                 if [ -n "$col" ]; then
-                    words[i]="${START_COLORSCHEME}${col}${END_COLORSCHEME}${words[i]}$RESET_COLORS"; fi
+                    words[i]="${START_COLORSCHEME}${col}${END_COLORSCHEME}${words[i]}$RESET_COLORS"
+                fi
                 ;;
 
             esac
@@ -1584,14 +1636,14 @@ _reformat_gloud_build_output()
     done
 
     # Now display it all
-    for j in $(seq -s' ' 0 $((${#txt[@]}-1)) ); do
+    for j in $(seq -s' ' 0 $((${#txt[@]} - 1))); do
 
         words=(${txt[j]})
 
         for i in $(seq -s' ' 0 5); do
 
             case $i in
-                0|3) continue;; esac
+            0 | 3) continue ;; esac
 
             # Length correction for colorization
             len=${lengths[i]}
@@ -1599,13 +1651,14 @@ _reformat_gloud_build_output()
                 len1=${#words[i]}
                 len2=$(expr length + "$(echo -e "${words[i]}" | sed -r "s/\x1B\[([0-9]{1,3}(;[0-9]{1,2})?)?[mGK]//g")")
                 if [ "$len1" != "$len2" ]; then
-                    let "len += $((len1-len2-2))"; fi
+                    let "len += $((len1 - len2 - 2))"
+                fi
             fi
 
-            printf "%-"$((len+1))"b" "${words[$i]}"
-
+            printf "%-"$((len + 1))"b" "${words[$i]}"
 
         done
+
         printf "\n"
     done
 
@@ -1613,16 +1666,14 @@ _reformat_gloud_build_output()
 
 }
 
-monitor_dev_deployment()
-{
+monitor_dev_deployment() {
     gcloud config set project xerra-prime --no-user-output-enabled
     export -f _reformat_gloud_build_output
     watch -xctd -n3 bash -c '
         gcloud builds list --limit=5 | _reformat_gloud_build_output'
 }
 
-monitor_prod_deployment()
-{
+monitor_prod_deployment() {
     gcloud config set project starboard-prod --no-user-output-enabled
     export -f _reformat_gloud_build_output
     watch -xctd -n3 bash -c '
@@ -1631,11 +1682,11 @@ monitor_prod_deployment()
         gcloud builds list --limit=5 | _reformat_gloud_build_output'
 }
 
-spinup_dev_instance()
-{
+spinup_dev_instance() {
     instance="rainbowwarrior"
     if [ $# == 1 ]; then
-        instance="${1}"; fi
+        instance="${1}"
+    fi
     ssh spot -t "/usr/local/bin/scale_up_starboard_dev_instance.sh loveboat-deploy-${instance}"
 }
 
@@ -1660,7 +1711,8 @@ psql_dev() {
 
 psql_prod() {
     for i in 1 2 3; do
-        echo $'\e[31mYOU ARE CONNECTING TO THE PRODUCTION DB!\e[0m'; done
+        echo $'\e[31mYOU ARE CONNECTING TO THE PRODUCTION DB!\e[0m'
+    done
     echo
     read -srp 'Enter PGPASSWORD for global-ais: ' PGPASS
     PGPASSWORD=${PGPASS} psql \
@@ -1704,24 +1756,24 @@ spinup_testdb() {
 ###<<< END: Xerra functionality
 ###================================================================================================
 
-
 # Enter SVN mode
-_enter_SVN()
-{
+_enter_SVN() {
     # enter SVN mode
     REPO_TYPE="svn"
     REPO_MODE=1
     REPO_PATH="$*"
 
     # alias everything
-    alias su="svn up"           ; REPO_CMD_update="su"
-    alias sc="svn commit -m "   ; REPO_CMD_commit="sc"
-    alias ss="svn status"       ; REPO_CMD_status="ss"
+    alias su="svn up"
+    REPO_CMD_update="su"
+    alias sc="svn commit -m "
+    REPO_CMD_commit="sc"
+    alias ss="svn status"
+    REPO_CMD_status="ss"
 }
 
 # Enter Mercurial mode
-_enter_HG()
-{
+_enter_HG() {
     # enter GIT mode
     REPO_TYPE="hg"
     REPO_MODE=1
@@ -1732,8 +1784,7 @@ _enter_HG()
 }
 
 # Enter Bazaar mode
-_enter_BZR()
-{
+_enter_BZR() {
     # enter BZR mode
     REPO_TYPE="bzr"
     REPO_MODE=1
@@ -1744,33 +1795,32 @@ _enter_BZR()
 }
 
 # leave repository
-_leave_repo()
-{
+_leave_repo() {
     if [[ -n $REPO_MODE && $REPO_MODE == 0 ]]; then
-        return; fi
+        return
+    fi
 
     # unalias everything
     for cmd in ${!REPO_CMD_*}; do
-        eval unalias "${!cmd}"; done
+        eval unalias "${!cmd}"
+    done
 
     # reset everything to normal
     PS1=$PS1_
     REPO_PATH=
     REPO_TYPE=
-    REPO_MODE=0;
+    REPO_MODE=0
 
     #shellcheck disable=SC2086
     unset ${!REPO_CMD_*}
 }
-
 
 # --------------------------------------------------------------------------------------------------
 # More advanced list functions
 # --------------------------------------------------------------------------------------------------
 
 # count and list directory sizes
-lds()
-{
+lds() {
     local sz
     local f
     local dirs
@@ -1780,29 +1830,31 @@ lds()
 
     # When no argument is given, process all dirs. Otherwise: process only given dirs
     if [ $# -eq 0 ]; then
-       dirs=$(ls -Adh1 --time-style=+ -- */ 2> >(error))
+        dirs=$(ls -Adh1 --time-style=+ -- */ 2> >(error))
     else
-       dirs=$(ls -Adh1 --time-style=+ -- "${@/%//}" 2> >(error))
+        dirs=$(ls -Adh1 --time-style=+ -- "${@/%//}" 2> >(error))
     fi
 
     # find proper color used for directories
     if [[ $USE_COLORS == 1 ]]; then
-        local -r color="${ALL_COLORS[di]}"; fi
+        local -r color="${ALL_COLORS[di]}"
+    fi
 
     # loop through dirlist and parse
     for f in $dirs; do
 
         # ./ and ../ may still be in the list, despite -A flag (lads(), for example)
         if [[ "$f" == "./" || "$f" == ".//" || "$f" == "../" || "$f" == "..//" ]]; then
-            continue; fi
+            continue
+        fi
 
         printf -- 'processing "%s"...\n' "$f"
-        sz=$(du -bsh --si "$f" 2> /dev/null);
+        sz=$(du -bsh --si "$f" 2>/dev/null)
         sz="${sz%%$'\t'*}"
         tput cuu 1 && tput el
 
         if [ $USE_COLORS -eq 1 ]; then
-            printf -- '%s\t'"${START_COLORSCHEME}${color}${END_COLORSCHEME}"'%s\n'"${RESET_COLORS}"   "$sz" "$f"
+            printf -- '%s\t'"${START_COLORSCHEME}${color}${END_COLORSCHEME}"'%s\n'"${RESET_COLORS}" "$sz" "$f"
         else
             printf -- '%s\t%s\n' "$sz" "$f"
         fi
@@ -1812,52 +1864,77 @@ lds()
 }
 
 # count and list directory sizes, including hidden dirs
-lads()
-{
+lads() {
     lds "*/" ".*/"
 }
 
 # display only dirs/files with given octal permissions for current user
-lo()
-{
+lo() {
     local cmd
     local str
     local -a fs
 
     # Contruct proper command and display string
     case "$1" in
-        0) str="no permissions"              ; cmd=""                                ;; # TODO
-        1) str="Executable"                  ; cmd="-executable"                     ;;
-        2) str="Writable"                    ; cmd="-writable"                       ;;
-        3) str="Writable/executable"         ; cmd="-writable -executable"           ;;
-        4) str="Readable"                    ; cmd="-readable"                       ;;
-        5) str="Readable/executable"         ; cmd="-readable -executable"           ;;
-        6) str="Readable/writable"           ; cmd="-readable -writable"             ;;
-        7) str="Readable/writable/executable"; cmd="-readable -writable -executable" ;;
+    0)
+        str="no permissions"
+        cmd=""
+        ;; # TODO
+    1)
+        str="Executable"
+        cmd="-executable"
+        ;;
+    2)
+        str="Writable"
+        cmd="-writable"
+        ;;
+    3)
+        str="Writable/executable"
+        cmd="-writable -executable"
+        ;;
+    4)
+        str="Readable"
+        cmd="-readable"
+        ;;
+    5)
+        str="Readable/executable"
+        cmd="-readable -executable"
+        ;;
+    6)
+        str="Readable/writable"
+        cmd="-readable -writable"
+        ;;
+    7)
+        str="Readable/writable/executable"
+        cmd="-readable -writable -executable"
+        ;;
 
-        *) error "Invalid octal permission."
-           return 1
-           ;;
+    *)
+        error "Invalid octal permission."
+        return 1
+        ;;
     esac
 
     # default: find non-dot files only.
     # when passing 2 args: find also dot-files.
     if [ $# -ne 2 ]; then
-        cmd="-name \"[^\\.]*\" "$cmd; fi
+        cmd="-name \"[^\\.]*\" "$cmd
+    fi
 
     echo "$str files:"
 
     # the actual find
     IFS=$'\n'
-        fs=($(eval find . -maxdepth 1 -type f $cmd))
+    fs=($(eval find . -maxdepth 1 -type f $cmd))
     IFS="$IFS_ORIGINAL"
 
     # parse file list and pass on to multicolumn_ls
     if [[ ${#fs[@]} != 0 ]]; then
 
         # add quotes to all args
-        for ((i=0; i<${#fs[@]}; ++i)); do
-            fs[$i]=\"${fs[i]#./}\"; done
+        for ((i = 0; i < ${#fs[@]}; ++i)); do
+            fs[$i]=\"${fs[i]#./}\"
+        done
 
         # and call (NOTE: eval required for quote expansion)
         eval multicolumn_ls "${fs[@]}"
@@ -1884,16 +1961,13 @@ lx() { lo 1; }
 # display only files executable by current user, including dot-dirs
 lax() { lo 1 "all"; }
 
-
 # --------------------------------------------------------------------------------------------------
 # More advanced cd, mkdir, rmdir, mv, rm, cp, ln
 # --------------------------------------------------------------------------------------------------
 
 # Check dirstack file if all directories it contains still exist
-_check_dirstack()
-{
-    if [ -e "${DIRSTACK_FILE}" ]
-    then
+_check_dirstack() {
+    if [ -e "${DIRSTACK_FILE}" ]; then
         local -r tmp=$(mktemp)
         local dir dirline
 
@@ -1901,15 +1975,16 @@ _check_dirstack()
         _lock_dirstack
 
         IFS=$'\n'
-            local -ar stack=($(cat "${DIRSTACK_FILE}"))
+        local -ar stack=($(cat "${DIRSTACK_FILE}"))
         IFS="$IFS_ORIGINAL"
 
         # Loop through all dirs one by one. If they exist, print
         # them into a tempfile
         for dirline in "${stack[@]}"; do
-            dir="${dirline:((DIRSTACK_COUNTLENGTH+1))}"
+            dir="${dirline:((DIRSTACK_COUNTLENGTH + 1))}"
             if [ -e "${dir}" ]; then
-                echo "${dirline}" >> "${tmp}"; fi
+                echo "${dirline}" >>"${tmp}"
+            fi
         done
 
         # Then overwrite the original dirstack file with the tempfile content
@@ -1921,14 +1996,12 @@ _check_dirstack()
 }
 
 # Save a directory to the dirstack file, and check if its unique
-_add_dir_to_stack()
-{
+_add_dir_to_stack() {
     local -r addition="$(normalize_dir "$1")"
 
     _lock_dirstack
 
-    if [ -e "${DIRSTACK_FILE}" ]
-    then
+    if [ -e "${DIRSTACK_FILE}" ]; then
         local dirline dir
         local -i counter
         local -i was_present=0
@@ -1936,29 +2009,30 @@ _add_dir_to_stack()
 
         # Read current dirstack
         IFS=$'\n'
-            local -ar stack=($(cat "${DIRSTACK_FILE}"))
+        local -ar stack=($(cat "${DIRSTACK_FILE}"))
         IFS="$IFS_ORIGINAL"
 
         # - If new directory has already been visited, increment its visits counter
         # - If directory is not found, add it with its visits counter set to 1
         for dirline in "${stack[@]}"; do
 
-            dir="${dirline:((DIRSTACK_COUNTLENGTH+1))}"
+            dir="${dirline:((DIRSTACK_COUNTLENGTH + 1))}"
             counter="${dirline:0:${DIRSTACK_COUNTLENGTH}}"
 
             if [ "${addition}" == "${dir}" ]; then
                 was_present=1
-                printf -- "%${DIRSTACK_COUNTLENGTH}d "'%s\n' $((counter+1)) "${dir}" >> "${tmp}"
+                printf -- "%${DIRSTACK_COUNTLENGTH}d "'%s\n' $((counter + 1)) "${dir}" >>"${tmp}"
             else
-                echo "${dirline}" >> "${tmp}"
+                echo "${dirline}" >>"${tmp}"
             fi
         done
 
         if [[ $was_present == 0 ]]; then
-            printf -- "%${DIRSTACK_COUNTLENGTH}d %s"'\n' 1 "${addition}" >> "${tmp}"; fi
+            printf -- "%${DIRSTACK_COUNTLENGTH}d %s"'\n' 1 "${addition}" >>"${tmp}"
+        fi
 
         # Sort according to most visits
-        sort -r "${tmp}" > "${DIRSTACK_FILE}"
+        sort -r "${tmp}" >"${DIRSTACK_FILE}"
         rm "${tmp}"
 
         # TODO: (Rody Oldenhuis) this means the newly added dir will be wiped
@@ -1970,23 +2044,23 @@ _add_dir_to_stack()
         #fi
 
     else
-        printf -- "%${DIRSTACK_COUNTLENGTH}d %s\n" 1 "${addition}" > "${DIRSTACK_FILE}"
+        printf -- "%${DIRSTACK_COUNTLENGTH}d %s\n" 1 "${addition}" >"${DIRSTACK_FILE}"
     fi
 
     _unlock_dirstack
 
     # Check if all directories still exist
-    ( _check_dirstack & )
+    (_check_dirstack &)
 
     IFS="$IFS_ORIGINAL"
 }
 
 # Remove a dir from the stack, if it exists
-_remove_dir_from_stack()
-{
+_remove_dir_from_stack() {
     # No arguments -- quick exit
     if [[ $# == 0 ]]; then
-        return 0; fi
+        return 0
+    fi
 
     # No dir stack -- can't remove anything
     if [ ! -e "${DIRSTACK_FILE}" ]; then
@@ -1997,7 +2071,7 @@ _remove_dir_from_stack()
     _lock_dirstack
 
     IFS=$'\n'
-        local -ar stack=( $(cat "${DIRSTACK_FILE}") )
+    local -ar stack=($(cat "${DIRSTACK_FILE}"))
     IFS="$IFS_ORIGINAL"
 
     # File present, but empty -- can't remove anything
@@ -2008,9 +2082,8 @@ _remove_dir_from_stack()
     fi
 
     # Recurse for more than one argument
-    if [ $# -gt 1 ]
-    then
-        while (( "$#" )); do
+    if [ $# -gt 1 ]; then
+        while (("$#")); do
             _remove_dir_from_stack "$1" || break
             shift
         done
@@ -2026,15 +2099,15 @@ _remove_dir_from_stack()
 
             # Check it!
             if [[ ${removal} > ${#stack} ]]; then
-               error "Requested index (%d) exceeds number of directories in stack (%d)." ${removal} ${#stack}
-               _unlock_dirstack
-               return 1
+                error "Requested index (%d) exceeds number of directories in stack (%d)." ${removal} ${#stack}
+                _unlock_dirstack
+                return 1
             fi
 
             # Remove it
-            for ((i=0; i<${#stack}; ++i)); do
+            for ((i = 0; i < ${#stack}; ++i)); do
                 if [ $i -ne ${removal} ]; then
-                    echo "${stack[$i]}" >> "${tmp}"
+                    echo "${stack[$i]}" >>"${tmp}"
                 else
                     was_present=1
                 fi
@@ -2046,8 +2119,8 @@ _remove_dir_from_stack()
             local -r deletion="$(normalize_dir "${removal}")"
 
             for dir in "${stack[@]}"; do
-                if [[ "${dir:((DIRSTACK_COUNTLENGTH+1))}" != *"${deletion}"* ]]; then
-                    echo "${stack[$i]}" >> "${tmp}"
+                if [[ "${dir:((DIRSTACK_COUNTLENGTH + 1))}" != *"${deletion}"* ]]; then
+                    echo "${stack[$i]}" >>"${tmp}"
                 else
                     was_present=1
                 fi
@@ -2066,10 +2139,8 @@ _remove_dir_from_stack()
     IFS="$IFS_ORIGINAL"
 }
 
-
 # Navigate to directory. Check if directory is in a repo
-_rbp_cd()
-{
+_rbp_cd() {
     # First cd to given directory
 
     # Home
@@ -2087,7 +2158,7 @@ _rbp_cd()
 
     # All others
     else
-		cd -- "$@" 2> >(error) || return
+        cd -- "$@" 2> >(error) || return
     fi
 
     # if successful, save to dirstack, display abbreviated dirlist and
@@ -2101,11 +2172,11 @@ _rbp_cd()
     local repo
     if repo=($(check_repo)); then
         case "${repo[0]}" in
-            "git") _enter_GIT "${repo[@]:1}" ;;
-            "svn") _enter_SVN "${repo[@]:1}" ;;
-            "hg")  _enter_HG  "${repo[@]:1}" ;;
-            "bzr") _enter_BZR "${repo[@]:1}" ;;
-            *) ;;
+        "git") _enter_GIT "${repo[@]:1}" ;;
+        "svn") _enter_SVN "${repo[@]:1}" ;;
+        "hg") _enter_HG "${repo[@]:1}" ;;
+        "bzr") _enter_BZR "${repo[@]:1}" ;;
+        *) ;;
         esac
     fi
 
@@ -2117,15 +2188,14 @@ _rbp_cd()
 # jump dirs via dir-numbers. Inspired by tp_command(), by
 # Alvin Alexander (DevDaily.com)
 # shellcheck disable=SC2120
-_cdn()
-{
+_cdn() {
     # Remove non-existent dirs from dirstack
     _check_dirstack
 
     # create initial stack array
     _lock_dirstack
     IFS=$'\n'
-        local -a stack=( $(cat "${DIRSTACK_FILE}") )
+    local -a stack=($(cat "${DIRSTACK_FILE}"))
     IFS="$IFS_ORIGINAL"
     _unlock_dirstack
 
@@ -2141,31 +2211,33 @@ _cdn()
     local -i intarg=-1
     local namearg=
 
-    while (( "$#" )); do
+    while (("$#")); do
         case "$1" in
 
-            "-c"|"--color"|"--colors")
-                supress_colors=0
-                ;;
+        "-c" | "--color" | "--colors")
+            supress_colors=0
+            ;;
 
-            "-r"|"--remove")
-                # Remove all arguments
-                _remove_dir_from_stack "${@:2}"
-                if [ $? -ne 0 ]; then
-                    return $?; fi
+        "-r" | "--remove")
+            # Remove all arguments
+            _remove_dir_from_stack "${@:2}"
+            if [ $? -ne 0 ]; then
+                return $?
+            fi
 
-                # When still OK, show new list
-                _cdn
-                return 0
-                ;;
+            # When still OK, show new list
+            _cdn
+            return 0
+            ;;
 
-            *) if [[ $1 =~ ^[0-9]+$ ]]; then
-                    intarg=$1
-               else
-                    namearg="$1"
-               fi
-               break
-               ;;
+        *)
+            if [[ $1 =~ ^[0-9]+$ ]]; then
+                intarg=$1
+            else
+                namearg="$1"
+            fi
+            break
+            ;;
         esac
         shift
     done
@@ -2173,7 +2245,7 @@ _cdn()
     # Integer argument provided: go to dir number
     if [ "$intarg" -ne -1 ]; then
         if [ "$intarg" -le ${#stack[@]} ]; then
-           _rbp_cd "${stack[$intarg]:((DIRSTACK_COUNTLENGTH+1))}"
+            _rbp_cd "${stack[$intarg]:((DIRSTACK_COUNTLENGTH + 1))}"
             return 0
         else
             error "given directory index exceeds number of directories visited."
@@ -2185,12 +2257,11 @@ _cdn()
 
         # Get local dirs
         IFS=$'\n'
-            local -ar local_dirs=($(command ls -1bd */ 2> /dev/null))
+        local -ar local_dirs=($(command ls -1bd */ 2>/dev/null))
         IFS="$IFS_ORIGINAL"
 
         # First check for exact match in local dirs
-        if [ ${#local_dirs} -ne 0 ]
-        then
+        if [ ${#local_dirs} -ne 0 ]; then
             for dir in "${local_dirs[@]}"; do
                 if [ "${dir}" = "${namearg}" ]; then
                     _rbp_cd "${dir}"
@@ -2199,18 +2270,18 @@ _cdn()
             done
 
             # Add local directories to stack
-            stack=( "${local_dirs[@]}" "${stack[@]}" )
+            stack=("${local_dirs[@]}" "${stack[@]}")
         fi
 
         # Otherwise, go for partial mathes in local dirs + dirstack.
         # TODO: prefer matches at the very END of the string
-        for dirline in "${stack[@]}"
-        do
+        for dirline in "${stack[@]}"; do
             # Local dirs have no counter, dirstack dirs do. In the latter case, remove
             # the counter from the variable
             dir="${dirline}"
-            if [[ "${dir:0:((DIRSTACK_COUNTLENGTH+1))}" =~ ^[[:space:]]*[0-9]+[[:space:]] ]]; then
-                dir="${dirline:((DIRSTACK_COUNTLENGTH+1))}"; fi
+            if [[ "${dir:0:((DIRSTACK_COUNTLENGTH + 1))}" =~ ^[[:space:]]*[0-9]+[[:space:]] ]]; then
+                dir="${dirline:((DIRSTACK_COUNTLENGTH + 1))}"
+            fi
 
             # CD to patially-matched dirname
             if [[ "$dir" == *"${namearg}"* ]]; then
@@ -2219,7 +2290,7 @@ _cdn()
             fi
         done
 
-        error "no partial match for input string \"%s\".\n"  "${namearg}"
+        error "no partial match for input string \"%s\".\n" "${namearg}"
         return 1
 
     # If no function arguments provided, show list
@@ -2228,7 +2299,7 @@ _cdn()
 
         local -i i
         local -a repos=($(check_repo "${stack[@]}"))
-        local -a types=($(echo "${repos[*]}" | cut -f 1  -d " "))
+        local -a types=($(echo "${repos[*]}" | cut -f 1 -d " "))
         local -a paths=($(echo "${repos[*]}" | cut -f 2- -d " "))
 
         IFS="$IFS_ORIGINAL"
@@ -2239,36 +2310,35 @@ _cdn()
             # Don't pass through prettyprint_dir(), it's faster to just truncate
             # here and print immediately (Cygwin spawning a hundred processes is something
             # Kaspersky does not like -- cdn() will be crawling)
-            local -r pwdmaxlen=$(($COLUMNS/3))
+            local -r pwdmaxlen=$(($COLUMNS / 3))
 
-            for ((i=0; i<${#repos[@]}; i++)); do
+            for ((i = 0; i < ${#repos[@]}; i++)); do
 
-                dir="${stack[$i]:((DIRSTACK_COUNTLENGTH+1))}"
+                dir="${stack[$i]:((DIRSTACK_COUNTLENGTH + 1))}"
 
                 if [ ${#dir} -gt $pwdmaxlen ]; then
-                    dir="...${dir: ((-${pwdmaxlen}-3))}"; fi
+                    dir="...${dir:((-${pwdmaxlen} - 3))}"
+                fi
 
                 printf -- "%3d: %-${pwdmaxlen}s\n" $i "${dir}"
             done
 
         # Colored list, taking into account dir/symlink coloring and repo coloring
         else
-            for ((i=0; i<${#repos[@]}; i++)); do
-                (printf -- "%3d: %s\n" $i "$( prettyprint_dir "${stack[$i]:((DIRSTACK_COUNTLENGTH+1))}" "${types[$i]}" "${paths[$i]}" )" &); done
+            for ((i = 0; i < ${#repos[@]}; i++)); do
+                (printf -- "%3d: %s\n" $i "$(prettyprint_dir "${stack[$i]:((DIRSTACK_COUNTLENGTH + 1))}" "${types[$i]}" "${paths[$i]}")" &)
+            done
         fi
     fi
 }
 
-
 # TODO: autocomplete dirs in the stack bash-ido style
 # (if none exist in the current path)
-_cdn_completer()
-{
+_cdn_completer() {
     local -r cur=${COMP_WORDS[COMP_CWORD]}
     local opts=""
 
-    if [ -e "${DIRSTACK_FILE}" ]
-    then
+    if [ -e "${DIRSTACK_FILE}" ]; then
         local dir dirline
 
         # Read current dirstack
@@ -2276,24 +2346,25 @@ _cdn_completer()
 
         # HISTORY COMPLETION
         IFS=$'\n'
-            local -a stack=($(cat "${DIRSTACK_FILE}"))
+        local -a stack=($(cat "${DIRSTACK_FILE}"))
         IFS="$IFS_ORIGINAL"
 
-        for ((i=0; i<${#stack[@]}; ++i)); do
-            stack[i]="${stack[i]:((${DIRSTACK_COUNTLENGTH}+1))}"; done
+        for ((i = 0; i < ${#stack[@]}; ++i)); do
+            stack[i]="${stack[i]:((${DIRSTACK_COUNTLENGTH} + 1))}"
+        done
         opts="${stack[@]}"
 
         # CURRENT DIR COMPLETION
         if [ -z "$cur" ]; then
             cdir="."
-        elif [[ "${cur:${#cur} - 1}" == '/' ]]; then
+        elif [[ "${cur:${#cur}-1}" == '/' ]]; then
             cdir="$cur"
         else
             cdir=$(command dirname ${cur})
         fi
 
-        for i in $(command ls "$cdir" 2>/dev/null);  do
-            opts="$opts $(basename -- "$i" 2>&1 > /dev/null)"
+        for i in $(command ls "$cdir" 2>/dev/null); do
+            opts="$opts $(basename -- "$i" 2>&1 >/dev/null)"
         done
 
         _unlock_dirstack
@@ -2304,33 +2375,27 @@ _cdn_completer()
 
     IFS="$IFS_ORIGINAL"
 
-
-
-    COMPREPLY=( $(compgen -W "${opts}" -- ${cur}) )
+    COMPREPLY=($(compgen -W "${opts}" -- ${cur}))
     return 0
 
 }
 complete -F _cdn_completer -o nospace cdn
 
-
 # create dir(s)
-_rbp_mkdir()
-{
+_rbp_mkdir() {
     mkdir -p -- "$@" 2> >(error)
     print_list_if_OK $?
     (_check_dirstack &)
 }
 
-_rbp_rmdir()
-{
+_rbp_rmdir() {
     rmdir "$@" 2> >(error)
     print_list_if_OK $?
     (_check_dirstack &)
 }
 
 # remove file(s), taking into account current repo mode
-_rbp_rm()
-{
+_rbp_rm() {
     # we are in REPO mode
     if [[ -n $REPO_MODE && $REPO_MODE == 1 ]]; then
 
@@ -2342,33 +2407,33 @@ _rbp_rm()
         # different repositories issue different errors
         case "$REPO_TYPE" in
 
-            "git")
-                not_added="did not match any files"
-                outside_repo="outside repository"
-                ;;
+        "git")
+            not_added="did not match any files"
+            outside_repo="outside repository"
+            ;;
 
-            "svn")
-                # TODO
-                not_added=""
-                outside_repo=""
-                ;;
+        "svn")
+            # TODO
+            not_added=""
+            outside_repo=""
+            ;;
 
-            "hg")
-                # TODO
-                not_added=""
-                outside_repo=""
-                ;;
+        "hg")
+            # TODO
+            not_added=""
+            outside_repo=""
+            ;;
 
-            "bzr")
-                # TODO
-                not_added=""
-                outside_repo=""
-                ;;
+        "bzr")
+            # TODO
+            not_added=""
+            outside_repo=""
+            ;;
 
-            *) # anything erroneous does the same as no repo
-                rm -vI "$@" 2> >(error)
-                print_list_if_OK $?
-                ;;
+        *) # anything erroneous does the same as no repo
+            rm -vI "$@" 2> >(error)
+            print_list_if_OK $?
+            ;;
         esac
 
         # All was OK
@@ -2386,18 +2451,19 @@ _rbp_rm()
 
                 case "$yn" in
 
-                    [Yy]*)
-                        rm -vI "$@" 2> >(error)
-                        print_list_if_OK $?
-                        break
-                        ;;
+                [Yy]*)
+                    rm -vI "$@" 2> >(error)
+                    print_list_if_OK $?
+                    break
+                    ;;
 
-                    [Nn]*)
-                        break
-                        ;;
+                [Nn]*)
+                    break
+                    ;;
 
-                    *)  echo "Please answer yes or no."
-                        ;;
+                *)
+                    echo "Please answer yes or no."
+                    ;;
                 esac
             done
 
@@ -2433,8 +2499,7 @@ _rbp_rm()
 #  - source OUT repo, target IN  repo
 #
 # warnings should be issued, files auto-added to repo, etc.
-_rbp_mv()
-{
+_rbp_mv() {
     # Help call
     if [[ $# -ge 1 && "-h" = "$1" || "--help" = "$1" ]]; then
         mv --help
@@ -2446,25 +2511,24 @@ _rbp_mv()
     local source_repo
     local target_repo=$(check_repo $(dirname "${@:$#}"))
 
-# TODO!
+    # TODO!
     ## if that is so, (repo-)move all sources to target
     #if [ $? -eq 0 ]; then
-        #for ((i=0; i<$#-1; ++i)); do
-            #source="$1" # NOTE: will be shifted
-            #source_repo=$(check_repo $(dirname $source))
+    #for ((i=0; i<$#-1; ++i)); do
+    #source="$1" # NOTE: will be shifted
+    #source_repo=$(check_repo $(dirname $source))
 
-            #shift
-        #done
-
+    #shift
+    #done
 
     ## if the target is NOT a repo, the sources might be
     #else
-        #for ((i=0; i<$#-1; ++i)); do
-            #source="$1" # NOTE: will be shifted
-            #source_repo=$(check_repo $(dirname $source))
+    #for ((i=0; i<$#-1; ++i)); do
+    #source="$1" # NOTE: will be shifted
+    #source_repo=$(check_repo $(dirname $source))
 
-            #shift
-        #done
+    #shift
+    #done
 
     #fi
 
@@ -2472,14 +2536,14 @@ _rbp_mv()
     if [[ ! -z $REPO_MODE && $REPO_MODE == 1 && $REPO_TYPE == "git" ]]; then
 
         local match="outside repository"
-        local err=$(git mv "$@" 1> /dev/null 2> >(error))
+        local err=$(git mv "$@" 1>/dev/null 2> >(error))
 
         if [ $? -ne 0 ]; then
-            if [[ "$err" =~ "${match}" ]]; then
+            if [[ "$err" =~ ${match} ]]; then
                 mv -iv "$@" 2> >(error)
                 if [[ $? == 0 ]]; then
                     print_list_if_OK $?
-                    warning "Target and/or source was outside repository";
+                    warning "Target and/or source was outside repository"
                 fi
             else
                 echo $err
@@ -2495,21 +2559,18 @@ _rbp_mv()
 # Make simlink, taking into account current repo mode
 # TODO: needs work...auto-add any new files/dirs, but the 4 different
 # forms of ln make this complicated
-_rbp_ln()
-{
+_rbp_ln() {
     # Help call
     if [[ $# -ge 1 && "-h" = "$1" || "--help" = "$1" ]]; then
         ln --help
         return 0
     fi
 
-    if (ln -s "$@" 2> >(error))
-    then
+    if (ln -s "$@" 2> >(error)); then
 
         print_list_if_OK 0
 
-        if [[ -n $REPO_MODE && $REPO_MODE == 1 ]];
-        then
+        if [[ -n $REPO_MODE && $REPO_MODE == 1 ]]; then
             addcmd=$(get_repo_cmd "$REPO_CMD_add")
             if (eval "$addcmd" "$@" "$dump_except_error"); then
                 repo_cmd_exit_message "Added new file(s) \"$@\" to the repository."
@@ -2521,8 +2582,7 @@ _rbp_ln()
 }
 
 # copy file(s), taking into account current repo mode
-_rbp_cp()
-{
+_rbp_cp() {
     # Help call
     if [[ $# -ge 1 && "-h" == "$1" || "--help" == "$1" ]]; then
         cp --help
@@ -2537,31 +2597,32 @@ _rbp_cp()
 
     # Explicitly quote all arguments (needed because eval())
     for arg in "${arglist[@]}"; do
-        args="$args \"$arg\""; done
+        args="$args \"$arg\""
+    done
 
     # nominal copy command
     cpcmd="rsync -aAHch --info=progress2 ${args}"
 
     # optional args
-    while (( "$#" )); do
+    while (("$#")); do
 
         case "$1" in
 
-            # cp -M = cp <file> <destination1> <destination2> ...
-            "-M"|"--multiple-destination"|"--multidest")
-                cpcmd="echo \"\${@:2:\$nargin}\" | xargs -n1 -P $(nproc --all) -- rsync -aAHch --info=progress2 -- \"\$1\""
-                ((nargin--))
-                shift
-                ;;
+        # cp -M = cp <file> <destination1> <destination2> ...
+        "-M" | "--multiple-destination" | "--multidest")
+            cpcmd="echo \"\${@:2:\$nargin}\" | xargs -n1 -P $(nproc --all) -- rsync -aAHch --info=progress2 -- \"\$1\""
+            ((nargin--))
+            shift
+            ;;
 
-            "--")
-                ((nargin--))
-                shift
-                break
-                ;;
-            *)
-                break
-                ;;
+        "--")
+            ((nargin--))
+            shift
+            break
+            ;;
+        *)
+            break
+            ;;
         esac
     done
 
@@ -2596,8 +2657,7 @@ _rbp_cp()
         #  - source DOESN'T EXIST, target EXISTS         �? error (handled by rsync)
 
         # First, carry out the copy
-        if eval "$cpcmd";
-        then
+        if eval "$cpcmd"; then
 
             # Then add sources to repository if needed
             local -r target="${arglist[-1]}"
@@ -2606,7 +2666,7 @@ _rbp_cp()
             local -i target_already_tracked=0
             local -i target_is_dir=0
 
-            local    src
+            local src
             local -i src_is_dir
             local -i src_in_repo
 
@@ -2615,12 +2675,12 @@ _rbp_cp()
             local -r istracked=$(get_repo_cmd "$REPO_CMD_trackcheck")
 
             if (eval "$istracked" "$target" "$dump_except_error"); then
-                target_already_tracked=1;
-                target_exists=1;
+                target_already_tracked=1
+                target_exists=1
             fi
             if [[ -d "$target" ]]; then
-                target_is_dir=1;
-                target_exists=1;
+                target_is_dir=1
+                target_exists=1
             fi
             if [[ "$REPO_PATH" = *"$target"* ]]; then
                 target_in_repo=1
@@ -2629,13 +2689,13 @@ _rbp_cp()
             echo ""
             for src in "${arglist[@]}"; do
 
-                src_is_dir=0;
-                src_in_repo=0;
+                src_is_dir=0
+                src_in_repo=0
 
                 if [[ -d "$src" ]]; then
-                    src_is_dir=1; fi
-                if (eval "$istracked" "$src" "$dump_except_error");
-                    then src_in_repo=1; fi
+                    src_is_dir=1
+                fi
+                if (eval "$istracked" "$src" "$dump_except_error"); then src_in_repo=1; fi
 
                 #  - source IN  repo, target IN repo   �? git add "target/source"
                 #  - source OUT repo, target OUT repo  �? do nothing
@@ -2657,8 +2717,8 @@ _rbp_cp()
 
                 fi
 
-
             done
+
             echo ""
 
         fi
@@ -2672,14 +2732,11 @@ _rbp_cp()
 }
 
 # touch file, taking into account current repo mode
-_rbp_touch()
-{
-    if (touch "$@" 1> /dev/null 2> >(error));
-    then
+_rbp_touch() {
+    if (touch "$@" 1>/dev/null 2> >(error)); then
         print_list_if_OK 0
 
-        if [[ ! -z $REPO_MODE && $REPO_MODE == 1 ]];
-        then
+        if [[ ! -z $REPO_MODE && $REPO_MODE == 1 ]]; then
             addcmd=$(get_repo_cmd "$REPO_CMD_add")
             if (eval "$addcmd" "$@" "$dump_except_error"); then
                 repo_cmd_exit_message "Added \"$*\" to the repository."
@@ -2690,58 +2747,51 @@ _rbp_touch()
     fi
 }
 
-
 # --------------------------------------------------------------------------------------------------
 # Frequently needed functionality
 # --------------------------------------------------------------------------------------------------
 
-_rbp_grep()
-{
+_rbp_grep() {
     # NOTE: see https://www.inmotionhosting.com/support/website/speed-up-grep-searches-with-lc-all/
     LC_ALL=C grep -EiIT --color=auto --exclude-dir=.svn --exclude-dir=.git "$@"
 }
 
-_rbp_frep()
-{
+_rbp_frep() {
     # NOTE: see https://www.inmotionhosting.com/support/website/speed-up-grep-searches-with-lc-all/
     LC_ALL=C grep -FiIT --color=auto --exclude-dir=.svn --exclude-dir=.git "$@"
 }
 
-_rbp_rgrep()
-{
+_rbp_rgrep() {
     _rbp_grep -R "$@"
 }
 
 # bgrep = grep excluding build/
-bgrep()
-{
+bgrep() {
     _rbp_rgrep --exclude-dir=build --exclude-dir=doc "$@"
 }
 
 # cgrep = grep excluding build/ looking inly in cmake files
-cgrep()
-{
+cgrep() {
     _rbp_rgrep --exclude-dir=build --include=CMakeLists.txt --include="*.cmake" "$@"
 }
 
 # Extract some arbitrary archive
-extract()
-{
-    if [[ -f "$1" && -r "$1" ]] ; then
+extract() {
+    if [[ -f "$1" && -r "$1" ]]; then
         case "$1" in
-            *.tar.bz2) tar xjvf "$1"   2> >(error) ;;
-            *.tar.gz)  tar xzvf "$1"   2> >(error) ;;
-            *.bz2)     bunzip2  "$1"   2> >(error) ;;
-            *.rar)     rar x    "$1"   2> >(error) ;;
-            *.gz)      gunzip   "$1"   2> >(error) ;;
-            *.tar)     tar xvf  "$1"   2> >(error) ;;
-            *.tbz2)    tar xjvf "$1"   2> >(error) ;;
-            *.tgz)     tar xzvf "$1"   2> >(error) ;;
-            *.zip)     unzip    "$1"   2> >(error) ;;
-            *.Z)       uncompress "$1" 2> >(error) ;;
-            *.7z)      7z x "$1"       2> >(error) ;;
+        *.tar.bz2) tar xjvf "$1" 2> >(error) ;;
+        *.tar.gz) tar xzvf "$1" 2> >(error) ;;
+        *.bz2) bunzip2 "$1" 2> >(error) ;;
+        *.rar) rar x "$1" 2> >(error) ;;
+        *.gz) gunzip "$1" 2> >(error) ;;
+        *.tar) tar xvf "$1" 2> >(error) ;;
+        *.tbz2) tar xjvf "$1" 2> >(error) ;;
+        *.tgz) tar xzvf "$1" 2> >(error) ;;
+        *.zip) unzip "$1" 2> >(error) ;;
+        *.Z) uncompress "$1" 2> >(error) ;;
+        *.7z) 7z x "$1" 2> >(error) ;;
 
-            *) warning "'%s' cannot be extracted via extract()."  "$1";;
+        *) warning "'%s' cannot be extracted via extract()." "$1" ;;
         esac
     else
         error "'%s' is not a valid, readable file." "$1"
@@ -2749,10 +2799,8 @@ extract()
     fi
 }
 
-
 # change extentions of files in current dir
-changext()
-{
+changext() {
     # usage
     if [[ $# != 2 || "$1" == "-h" || "$1" == "--help" ]]; then
         echo USAGE = $0 [.OLDEXT] [.NEWEXT]
@@ -2764,17 +2812,20 @@ changext()
     local f
 
     # period is optional
-    before=$1;
+    before=$1
     after=$2
 
     if [ "${before:0:1}" != "." ]; then
-        before=".$before"; fi
+        before=".$before"
+    fi
     if [ "${after:0:1}" != "." ]; then
-        after=".$after"; fi
+        after=".$after"
+    fi
 
     # loop through file list
     for f in *$before; do
-        mv "$f" "${f%$before}$after" 2> >(error); done
+        mv "$f" "${f%$before}$after" 2> >(error)
+    done
 
     _rbp_clear
     multicolumn_ls
@@ -2786,37 +2837,39 @@ C() {
 }
 
 # Generalised manpages
-man()
-{
+man() {
 
-	# TODO: check for aliases and figure out which manpage to show; see #18
+    # TODO: check for aliases and figure out which manpage to show; see #18
 
     #(from https://unix.stackexchange.com/a/18088)
     case "$(type -t "$1"):$1" in
 
-        # built-in
-		# also, https://unix.stackexchange.com/a/18092/20712
-        builtin:*) command man bash | less -p "^       $1 ";
-		           #help "$1" | "${PAGER:-less}"
-                   ;;
+    # built-in
+    # also, https://unix.stackexchange.com/a/18092/20712
+    builtin:*)
+        command man bash | less -p "^       $1 "
+        #help "$1" | "${PAGER:-less}"
+        ;;
 
         # pattern
-        *[[?*]*) help "$1" | "${PAGER:-less}"
-                 ;;
+    *[[?*]*)
+        help "$1" | "${PAGER:-less}"
+        ;;
 
-        # something else, presumably an external command
-        # or options for the man command or a section number
-        *) command -p man "$@"
-           ;;
+    # something else, presumably an external command
+    # or options for the man command or a section number
+    *)
+        command -p man "$@"
+        ;;
 
     esac
 }
 
 # grep all processes in wide-format PS, excluding "grep" itself
-psa()
-{
+psa() {
     if [[ $# == 0 ]]; then
-        return 1; fi
+        return 1
+    fi
 
     ps auxw | grep -EiT --color=auto "[${1:0:1}]${1:1}" 2> >(error)
 }
@@ -2827,12 +2880,11 @@ psa()
 #
 # no arguments   : list 10 biggest files
 # single argument: list N biggest files
-_findbig()
-{
+_findbig() {
 
     # parse input arguments
     if [ $# -gt 1 ]; then
-        error "Findbig takes at most 1 argument.";
+        error "Findbig takes at most 1 argument."
         return 1
     fi
 
@@ -2848,11 +2900,12 @@ _findbig()
 
     # find proper color used for directories
     if [[ $USE_COLORS == 1 ]]; then
-        local dcolor="${ALL_COLORS[di]}"; fi
+        local dcolor="${ALL_COLORS[di]}"
+    fi
 
     # loop through all big files
     IFS=$'\n'
-    for f in $(find . -type f -exec /bin/ls -s "{}" \; 2> /dev/null | sort -nr | head -n $num); do
+    for f in $(find . -type f -exec /bin/ls -s "{}" \; 2>/dev/null | sort -nr | head -n $num); do
 
         # formatted ls
         lsout=$(/bin/ls -opgh --time-style=+ "${f#* }")
@@ -2860,15 +2913,16 @@ _findbig()
         # split the string in perms+size, path, and filename
         perms=${lsout%%./*}
         file=${lsout##*/}
-        dir=${lsout/$perms/}; dir=${dir/$file/}
+        dir=${lsout/$perms/}
+        dir=${dir/$file/}
 
         # Print list, taking into account proper file colors
         # TODO: do this the same way as in multicolumn_ls()
-        if [ $USE_COLORS  -eq 1 ]; then
-            local fcolor=${LS_COLORS##*'*'.${file##*.}=};
+        if [ $USE_COLORS -eq 1 ]; then
+            local fcolor=${LS_COLORS##*'*'.${file##*.}=}
             fcolor=${fcolor%%:*}
             if [ -z $(echo ${fcolor:0:1} | tr -d "[:alpha:]") ]; then
-                fcolor=${LS_COLORS##*no=};
+                fcolor=${LS_COLORS##*no=}
                 fcolor=${fcolor%%:*}
             fi
             printf -- "%s\E[${dcolor#*;}m%s\E[${fcolor#*;}m%s\\n${RESET_COLORS}" $perms $dir $file
@@ -2883,24 +2937,22 @@ _findbig()
 # find biggest applications
 # must be aliased in .bash_aliases
 # FIXME: can't alias this one directly due to {} symbols
-_findbig_applications()
-{
+_findbig_applications() {
     dpkg-query --show --showformat='${Package;-50}\t${Installed-Size}\n' | sort -k 2 -rn | grep -v deinstall | awk '{printf "%.3f MB \t %s\n", $2/(1024),  $1 }' | head -n 10
 }
 
 # chroot some environment
-chroot_dir()
-{
+chroot_dir() {
     # Check input
     if [ $# -ne 1 ]; then
         error "Invalid number of arguments received.              "
-        echo  "                                                   "
-        echo  "Usage: $0 [PATH]                                   "
-        echo  "                                                   "
-        echo  "Where PATH is a valid dirname to put the chroot in."
-        echo  "Example:                                           "
-        echo  "   $0 /media/SYSTEM_DISK/                          "
-        echo  "                                                   "
+        echo "                                                   "
+        echo "Usage: $0 [PATH]                                   "
+        echo "                                                   "
+        echo "Where PATH is a valid dirname to put the chroot in."
+        echo "Example:                                           "
+        echo "   $0 /media/SYSTEM_DISK/                          "
+        echo "                                                   "
         return 1
     fi
 
@@ -2912,9 +2964,10 @@ chroot_dir()
 
     # Mount the essentials to the system
     chroot_path="$1"
-    for ((i=0; i<${#bind_dirs[@]}; ++i)); do
+    for ((i = 0; i < ${#bind_dirs[@]}; ++i)); do
         if [ ! -d ${chroot_path}${bind_dirs[$i]} ]; then
-            mkdir "${chroot_path}${bind_dirs[$i]}"; fi
+            mkdir "${chroot_path}${bind_dirs[$i]}"
+        fi
         sudo mount --bind "${bind_dirs[$i]}" "${chroot_path}${bind_dirs[$i]}"
     done
 
@@ -2928,50 +2981,46 @@ chroot_dir()
         # if [ $? -eq 0 ]; then
         #    echo "Target architecture differs from host system architecture; do you have QEMU installed?"
         # else
-            printf -- "Could not enter chroot: %s" $(cat $tmpErr)
+        printf -- "Could not enter chroot: %s" $(cat $tmpErr)
         # fi
     fi
 
     # Unmount everything again when chroot exits
-    for ((; i>=0; --i)); do
-        sudo umount "${chroot_path}${bind_dirs[$i]}"; done
+    for (( ; i >= 0; --i)); do
+        sudo umount "${chroot_path}${bind_dirs[$i]}"
+    done
 }
 
 # gedit, geany and pcmanfm (and windows equivalents):
 # ALWAYS in background and immune to terminal closing!
-_gedit()
-{
-    (gedit "$@" &) | nohup &> /dev/null;
+_gedit() {
+    (gedit "$@" &) | nohup &>/dev/null
 }
 
-_geany()
-{
+_geany() {
     if which geany; then
-        (geany "$@" &) | nohup &> /dev/null;
+        (geany "$@" &) | nohup &>/dev/null
     else
         _gedit "$@"
     fi
 
 }
 
-_vscode()
-{
+_vscode() {
     if which code; then
-        (code "$@") | nohup &> /dev/null;
+        (code "$@") | nohup &>/dev/null
     else
         _gedit "$@"
     fi
 
 }
 
-_pcmanfm()
-{
-    (pcmanfm . &) | nohup &> /dev/null;
+_pcmanfm() {
+    (pcmanfm . &) | nohup &>/dev/null
 }
 
 # Queued move
-mvq()
-{
+mvq() {
     if [ $# -lt 2 ]; then
         error "mvq requires at least 2 arguments."
         return 1
@@ -2980,12 +3029,11 @@ mvq()
     # TODO: nohup doesn't allow for easy redirection
     #(nohup nice -n 19 mv "$@" 2> >(error) &)
     (nice -n 19 mr "$@" 1> >(warning) 2> >(error) &)
-    printf -- 'Moving %s to "%s"...\n'  "$(quoted_list ${@: 1:$(($#-1))})"  "${@: -1}"
+    printf -- 'Moving %s to "%s"...\n' "$(quoted_list ${@:1:$(($# - 1))})" "${@: -1}"
 }
 
 # Queued copy
-cpq()
-{
+cpq() {
     if [ $# -lt 2 ]; then
         error "cpq requires at least 2 arguments."
         return 1
@@ -2994,12 +3042,11 @@ cpq()
     # TODO: nohup doesn't allow for easy redirection
     #(nohup nice -n 19 cp -r "$@" 1> >(warning) 2> >(error) &)
     (nice -n 19 cp -r "$@" 1> >(warning) 2> >(error) &)
-    printf -- 'Copying %s to "%s"...\n'  "$(quoted_list ${@: 1:$(($#-1))})"  "${@: -1}"
+    printf -- 'Copying %s to "%s"...\n' "$(quoted_list ${@:1:$(($# - 1))})" "${@: -1}"
 }
 
 # Multi-source, multi-destination copy/move
-_spread()
-{
+_spread() {
     local cmd="cp"
 
     local -a sources=()
@@ -3008,40 +3055,44 @@ _spread()
     local -i collecting_sources=1
     local -i do_repository=0
 
-
     # Collect arguments
-    while (( "$#" )); do
+    while (("$#")); do
 
         case "$1" in
 
-            "-c"|"--copy") cmd="cp" ;;
-            "-m"|"--move") cmd="mv" ;;
+        "-c" | "--copy") cmd="cp" ;;
+        "-m" | "--move") cmd="mv" ;;
 
-            "-r"|"--repository") do_repository=1 ;;
+        "-r" | "--repository") do_repository=1 ;;
 
-            "-s"|"--sources")
-                collecting_sources=1
-                ;;
+        "-s" | "--sources")
+            collecting_sources=1
+            ;;
 
-            "-t"|"--targets")
-                collecting_sources=0
-                ;;
+        "-t" | "--targets")
+            collecting_sources=0
+            ;;
 
-            *)  if [[ $collecting_sources == 1 ]]; then
-                    sources+=("$1")
-                else
-                    targets+=("$1")
-                fi
-                ;;
+        *)
+            if [[ $collecting_sources == 1 ]]; then
+                sources+=("$1")
+            else
+                targets+=("$1")
+            fi
+            ;;
         esac
         shift
     done
 
     # Check arguments
     if [[ ${#sources[@]} == 0 ]]; then
-        error "No source files/directories given."; return 1; fi
+        error "No source files/directories given."
+        return 1
+    fi
     if [[ ${#sources[@]} == 0 ]]; then
-        error "No target files/directories given."; return 1; fi
+        error "No target files/directories given."
+        return 1
+    fi
 
     # Execute command
     for target in "${targets[@]}"; do
@@ -3049,43 +3100,42 @@ _spread()
         # Move/copy sources to current target
         if [ $do_repository -eq 1 ]; then
             case $cmd in
-                "cp") (_rbp_cd "${sources[@]}" "${target}" 1> >(warning) 2> >(error) &); ;;
-                "mv") (_rbp_mv "${sources[@]}" "${target}" 1> >(warning) 2> >(error) &); ;;
-                *)    error "Invalid command: '%s'." "$cmd"
-                      return 1
-                      ;;
+            "cp") (_rbp_cd "${sources[@]}" "${target}" 1> >(warning) 2> >(error) &) ;;
+            "mv") (_rbp_mv "${sources[@]}" "${target}" 1> >(warning) 2> >(error) &) ;;
+            *)
+                error "Invalid command: '%s'." "$cmd"
+                return 1
+                ;;
             esac
         else
             case $cmd in
-                "cp") cpq "${sources[@]}" "${target}" ;;
-                "mv") mvq "${sources[@]}" "${target}" ;;
-                *)    error "Invalid command: '%s'." "$cmd"
-                      return 1
-                      ;;
+            "cp") cpq "${sources[@]}" "${target}" ;;
+            "mv") mvq "${sources[@]}" "${target}" ;;
+            *)
+                error "Invalid command: '%s'." "$cmd"
+                return 1
+                ;;
             esac
         fi
 
         # Halt on first error
         if [ $? -ne 0 ]; then
-            return 1; fi
+            return 1
+        fi
     done
 }
 # alias for the 'copy' variant
-proliferate()
-{
+proliferate() {
     _spread -c "$@"
 }
 # alias for the 'move' variant
-spread()
-{
+spread() {
     _spread -m "$@"
 }
 
-
 # export hi-res PNG from svg file
-svg2png()
-{
-    if (which inkscape > /dev/null 2>&1); then
+svg2png() {
+    if (which inkscape >/dev/null 2>&1); then
 
         local svgname
         local pngname
@@ -3102,11 +3152,9 @@ svg2png()
 }
 
 # check validity of XML
-check_XML()
-{
+check_XML() {
     for file in "$@"; do
-        if (python -c "import sys,xml.dom.minidom as d; d.parse(sys.argv[1])" "$file");
-        then
+        if (python -c "import sys,xml.dom.minidom as d; d.parse(sys.argv[1])" "$file"); then
             echo "XML-file $file is valid and well-formed"
         else
             warning "XML-file $file is NOT valid"
@@ -3114,13 +3162,11 @@ check_XML()
     done
 }
 
-
 # ==================================================
 # Github
 # ==================================================
 
-new_github_repo()
-{
+new_github_repo() {
     git init
     git add -- * .gitignore
     git commit -m "First commit"
@@ -3128,8 +3174,7 @@ new_github_repo()
     git push -u origin master
 }
 
-existing_github_repo()
-{
+existing_github_repo() {
     git remote add origin git@github.com:rodyo/"${1}".git
     git push -u origin master
 }
@@ -3139,19 +3184,17 @@ existing_github_repo()
 # ==================================================
 # TODO
 
-
-
 # ==================================================
 # MATLAB / Simulink
 # ==================================================
 
-slgrep()
-{
+slgrep() {
     if [ $# = 0 ]; then
-        return; fi
+        return
+    fi
 
-    IFS_="$IFS";
-    IFS=$'\n';
+    IFS_="$IFS"
+    IFS=$'\n'
 
     for file in $(find . -type f); do
 
@@ -3162,12 +3205,13 @@ slgrep()
         if [ "$extension" = "slx" ]; then
             local result=$(unzip -c "$file" | grep -EiIT --color=always --exclude-dir .svn --exclude-dir .git "$@")
             if [[ -n "$result" ]]; then
-                printf -- "${START_COLORSCHEME}${FG_MAGENTA}${END_COLORSCHEME}%s${RESET_COLORS}: %s"'\n' "$file" "$result"; fi
+                printf -- "${START_COLORSCHEME}${FG_MAGENTA}${END_COLORSCHEME}%s${RESET_COLORS}: %s"'\n' "$file" "$result"
+            fi
         else
             grep -EiIT --color=auto --exclude-dir .svn --exclude-dir .git "$@" "$file" /dev/null
         fi
 
-    done;
+    done
 
     IFS="$IFS_"
 }

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+#shellcheck disable=SC1090
 
 # disable pango (improves rendering in FireFox)
 export MOZ_DISABLE_PANGO=1
@@ -13,7 +14,7 @@ declare -x TERM=xterm
 BASH_MAJOR_VERSION=${BASH_VERSION:0:1}
 BASH_MINOR_VERSION=${BASH_VERSION:2:1}
 
-if (($BASH_MAJOR_VERSION >= 4)); then
+if ((BASH_MAJOR_VERSION >= 4)); then
     shopt -s autocd    # interpret commands like 'home' as 'cd /home'
     shopt -s cdspell   # correct small typos in typed dirnames
     shopt -s checkjobs # check for any running jobs on shell exit
@@ -22,15 +23,15 @@ if (($BASH_MAJOR_VERSION >= 4)); then
     shopt -u dotglob   # include .-directories in pathname expansion
     shopt -u globstar  # use recursive globbing (**, match this dir and all subdirs)
 
-    if (($BASH_MINOR_VERSION > 1)); then
+    if ((BASH_MINOR_VERSION > 1)); then
         shopt -u compat41 # compatibility mode w/ bash 4.1
     fi
 fi
 
-if (($BASH_MINOR_VERSION > 1)); then
+if ((BASH_MINOR_VERSION > 1)); then
     shopt -u compat31 # compatibility mode w/ bash 3.1
 fi
-if (($BASH_MINOR_VERSION > 2)); then
+if ((BASH_MINOR_VERSION > 2)); then
     shopt -u compat32 # compatibility mode w/ bash 3.2
 fi
 
@@ -106,7 +107,8 @@ fi
 
 # Start SSH agent
 if [[ -z "$SSH_AUTH_SOCK" ]]; then
-    eval $(ssh-agent) 2>&1 >/dev/null
+    eval "$(ssh-agent)" >/dev/null 2>&1
+    # shellcheck disable=SC2064
     trap "kill $SSH_AGENT_PID" 0
 fi
 
@@ -116,7 +118,7 @@ if [ -f /usr/share/bash-completion/completions/git ]; then
 fi
 
 # Default editor
-if which nano 2>&1 >/dev/null; then
+if which nano >/dev/null 2>&1; then
     export EDITOR=nano
 fi
 
@@ -160,9 +162,7 @@ if [[ -f ~/.bash_globals.sh ]]; then
     fi
 
     # We're done; do an LS
-    if [[ _have_fcn == 1 ]]; then
-        multicolumn_ls
-    fi
+    if [ $_have_fcn == 1 ]; then multicolumn_ls; fi
     unset _have_fcn
 
 else
@@ -174,6 +174,20 @@ fi
 if [[ $TILIX_ID ]]; then
     source /etc/profile.d/vte-*.sh
 fi
+
+# Append history *immediately* - useful when working with multiple terminals
+# From https://unix.stackexchange.com/a/48113/20712
+# and  https://stackoverflow.com/a/19533853/1085062
+export HISTCONTROL=ignoredups:erasedups # no duplicate entries
+export HISTFILESIZE=
+export HISTSIZE=
+export HISTTIMEFORMAT="[%F %T] "
+# Change the file location because certain bash sessions truncate .bash_history file upon close.
+# http://superuser.com/questions/575479/bash-history-truncated-to-500-lines-on-each-login
+export HISTFILE=~/.bash_eternal_history
+shopt -s histappend # append to history, don't overwrite it
+# Save and reload the history after each command finishes
+export PROMPT_COMMAND="history -a; history -c; history -r; $PROMPT_COMMAND"
 
 # Run any local definitions
 if [[ -f ~/.bashrc_local ]]; then
