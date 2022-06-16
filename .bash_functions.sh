@@ -1,3 +1,4 @@
+
 #!/usr/bin/env bash
 
 # shellcheck disable=SC2207,SC2206,SC2034
@@ -1343,7 +1344,11 @@ _git_clean_recursive()
         git submodule foreach git clean -xfd; fi
 }
 
-###>>> BEGIN: new Xerra functionality
+###>>> BEGIN: Xerra functionality
+###================================================================================================
+
+readonly STARBOARD_FRONTEND_DIR="/home/rody/Repos/work/frontend/lovedinghy-ii"
+readonly STARBOARD_BACKEND_DIR="/home/rody/Repos/work/backend/api-server"
 
 _git_get_feature_branch()
 {
@@ -1626,7 +1631,7 @@ monitor_prod_deployment()
         gcloud builds list --limit=5 | _reformat_gloud_build_output'
 }
 
-spinup_dev()
+spinup_dev_instance()
 {
     instance="rainbowwarrior"
     if [ $# == 1 ]; then
@@ -1667,8 +1672,37 @@ psql_prod() {
         ON_ERROR_STOP=1
 }
 
+_local_testing_basecmd() {
+    TESTDBIMG=test-db docker-compose -f "${STARBOARD_FRONTEND_DIR}/compose-localhost-api.yml" up "$@"
+}
+
+spinup_local_testing() {
+    _local_testing_basecmd -d
+}
+
+reattach_local_testing() {
+    _local_testing_basecmd --attach-dependencies
+}
+
+spinup_e2e_local() {
+    spinup_local_testing
+    source "${STARBOARD_BACKEND_DIR}/env.localhost.sh"
+    cd "${STARBOARD_BACKEND_DIR}/cmd/api-server" && go build && ./api-server
+    reattach_local_testing
+}
+
+spinup_frontend_local() {
+    spinup_local_testing
+    cd "${STARBOARD_FRONTEND_DIR}" && BROWSER=none yarn start
+    reattach_local_testing
+}
+
+spinup_testdb() {
+    docker run -it -p 55432:5432 test-db
+}
 
 ###<<< END: Xerra functionality
+###================================================================================================
 
 
 # Enter SVN mode
