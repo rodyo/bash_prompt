@@ -223,7 +223,7 @@ warning() {
     fi
 
     # Print the message, based on color settings
-    if [[ $USE_COLORS == 1 ]]; then
+    if [ "$USE_COLORS" -eq 1 ]; then
         echo "${START_COLORSCHEME}${TXT_BOLD};${FG_YELLOW}${END_COLORSCHEME}WARNING: ${msg}${RESET_COLORS}"
     else
         echo "WARNING: ${msg}"
@@ -1750,7 +1750,7 @@ spinup_frontend_local() {
 }
 
 spinup_testdb() {
-    docker run -it -p 55432:5432 test-db
+    docker run -it --rm -p 55432:5432 --name=test-db test-db
 }
 
 ###<<< END: Xerra functionality
@@ -2395,14 +2395,20 @@ _rbp_rmdir() {
 }
 
 # remove file(s), taking into account current repo mode
+_norepo_rm() {
+    rm -vI "$@" 2> >(error)
+    print_list_if_OK $?
+}
+
 _rbp_rm() {
     # we are in REPO mode
-    if [[ -n $REPO_MODE && $REPO_MODE == 1 ]]; then
+    if [ -n "$REPO_MODE" ] && [ "$REPO_MODE" -eq 1 ]; then
 
         # perform repo-specific delete
-        local -r err=$(eval ${REPO_CMD_remove} "$@" 2>&1)
+        local -r err=$(${REPO_CMD_remove} "$@" 2>&1)
         local not_added
         local outside_repo
+        local yn
 
         # different repositories issue different errors
         case "$REPO_TYPE" in
@@ -2431,9 +2437,10 @@ _rbp_rm() {
             ;;
 
         *) # anything erroneous does the same as no repo
-            rm -vI "$@" 2> >(error)
-            print_list_if_OK $?
+            _norepo_rm "$@"
+            return 0
             ;;
+
         esac
 
         # All was OK
@@ -2446,14 +2453,13 @@ _rbp_rm() {
 
             while true; do
 
-                warning "Some files were never added to the repository\nDo you wish to remove them anyway? [N/y] "
+                warning "Some files were never added to the repository\nDo you wish to remove them anyway? [y|N]"
                 read -rp " " yn
 
                 case "$yn" in
 
                 [Yy]*)
-                    rm -vI "$@" 2> >(error)
-                    print_list_if_OK $?
+                    _norepo_rm "$@"
                     break
                     ;;
 
@@ -2462,18 +2468,18 @@ _rbp_rm() {
                     ;;
 
                 *)
-                    echo "Please answer yes or no."
+                    echo "Please answer [Y]es or [N]o."
                     ;;
+
                 esac
             done
 
+            return 0
+
         else
             if [[ "$err" =~ ${outside_repo} ]]; then
-                rm -vI "$@" 2> >(error)
-                if [ $? -eq 0 ]; then
-                    print_list_if_OK 0
-                    warning "Some files were outside the repository."
-                fi
+                _norepo_rm "$@"
+                warning "Some files were outside the repository."
             else
                 # stderr was not empty, but none of the expected strings; rethrow
                 # whatever error git issued
@@ -2485,8 +2491,7 @@ _rbp_rm() {
 
     # not in REPO mode
     else
-        rm -vI "$@" 2> >(error)
-        print_list_if_OK $?
+        _norepo_rm "$@"
     fi
 }
 
@@ -2553,31 +2558,6 @@ _rbp_mv() {
     else
         mv -iv "$@" 2> >(error)
         print_list_if_OK $?
-    fi
-}
-
-# Make simlink, taking into account current repo mode
-# TODO: needs work...auto-add any new files/dirs, but the 4 different
-# forms of ln make this complicated
-_rbp_ln() {
-    # Help call
-    if [[ $# -ge 1 && "-h" = "$1" || "--help" = "$1" ]]; then
-        ln --help
-        return 0
-    fi
-
-    if (ln -s "$@" 2> >(error)); then
-
-        print_list_if_OK 0
-
-        if [[ -n $REPO_MODE && $REPO_MODE == 1 ]]; then
-            addcmd=$(get_repo_cmd "$REPO_CMD_add")
-            if (eval "$addcmd" "$@" "$dump_except_error"); then
-                repo_cmd_exit_message "Added new file(s) \"$@\" to the repository."
-            else
-                warning "Created link(s) \"$@\", but could not add it to the repository."
-            fi
-        fi
     fi
 }
 

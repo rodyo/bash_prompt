@@ -25,7 +25,6 @@ alias dc=_rbp_cd
 #alias mv=_rbp_mv  # TODO: off, until it's finished
 #alias cp=_rbp_cp  #
 alias rm=_rbp_rm
-alias ln=_rbp_ln
 alias touch=_rbp_touch
 alias mkdir=_rbp_mkdir
 alias rmdir=_rbp_rmdir
