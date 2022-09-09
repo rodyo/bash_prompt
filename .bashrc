@@ -193,3 +193,6 @@ export PROMPT_COMMAND="history -a; history -c; history -r; $PROMPT_COMMAND"
 if [[ -f ~/.bashrc_local ]]; then
     source ~/.bashrc_local
 fi
+
+# See https://cloud.google.com/blog/products/containers-kubernetes/kubectl-auth-changes-in-gke
+export USE_GKE_GCLOUD_AUTH_PLUGIN=True

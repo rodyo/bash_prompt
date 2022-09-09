@@ -1167,7 +1167,7 @@ update_all() {
 
 # Update all git repositories found recursively under the current dir
 _gp_with_err() {
-    if (git -C "$@" pull --tags --jobs-8 --prune --verbose); then
+    if (git -C "$@" pull --tags --jobs=8 --prune --verbose); then
         infomessage "Pulling '$*' completed successfully."
     else
         error "Pull failed on '$*'"
@@ -1175,7 +1175,7 @@ _gp_with_err() {
     echo ""
 }
 _gR_with_err() {
-    if (git -C "$@" pull --tags --jobs-8 --prune --verbose --rebase); then
+    if (git -C "$@" pull --tags --jobs=8 --prune --verbose --rebase); then
         infomessage "Pulling '$*' completed successfully."
     else
         error "Pull failed on '$*'"
@@ -1238,29 +1238,46 @@ _enter_GIT() {
     # Basics
     alias gk="gitk"
     alias gg="git gui"
+
     alias gf="git fetch --prune"
     REPO_CMD_fetch="gf"
+
     alias gp="git push"
     REPO_CMD_push="gp"
+
+    alias gco="git checkout"
+    REPO_CMD_checkout="gco"
+    alias gcob="_git_checkout_wrapper"
+    REPO_CMD_checkout="gcob"
+
     alias gP="_git_pull_and_update_submodules"
     REPO_CMD_pull="gP"
+
     alias gR="_git_pull_with_rebase"
     REPO_CMD_pull_rebase="gR"
+
     alias gc="git commit -m"
     REPO_CMD_commit="gc"
+
     alias gs="_rbp_clear && git status"
     REPO_CMD_status="gs"
+
     alias gl="git log --oneline"
     REPO_CMD_log="gl"
+
     alias glg="git log --graph --pretty=oneline --abbrev-commit"
     REPO_CMD_loggraph="glg"
+
     alias ga="git add"
     REPO_CMD_add="ga"
+
     alias grm="git rm"
     REPO_CMD_remove="grm"
+
     alias gm="git merge"
     REPO_CMD_merge="gm"
 
+    # Xerra workflows
     alias gpdev="_git_push_to_dev"
     REPO_CMD_push_to_dev="gpdev"
     alias gpcanary="_git_push_to_canary"
@@ -1270,8 +1287,12 @@ _enter_GIT() {
 
     alias gsquash="_git_squash_commits"
     REPO_CMD_squash_commits="gsquash"
-    alias gpmr="git push -o merge_request.create -o merge_request.target=master -o merge_request.assign='rodyoldenhuis'"
-    REPO_CMD_push_mr="gpmr"
+
+    alias grb="git rebase --interactive --autosquash"
+    REPO_CMD_rebase="grb"
+
+    alias gcf="git commit --fixup"
+    REPO_CMD_squash_commits="gcf"
 
     # Show parent branch for the current child branch
     alias gbp="git show-branch -a \
@@ -1290,11 +1311,6 @@ _enter_GIT() {
     # check whether file is tracked
     alias istracked="git ls-files --error-unmatch"
     REPO_CMD_trackcheck="istracked"
-
-    alias gco="git checkout"
-    REPO_CMD_checkout="gco"
-    alias gcob="_git_checkout_wrapper"
-    REPO_CMD_checkout="gcob"
 
     # Tagging
     alias gt="git tag"
@@ -1334,6 +1350,7 @@ _enter_GIT() {
     __git_complete ga _git_add
     __git_complete gm _git_merge
     __git_complete gd _git_diff
+    __git_complete grb _git_rebase
 }
 
 _git_pull_all() {
@@ -1344,7 +1361,7 @@ _git_pull_all_masters() {
     git submodule foreach --recursive git pull origin master
 }
 _git_checkout_wrapper() {
-    git checkout
+    git checkout "$@"
     _git_update_submodules
 }
 _git_update_submodules() {
@@ -1524,6 +1541,13 @@ _git_squash_commits() {
     git reset "$(git merge-base master "$(git branch --show-current)")"
     git add -A
     git commit -m "$1"
+}
+
+git_push_fixup() {
+    head_sha="$(git log --oneline | grep -m1 -v 'fixup! ' | cut -f1 -d' ')"
+    git add .
+    git commit --fixup "${head_sha}"
+    git push
 }
 
 _reformat_gloud_build_output() {
@@ -1709,23 +1733,11 @@ psql_dev() {
         -v
 }
 
-psql_prod() {
-    for i in 1 2 3; do
-        echo $'\e[31mYOU ARE CONNECTING TO THE PRODUCTION DB!\e[0m'
-    done
-    echo
-    read -srp 'Enter PGPASSWORD for global-ais: ' PGPASS
-    PGPASSWORD=${PGPASS} psql \
-        --host=35.197.168.167 \
-        --username=postgres \
-        --dbname=global-ais \
-        --echo-errors \
-        -v \
-        ON_ERROR_STOP=1
-}
-
 _local_testing_basecmd() {
     TESTDBIMG=test-db docker-compose -f "${STARBOARD_FRONTEND_DIR}/compose-localhost-api.yml" up "$@"
+}
+_local_testing_cleanup() {
+    TESTDBIMG=test-db docker-compose -f "${STARBOARD_FRONTEND_DIR}/compose-localhost-api.yml" down
 }
 
 spinup_local_testing() {
@@ -1734,6 +1746,7 @@ spinup_local_testing() {
 
 reattach_local_testing() {
     _local_testing_basecmd --attach-dependencies
+    _local_testing_cleanup
 }
 
 spinup_e2e_local() {
