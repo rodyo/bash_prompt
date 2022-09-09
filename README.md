@@ -4,3 +4,6 @@ bash_prompt
 ===========
 
 Just a bunch of functions, bits and bobs to make my life on the command line a lot easier.
+
+
+Just a demo
