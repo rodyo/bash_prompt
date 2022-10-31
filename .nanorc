@@ -161,7 +161,7 @@ set smarthome
 # set speller "aspell -x -c"
 
 ## Allow nano to be suspended.
-set suspend
+#set suspend
 
 ## Use this tab size instead of the default; it must be greater than 0.
 set tabsize 4
@@ -170,7 +170,7 @@ set tabsize 4
 set tabstospaces
 
 ## Save automatically on exit, don't prompt.
-unset tempfile
+#unset tempfile
 
 ## Disallow file modification.  Why would you want this in an rcfile? ;)
 # set view

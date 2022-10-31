@@ -34,6 +34,7 @@ alias ged=_gedit
 alias not=_gedit
 
 # one-or-two-letter shorts
+alias b='batcat -P'
 alias c='printf "\033c"'
 alias cls='printf "\033c"'
 alias clc='printf "\033c"'
@@ -69,6 +70,7 @@ alias dropbox="cd ~/Dropbox/"
 alias work="cd ~/e/Work/"
 
 # various
+alias please="sudo"
 alias fuck="sudo !!"
 alias clear="_rbp_clear"
 alias forget="history -c; clear"

@@ -1277,7 +1277,7 @@ _enter_GIT() {
     alias gm="git merge"
     REPO_CMD_merge="gm"
 
-    # Xerra workflows
+    # Xerra/Starboard workflows
     alias gpdev="_git_push_to_dev"
     REPO_CMD_push_to_dev="gpdev"
     alias gpcanary="_git_push_to_canary"
@@ -1405,7 +1405,7 @@ _git_clean_recursive() {
     fi
 }
 
-###>>> BEGIN: Xerra functionality
+###>>> BEGIN: Xerra/Starboard functionality
 ###================================================================================================
 
 readonly STARBOARD_FRONTEND_DIR="/home/rody/Repos/work/frontend/lovedinghy-ii"
@@ -1757,16 +1757,29 @@ spinup_e2e_local() {
 }
 
 spinup_frontend_local() {
-    spinup_local_testing
-    cd "${STARBOARD_FRONTEND_DIR}" && BROWSER=none yarn start
-    reattach_local_testing
+    cd "${STARBOARD_FRONTEND_DIR}" || return
+    BROWSER=none yarn start
 }
 
 spinup_testdb() {
     docker run -it --rm -p 55432:5432 --name=test-db test-db
 }
 
-###<<< END: Xerra functionality
+psql_testdb() {
+    PGPASSWORD=testpwd psql -U testuser -p 55432 -h localhost -d test-db
+}
+
+base64_decode() {
+    printf '%s' "$*" | base64 -dw0
+    echo
+}
+
+base64_encode() {
+    printf '%s' "$*" | base64 -w0
+    echo
+}
+
+###<<< END: Xerra/Starboard functionality
 ###================================================================================================
 
 # Enter SVN mode
